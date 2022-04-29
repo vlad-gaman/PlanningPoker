@@ -1,0 +1,21 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Planning Poker";
+}
+
+<div class="text-center align-items-start">
+    <form id="createRoom" asp-controller="Index" asp-action="CreateRoom">
+        <div class="form-row align-items-center">
+            <label for="name" class="m-1 noselect">Name:</label>
+            <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
+        </div>
+        <div class="form-row align-items-center">
+            <label for="isObserver" class="m-1 noselect">Observer?:</label>
+            <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true"/>
+        </div>
+        <div class="form-row align-items-center">
+            <input type="submit" value="Create room" class="m-1" />
+        </div>
+    </form>
+</div>

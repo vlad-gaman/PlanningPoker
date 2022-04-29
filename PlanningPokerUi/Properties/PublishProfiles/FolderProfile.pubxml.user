@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_PublishTargetUrl>\\10.23.89.170\c$\inetpub\PlanningPoker</_PublishTargetUrl>
+    <History>True|2022-04-29T23:00:33.4232580Z;True|2022-04-30T01:45:24.5025740+03:00;True|2022-04-30T01:43:45.6970882+03:00;True|2022-04-30T01:42:47.1775361+03:00;False|2022-04-30T01:42:13.5790602+03:00;True|2022-04-30T01:29:15.0237734+03:00;False|2022-04-30T01:28:35.5126449+03:00;True|2022-04-30T00:33:40.4854074+03:00;</History>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,123 @@
+﻿@model ViewModels.RoomViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Planning Poker";
+
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Person.Name))
+{
+    <div class="text-center align-items-start">
+        <div class="form-row align-items-center">
+            <label class="m-1 noselect">Room:</label>
+            <label class="m-1 noselect">@Model.Guid.ToString()</label>
+        </div>
+        <div class="form-row align-items-center">
+            <input id="clear-votes" type="button" value="Clear votes" />
+            <input id="show-votes" type="button" value="Show votes" />
+            <label for="isObserver" class="m-1 noselect">Observer?:</label>
+            <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true" @(Model.Person.IsObserver ? "checked='checked'" : "") />
+        </div>
+        <div class="table form-row align-items-center">
+            <span>
+                <input type="radio" value="0" id="0" name="mark" />
+                <label for="0">0</label>
+            </span>
+            <span>
+                <input type="radio" value="0.5" id="0.5" name="mark" />
+                <label for="0.5">&#189;</label>
+            </span>
+            <span>
+                <input type="radio" value="1" id="1" name="mark" />
+                <label for="1">1</label>
+            </span>
+            <span>
+                <input type="radio" value="2" id="2" name="mark" />
+                <label for="2">2</label>
+            </span>
+            <span>
+                <input type="radio" value="3" id="3" name="mark" />
+                <label for="3">3</label>
+            </span>
+            <span>
+                <input type="radio" value="5" id="5" name="mark" />
+                <label for="5">5</label>
+            </span>
+            <span>
+                <input type="radio" value="8" id="8" name="mark" />
+                <label for="8">8</label>
+            </span>
+            <span>
+                <input type="radio" value="13" id="13" name="mark" />
+                <label for="13">13</label>
+            </span>
+            <span>
+                <input type="radio" value="20" id="20" name="mark" />
+                <label for="20">20</label>
+            </span>
+            <span>
+                <input type="radio" value="40" id="40" name="mark" />
+                <label for="40">40</label>
+            </span>
+            <span>
+                <input type="radio" value="100" id="100" name="mark" />
+                <label for="100">100</label>
+            </span>
+            <span>
+                <input type="radio" value="?" id="?" name="mark" />
+                <label for="?">?</label>
+            </span>
+            <span>
+                <input type="radio" value="coffee" id="coffee" name="mark" />
+                <label for="coffee">&#x2615;</label>
+            </span>
+        </div>
+        <div class="row">
+            <div class="col-sm-12 col-md-6">
+                <div class="form-row">
+                    <table class="table">
+                        <tbody id="people">
+                        </tbody>
+                    </table>
+                    <span class="col-1">Observers</span>
+                    <table class="table">
+                        <tbody id="observers">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-sm-12 col-md-6">
+                <div class="form-row">
+                    <canvas id="myChart"></canvas>
+                    <div><span>Average: </span><span id="averageMark"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @section Scripts {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js" ></script>
+        <script type="text/javascript">connectToRoom("@Model.Guid.ToString()", "@Model.Person.Guid")</script>
+    }
+}
+else
+{
+    <div class="text-center align-items-start">
+        <div class="form-row align-items-center">
+            <label class="m-1 noselect">Room:</label>
+            <label class="m-1 noselect">@Model.Guid.ToString()</label>
+        </div>
+        <form id="createRoom" asp-action="Room">
+            <div class="form-row align-items-center">
+                <label for="name" class="m-1 noselect">Name:</label>
+                <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
+            </div>
+            <div class="form-row align-items-center">
+                <label for="isObserver" class="m-1 noselect">Observer?:</label>
+                <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true" />
+            </div>
+            <div class="form-row align-items-center">
+                <input type="submit" value="Join room" class="m-1" />
+            </div>
+        </form>
+    </div>
+}
