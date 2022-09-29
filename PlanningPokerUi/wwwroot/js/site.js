@@ -6,7 +6,7 @@ var personId = ""
 var webSocket
 var chart
 
-var createWebSocket(hostname, port, guid) {
+var createWebSocket = function (hostname, port, guid) {
     var uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
     try {
         var ws = new WebSocket("ws://" + uri)
@@ -18,7 +18,7 @@ var createWebSocket(hostname, port, guid) {
     }
 }
 
-var connectToRoomconnectToRoom = function (guid, personGuid) {
+var connectToRoom = function (guid, personGuid) {
     webSocket = createWebSocket(window.location.hostname, window.location.port, guid);
     webSocket.bufferedAmount = 1024 * 20;
     personId = personGuid
