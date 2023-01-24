@@ -17,35 +17,24 @@ namespace PlanningPokerUi.Controllers
             _peopleManagerService = peopleManagerService;
         }
 
-        public IActionResult Room(Guid guid)
-        {
-            var person = _peopleManagerService.GetPerson(HttpContext);
 
-            if (_roomsService.DoesRoomExist(guid))
-            {
-                return View(new RoomViewModel()
-                {
-                    Guid = guid,
-                    Person = person
-                });
-            }
-            return Redirect("/");
-        }
-
-        [HttpPost]
-        public IActionResult Room(Guid guid, [FromForm] Person person)
+        public IActionResult Room(string guid, FormViewModel formViewModel = null)
         {
             var existingPerson = _peopleManagerService.GetPerson(HttpContext);
-            existingPerson.CopyFrom(person);
+            if (!string.IsNullOrWhiteSpace(formViewModel.Name))
+            {
+                existingPerson.CopyFrom(formViewModel);
+            }
 
             if (_roomsService.DoesRoomExist(guid))
             {
                 return View("Room", new RoomViewModel()
                 {
                     Guid = guid,
-                    Person = existingPerson         
+                    Person = existingPerson
                 });
             }
+
             return Redirect("/");
         }
     }

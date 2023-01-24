@@ -1,21 +1,61 @@
 ﻿@page
+@using PlanningPokerUi.Services
 @model IndexModel
 @{
     ViewData["Title"] = "Planning Poker";
 }
 
-<div class="text-center align-items-start">
-    <form id="createRoom" asp-controller="Index" asp-action="CreateRoom">
+@if (string.IsNullOrWhiteSpace(Model.Person?.Name))
+{
+    <div class="text-center align-items-start">    
+        <form id="createRoom" asp-controller="Index">
+            <div class="form-row align-items-center">
+                <label for="name" class="m-1 noselect">Your Name:</label>
+                <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
+                <label for="isObserver" class="m-1 noselect">Observer?:</label>
+                <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true"/>
+            </div>
+            <div class="form-row align-items-center">
+                <label for="useFunRoomName" class="m-1 noselect">Use fun room name?:</label>
+                <input type="checkbox" id="useFunRoomName" name="useFunRoomName" class="m-1" value="true" />            
+            </div>
+            <div class="form-row align-items-center">
+                <span class="m-1" style="font-weight: bold">Caution! It may generate weird names!!!</span>
+            </div>
+            <div class="form-row align-items-center">
+                <input type="submit" formaction="/CreateRoom" value="Create room" class="m-1" />
+            </div>
+            <br />
+            <div class="form-row align-items-center">
+                <label for="roomName" class="m-1 noselect">Room Name:</label>
+                <input type="text" id="roomName" name="roomName" minLength="4" size="10" class="m-1" />
+            </div>
+            <div class="form-row align-items-center">
+                <input type="submit" formaction="/JoinRoom" value="Join room" class="m-1" />
+            </div>
+        </form>
+    </div>
+}
+else 
+{
+    <div class="text-center align-items-start">
         <div class="form-row align-items-center">
-            <label for="name" class="m-1 noselect">Name:</label>
-            <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
+            <label class="m-1 noselect">Room:</label>
+            <label class="m-1 noselect">@Model.Guid</label>
         </div>
-        <div class="form-row align-items-center">
-            <label for="isObserver" class="m-1 noselect">Observer?:</label>
-            <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true"/>
-        </div>
-        <div class="form-row align-items-center">
-            <input type="submit" value="Create room" class="m-1" />
-        </div>
-    </form>
-</div>
+        <form id="join" asp-action="Room">
+            <div class="form-row align-items-center">
+                <label for="name" class="m-1 noselect">Your Name:</label>
+                <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
+            </div>
+            <div class="form-row align-items-center">
+                <label for="isObserver" class="m-1 noselect">Observer?:</label>
+                <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true" />
+            </div>
+            <div class="form-row align-items-center">
+                <input type="hidden" id="roomName" name="roomName" class="m-1" value="@Model.Guid" />
+                <input type="submit" value="Join room" class="m-1" />
+            </div>
+        </form>
+    </div>
+}

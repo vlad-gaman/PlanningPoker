@@ -9,30 +9,13 @@ namespace PlanningPokerUi.Models
         public Guid Guid { get; set; }
         public string Name { get; set; }
         public bool IsObserver { get; set; }
-        public int Index { get; set; }
         [JsonIgnore]
         public WebSocket WebSocket { get; set; }
 
-        public void CopyFrom(Person other)
+        public void CopyFrom(FormViewModel formViewModel)
         {
-            Name = other.Name;
-            IsObserver = other.IsObserver;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (!(obj is Person))
-            {
-                return false;
-            }
-            var other = obj as Person;
-
-            return Name == other.Name;
-        }
-
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
+            Name = formViewModel.Name;
+            IsObserver = formViewModel.IsObserver;
         }
     }
 }

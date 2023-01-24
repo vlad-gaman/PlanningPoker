@@ -7,11 +7,11 @@ namespace PlanningPokerUi.Services
 {
     public class RoomsManagerService
     {
-        private readonly ConcurrentDictionary<Guid, Room> _rooms;
+        private readonly ConcurrentDictionary<string, Room> _rooms;
 
         public RoomsManagerService()
         {
-            _rooms = new ConcurrentDictionary<Guid, Room>();
+            _rooms = new ConcurrentDictionary<string, Room>();
         }
 
         public Room GetRoom(Person person)
@@ -19,31 +19,35 @@ namespace PlanningPokerUi.Services
             return _rooms.FirstOrDefault(p => p.Value.IsPersonHere(person)).Value;
         }
 
-        public Room GetRoom(Guid guid)
+        public Room GetRoom(string guid)
         {
             _rooms.TryGetValue(guid, out var room);
             return room;
         }
 
-        public bool DoesRoomExist(Guid guid)
+        public bool DoesRoomExist(string guid)
         {
-            return _rooms.TryGetValue(guid, out _);
+            if (!string.IsNullOrWhiteSpace(guid))
+            {
+                return _rooms.TryGetValue(guid, out _);
+            }
+            return false;
         }
 
-        public Guid CreateRoom(Person person)
+        public string CreateRoom(Person person, bool useFunName)
         {
-            Guid guid = Guid.Empty;
+            string guid = string.Empty;
             var created = false;
             var index = 0;
             var room = new Room(person);
 
             while (!created)
             {
-                guid = Guid.NewGuid();
+                guid = useFunName ? RoomNameGenerator.Generate() : Guid.NewGuid().ToString();
                 created = _rooms.TryAdd(guid, room);
                 if (index > 0)
                 {
-                    return Guid.Empty;
+                    return string.Empty;
                 }
                 index++;
             }
@@ -52,9 +56,9 @@ namespace PlanningPokerUi.Services
             return guid;
         }
 
-        public bool JoinRoom(Person person, Guid guid)
+        public bool JoinRoom(Person person, string guid, out Room room)
         {
-            if (_rooms.TryGetValue(guid, out Room room))
+            if (_rooms.TryGetValue(guid, out room))
             {
                 room.AddPerson(person);
                 return true;
@@ -63,7 +67,7 @@ namespace PlanningPokerUi.Services
             return false;
         }
 
-        public void ExitRoom(Person person, Guid guid)
+        public void ExitRoom(Person person, string guid)
         {
             if (_rooms.TryGetValue(guid, out Room room))
             {

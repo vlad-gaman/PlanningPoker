@@ -22,7 +22,7 @@ namespace PlanningPokerUi.Middleware
         {
             if (context.WebSockets.IsWebSocketRequest)
             {
-                var guid = Guid.Parse(context.Request.Path.Value.Split("/")[1]);
+                var guid = context.Request.Path.Value.Split("/")[1];
                 var room = _roomsManagerService.GetRoom(guid);
                 if (room != null)
                 {

@@ -5,7 +5,7 @@ namespace PlanningPokerUi.ViewModels
 {
     public class RoomViewModel
     {
-        public Guid Guid { get; set; }
+        public string Guid { get; set; }
         public Person Person { get; set; }
     }
 }

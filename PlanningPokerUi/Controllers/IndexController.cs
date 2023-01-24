@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PlanningPokerUi.Models;
 using PlanningPokerUi.Services;
+using PlanningPokerUi.ViewModels;
 using System;
 
 namespace PlanningPokerUi.Controllers
@@ -22,18 +23,26 @@ namespace PlanningPokerUi.Controllers
         }
 
         [HttpPost("CreateRoom")]
-        public IActionResult CreateRoom([FromForm] Person person)
+        public IActionResult CreateRoom([FromForm] FormViewModel formViewModel)
         {
             var existingPerson = _peopleManagerService.GetPerson(HttpContext);
-            existingPerson.CopyFrom(person);
+            existingPerson.CopyFrom(formViewModel);
 
-            var guid = _roomsManagerService.CreateRoom(existingPerson);
-            if (guid == Guid.Empty)
+            var guid = _roomsManagerService.CreateRoom(existingPerson, formViewModel.UseFunRoomName);
+            if (string.IsNullOrEmpty(guid))
             {
                 return Conflict();
             }
 
-            return LocalRedirect($"/Room/{guid}");
+            return RedirectPermanent($"/Room/{guid}");
+        }
+
+        [HttpPost("JoinRoom")]
+        public IActionResult JoinRoom(FormViewModel formViewModel)
+        {
+            var a = RedirectPermanent($"/Room/{formViewModel.RoomName}");
+            a.PreserveMethod = true;
+            return a;
         }
     }
 }

@@ -85,6 +85,11 @@ div.table label:hover {
     background-color: rgba(0, 0, 0, 0.075);
 }
 
+div.table input[type=radio][disabled] + label {
+    border: 1px solid #787878;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
 div.table label {
     min-width: 4em;
     width: 4em;
@@ -112,4 +117,8 @@ div.table span input[type=radio]:checked + label {
 table.table tr > td {
     width: 50%;
     text-align: left;
+}
+
+#show-votes-countdown {
+    font-weight: bold;
 }

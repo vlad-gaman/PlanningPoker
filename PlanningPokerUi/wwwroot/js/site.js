@@ -2,34 +2,42 @@
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your Javascript code.
-var personId = ""
-var webSocket
-var chart
+let personId = ""
+let webSocket
+let chart
 
-var createWebSocket = function (hostname, port, guid) {
-    var uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
+let createWebSocket = function (hostname, port, guid) {
+    let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
+    let ws;
     try {
-        var ws = new WebSocket("ws://" + uri)
-        return ws;
+        ws = new WebSocket("ws://" + uri)
     }
     catch (err) {
-        var ws = new WebSocket("wss://" + uri)
+        ws = new WebSocket("wss://" + uri)
+    }
+
+    if (ws.readyState == ws.OPEN) {
+        return ws
+    }
+    else {
+        ws = new WebSocket("wss://" + uri)
         return ws;
     }
+
 }
 
-var connectToRoom = function (guid, personGuid) {
+let connectToRoom = function (guid, personGuid) {
     webSocket = createWebSocket(window.location.hostname, window.location.port, guid);
     webSocket.bufferedAmount = 1024 * 20;
     personId = personGuid
 
     webSocket.onopen = function (event) {
-        var message = {
+        let message = {
             verb: "Join",
             object: guid
         }
 
-        var messageAsString = JSON.stringify(message)
+        let messageAsString = JSON.stringify(message)
 
         webSocket.send(messageAsString)
     }
@@ -42,37 +50,27 @@ var connectToRoom = function (guid, personGuid) {
         }
     }
 
-    var handleMessage = function (data) {
-        var messsage = JSON.parse(data)
+    let handleMessage = function (data) {
+        let messsage = JSON.parse(data)
         console.log(messsage)
-        var object = messsage.Object
+        let object = messsage.Object
         switch (messsage.Verb) {
             case "IsJoined":
                 if (object.IsSuccessful) {
                     addPeopleToTable(object.People)
-                    setVotes(object.Votes)
+                    setVoteResultInfo(object.VoteResultInfo)
 
                     $('#people').append($('#people > tr').sort(sortByIdProp))
-
                     $('#observers').append($('#observers > tr').sort(sortByIdProp))
                 }
                 break
             case "Joined":
-                addPeopleToTable([object])
+                addPeopleToTable([object.Person])
+                if (object.Vote) {
+                    setVotes([object.Vote])
+                }
 
                 if (!object.IsObserver) {
-                    $("#averageMark").text("")
-                    chart.data.labels = []
-                    chart.data.datasets[0].data = []
-                    chart.data.datasets[0].backgroundColor = []
-                    chart.update()
-
-                    for (let a of $(".mark")) {
-                        let b = $(a)
-                        if (b.text()) {
-                            b.text("\u25AE")
-                        }
-                    }
                     $('#people').append($('#people > tr').sort(sortByIdProp))
                 } else {
                     $('#observers').append($('#observers > tr').sort(sortByIdProp))
@@ -88,35 +86,46 @@ var connectToRoom = function (guid, personGuid) {
                 $("#" + object + " .mark").text("\u25AE")
                 break
             case "ShowVotes":
-                setVotes(object.Votes)
-                setStatistics(object.Statistics)
+                setVoteResultInfo(object)                
                 break
             case "ClearVote":
+                $("#statistics").hide();
+                $("#show-votes-countdown").hide();
                 $(".mark").text("")
                 $("input[type=radio][name=mark]").prop("checked", false)
                 $("#averageMark").text("")
+                disableVoting(false)
 
                 chart.data.labels = []
                 chart.data.datasets[0].data = []
                 chart.data.datasets[0].backgroundColor = []
                 chart.update()
                 break
+            case "Countdown":
+                if (object.Reset) {
+                    $("#show-votes-countdown").hide();
+                } else {
+                    $("#show-votes-countdown").show();
+                    $("#countdown").text(object.Countdown)
+                }
+                break
             case "ObserverChange":
-                $("#" + object.Guid).remove()
-                addPeopleToTable([object])
+                $("#" + object.Person.Guid).remove()
+                addPeopleToTable([object.Person])
+                setVoteResultInfo(object.VoteResultInfo)
                 break
         }
     }
 
     $("#isObserver").change(function () {
-        var message = {
+        let message = {
             Verb: "ObserverChange",
             Object: {
                 IsObserver: this.checked
             }
         }
 
-        var messageAsString = JSON.stringify(message)
+        let messageAsString = JSON.stringify(message)
         webSocket.send(messageAsString)
     })
 
@@ -172,9 +181,13 @@ var connectToRoom = function (guid, personGuid) {
     })
 }
 
-var sortByIdProp = function (a, b) {
-    var aId = $(a).prop("id")
-    var bId = $(b).prop("id")
+let disableVoting = function (value) {
+    $('input[type=radio][name=mark]').prop('disabled', value)
+}
+
+let sortByIdProp = function (a, b) {
+    let aId = $(a).prop("id")
+    let bId = $(b).prop("id")
     if (aId < bId) {
         return -1
     } else if (aId > bId) {
@@ -183,7 +196,7 @@ var sortByIdProp = function (a, b) {
     return 0;
 }
 
-var setStatistics = function (statistics) {
+let setStatistics = function (statistics) {
     let labels = []
     let percentages = []
     let colors = []
@@ -206,18 +219,36 @@ var setStatistics = function (statistics) {
     chart.update()
 }
 
-var setVotes = function (votes) {
+let setVoteResultInfo = function (voteResultInfo) {
+    setVotes(voteResultInfo.Votes)
+    if (voteResultInfo.VotingFinished) {
+        $("#statistics").show()
+        $("#show-votes-countdown").hide()
+        setStatistics(voteResultInfo.Statistics)
+        disableVoting(true)
+    } else {
+        $("#statistics").hide();
+        if (voteResultInfo.HasEveryoneVoted) {
+            $("#show-votes-countdown").show();
+            $("#countdown").text(voteResultInfo.Countdown)
+        } else {
+            $("#show-votes-countdown").hide();
+        }
+        
+    }
+}
+
+let setVotes = function (votes) {
     for (let vote of votes) {
         if ($("#" + vote.Guid)[0]) {
-            var markElement = $("#" + vote.Guid + " .mark")
+            let markElement = $("#" + vote.Guid + " .mark")
             if (vote.Mark == 'coffee') {
                 markElement.text("\u2615")
             }
             else if (vote.Mark == '0.5') {
                 markElement.text("\u00BD")
             }
-            else if (vote.Mark == 'hide')
-            {
+            else if (vote.Mark == 'hide') {
                 markElement.text("\u25AE")
             }
             else {
@@ -227,7 +258,7 @@ var setVotes = function (votes) {
     }
 }
 
-var addPeopleToTable = function (otherPeople) {
+let addPeopleToTable = function (otherPeople) {
     let people = $("#people")
     let observers = $("#observers")
     for (let otherPerson of otherPeople) {        
@@ -255,7 +286,7 @@ var addPeopleToTable = function (otherPeople) {
     }
 }
 
-var removePeopleFromTable = function (otherPeople) {
+let removePeopleFromTable = function (otherPeople) {
     for (let otherPerson of otherPeople) {
         $("#" + otherPerson.Guid).remove()
     }
@@ -265,30 +296,33 @@ $(document).ready(function () {
     $('input[type=radio][name=mark]').change(function () {
         if (!this.value)
             return;
-        var message = {
+        let message = {
             Verb: "Vote",
             Object: this.value
         }
 
-        var messageAsString = JSON.stringify(message)
+        let messageAsString = JSON.stringify(message)
         webSocket.send(messageAsString)
     })
 
     $('#clear-votes').click(function () {
-        var message = {
+        let message = {
             verb: "ClearVotes"
         }
 
-        var messageAsString = JSON.stringify(message)
+        let messageAsString = JSON.stringify(message)
         webSocket.send(messageAsString)
     })
 
     $('#show-votes').click(function () {
-        var message = {
+        let message = {
             verb: "ShowVotes"
         }
 
-        var messageAsString = JSON.stringify(message)
+        let messageAsString = JSON.stringify(message)
         webSocket.send(messageAsString)
     })
+
+    $("#statistics").hide();
+    $("#show-votes-countdown").hide();
 })
