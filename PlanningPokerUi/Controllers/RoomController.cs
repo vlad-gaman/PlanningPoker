@@ -2,7 +2,6 @@
 using PlanningPokerUi.Models;
 using PlanningPokerUi.Services;
 using PlanningPokerUi.ViewModels;
-using System;
 
 namespace PlanningPokerUi.Controllers
 {
@@ -28,11 +27,24 @@ namespace PlanningPokerUi.Controllers
 
             if (_roomsService.DoesRoomExist(guid))
             {
-                return View("Room", new RoomViewModel()
+                if (existingPerson != null)
                 {
-                    Guid = guid,
-                    Person = existingPerson
-                });
+                    return View("Room", new RoomViewModel()
+                    {
+                        Guid = guid,
+                        Person = existingPerson
+                    });
+                }
+                else
+                {
+                    var newPerson = _peopleManagerService.CreatePerson(HttpContext);
+
+                    return View("RoomJoin", new RoomJoinModel()
+                    {
+                        Guid = guid,
+                        Person = newPerson
+                    });
+                }
             }
 
             return Redirect("/");

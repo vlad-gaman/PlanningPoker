@@ -6,5 +6,6 @@ namespace PlanningPokerUi.Models
     {
         public Guid Guid { get; set; }
         public string Mark { get; set; }
+        public string PersonType { get; set; }
     }
 }

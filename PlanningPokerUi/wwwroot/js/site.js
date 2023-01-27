@@ -4,7 +4,9 @@
 // Write your Javascript code.
 let personId = ""
 let webSocket
-let chart
+let allChart
+let devChart
+let testChart
 
 let createWebSocket = function (hostname, port, guid) {
     let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
@@ -60,7 +62,8 @@ let connectToRoom = function (guid, personGuid) {
                     addPeopleToTable(object.People)
                     setVoteResultInfo(object.VoteResultInfo)
 
-                    $('#people').append($('#people > tr').sort(sortByIdProp))
+                    $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
+                    $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
                     $('#observers').append($('#observers > tr').sort(sortByIdProp))
                 }
                 break
@@ -71,7 +74,11 @@ let connectToRoom = function (guid, personGuid) {
                 }
 
                 if (!object.IsObserver) {
-                    $('#people').append($('#people > tr').sort(sortByIdProp))
+                    if (object.PersonType == "test") {
+                        $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
+                    } else {
+                        $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
+                    }
                 } else {
                     $('#observers').append($('#observers > tr').sort(sortByIdProp))
                 }
@@ -96,10 +103,20 @@ let connectToRoom = function (guid, personGuid) {
                 $("#averageMark").text("")
                 disableVoting(false)
 
-                chart.data.labels = []
-                chart.data.datasets[0].data = []
-                chart.data.datasets[0].backgroundColor = []
-                chart.update()
+                allChart.data.labels = []
+                allChart.data.datasets[0].data = []
+                allChart.data.datasets[0].backgroundColor = []
+                allChart.update()
+
+                devChart.data.labels = []
+                devChart.data.datasets[0].data = []
+                devChart.data.datasets[0].backgroundColor = []
+                devChart.update()
+
+                testChart.data.labels = []
+                testChart.data.datasets[0].data = []
+                testChart.data.datasets[0].backgroundColor = []
+                testChart.update()
                 break
             case "Countdown":
                 if (object.Reset) {
@@ -110,9 +127,18 @@ let connectToRoom = function (guid, personGuid) {
                 }
                 break
             case "ObserverChange":
+            case "PersonTypeChange":
                 $("#" + object.Person.Guid).remove()
                 addPeopleToTable([object.Person])
                 setVoteResultInfo(object.VoteResultInfo)
+                break            
+            case "HealthCheck":
+                let message = {
+                    verb: "Healthy"
+                }
+
+                let messageAsString = JSON.stringify(message)
+                webSocket.send(messageAsString)
                 break
         }
     }
@@ -129,7 +155,19 @@ let connectToRoom = function (guid, personGuid) {
         webSocket.send(messageAsString)
     })
 
-    chart = new Chart("myChart", {
+    $("input[type=radio][name=personType]").change(function () {
+        let message = {
+            Verb: "PersonTypeChange",
+            Object: {
+                PersonType: this.value
+            }
+        }
+
+        let messageAsString = JSON.stringify(message)
+        webSocket.send(messageAsString)
+    })
+
+    allChart = new Chart("allChart", {
         type: "bar",
         data: {
             labels: [],
@@ -179,6 +217,108 @@ let connectToRoom = function (guid, personGuid) {
             }            
         }
     })
+
+    devChart = new Chart("devChart", {
+        type: "bar",
+        data: {
+            labels: [],
+            datasets: [{
+                backgroundColor: [],
+                data: []
+            }]
+        },
+        options: {
+            tooltips: {
+                callbacks: {
+                    label: function (tooltipItem, data) {
+                        return tooltipItem.value + "%";
+                    }
+                }
+            },
+            legend: {
+                display: false
+            },
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        display: false
+                    },
+                    gridLines: {
+                        display: false
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                        fontSize: 16,
+                        callback: function (value) {
+                            if (value == '0.5') {
+                                return '\u00BD'
+                            } else if (value == 'coffee') {
+                                return '\u2615'
+                            }
+                            return value
+                        }
+                    },
+                    gridLines: {
+                        display: false
+                    }
+                }]
+            }
+        }
+    })
+
+    testChart = new Chart("testChart", {
+        type: "bar",
+        data: {
+            labels: [],
+            datasets: [{
+                backgroundColor: [],
+                data: []
+            }]
+        },
+        options: {
+            tooltips: {
+                callbacks: {
+                    label: function (tooltipItem, data) {
+                        return tooltipItem.value + "%";
+                    }
+                }
+            },
+            legend: {
+                display: false
+            },
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        display: false
+                    },
+                    gridLines: {
+                        display: false
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                        fontSize: 16,
+                        callback: function (value) {
+                            if (value == '0.5') {
+                                return '\u00BD'
+                            } else if (value == 'coffee') {
+                                return '\u2615'
+                            }
+                            return value
+                        }
+                    },
+                    gridLines: {
+                        display: false
+                    }
+                }]
+            }
+        }
+    })
 }
 
 let disableVoting = function (value) {
@@ -200,6 +340,15 @@ let setStatistics = function (statistics) {
     let labels = []
     let percentages = []
     let colors = []
+
+    let labelsDev = []
+    let percentagesDev = []
+    let colorsDev = []
+
+    let labelsTest = []
+    let percentagesTest = []
+    let colorsTest = []
+
     for (let mark of statistics.Marks) {
         labels.push(mark.Mark)
         percentages.push(mark.Percentage)
@@ -211,12 +360,46 @@ let setStatistics = function (statistics) {
         }
     }
 
-    $("#averageMark").text(statistics.AverageMark)
+    for (let mark of statistics.MarksDev) {
+        labelsDev.push(mark.Mark)
+        percentagesDev.push(mark.Percentage)
+        if (statistics.HighestMarkDev == mark.Mark) {
+            colorsDev.push("green")
+        }
+        else {
+            colorsDev.push("blue")
+        }
+    }
 
-    chart.data.labels = labels
-    chart.data.datasets[0].data = percentages
-    chart.data.datasets[0].backgroundColor = colors
-    chart.update()
+    for (let mark of statistics.MarksTest) {
+        labelsTest.push(mark.Mark)
+        percentagesTest.push(mark.Percentage)
+        if (statistics.HighestMarkTest == mark.Mark) {
+            colorsTest.push("green")
+        }
+        else {
+            colorsTest.push("blue")
+        }
+    }
+
+    $("#allAverageMark").text(statistics.AverageMark)
+    $("#devAverageMark").text(statistics.AverageMarkDev)
+    $("#testAverageMark").text(statistics.AverageMarkTest)
+
+    allChart.data.labels = labels
+    allChart.data.datasets[0].data = percentages
+    allChart.data.datasets[0].backgroundColor = colors
+    allChart.update()
+
+    devChart.data.labels = labelsDev
+    devChart.data.datasets[0].data = percentagesDev
+    devChart.data.datasets[0].backgroundColor = colorsDev
+    devChart.update()
+
+    testChart.data.labels = labelsTest
+    testChart.data.datasets[0].data = percentagesTest
+    testChart.data.datasets[0].backgroundColor = colorsTest
+    testChart.update()
 }
 
 let setVoteResultInfo = function (voteResultInfo) {
@@ -259,7 +442,8 @@ let setVotes = function (votes) {
 }
 
 let addPeopleToTable = function (otherPeople) {
-    let people = $("#people")
+    let peopleDev = $("#people-dev")
+    let peopleTest = $("#people-test")
     let observers = $("#observers")
     for (let otherPerson of otherPeople) {        
         if (!($("#" + otherPerson.Guid)[0])) {
@@ -276,11 +460,14 @@ let addPeopleToTable = function (otherPeople) {
                 observers.append(tr)
             } else {
                 let tdMark = $("<td/>")
-                tdMark.attr("class", "mark")
-
-                
+                tdMark.attr("class", "mark")                
                 tr.append(tdMark)
-                people.append(tr)
+
+                if (otherPerson.PersonType == "test") {
+                    peopleTest.append(tr)
+                } else {
+                    peopleDev.append(tr)
+                }                
             }
         }
     }
@@ -316,7 +503,7 @@ $(document).ready(function () {
 
     $('#show-votes').click(function () {
         let message = {
-            verb: "ShowVotes"
+            verb: "ForceShowVotes"
         }
 
         let messageAsString = JSON.stringify(message)

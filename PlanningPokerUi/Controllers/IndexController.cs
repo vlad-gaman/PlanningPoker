@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using PlanningPokerUi.Models;
 using PlanningPokerUi.Services;
-using PlanningPokerUi.ViewModels;
 using System;
 
 namespace PlanningPokerUi.Controllers
@@ -10,11 +10,13 @@ namespace PlanningPokerUi.Controllers
     {
         private readonly RoomsManagerService _roomsManagerService;
         private readonly PeopleManagerService _peopleManagerService;
+        private readonly RoomsMessageService _roomsMessageService;
 
-        public IndexController(RoomsManagerService roomsManagerService, PeopleManagerService peopleManagerService)
+        public IndexController(RoomsManagerService roomsManagerService, PeopleManagerService peopleManagerService, RoomsMessageService roomsMessageService)
         {
             _roomsManagerService = roomsManagerService;
             _peopleManagerService = peopleManagerService;
+            _roomsMessageService = roomsMessageService;
         }
 
         public IActionResult Index()
@@ -25,14 +27,16 @@ namespace PlanningPokerUi.Controllers
         [HttpPost("CreateRoom")]
         public IActionResult CreateRoom([FromForm] FormViewModel formViewModel)
         {
-            var existingPerson = _peopleManagerService.GetPerson(HttpContext);
-            existingPerson.CopyFrom(formViewModel);
+            var newPerson = _peopleManagerService.CreatePerson(HttpContext);
+            newPerson.CopyFrom(formViewModel);
 
-            var guid = _roomsManagerService.CreateRoom(existingPerson, formViewModel.UseFunRoomName);
+            var guid = _roomsManagerService.CreateRoom(newPerson, formViewModel.UseFunRoomName);
             if (string.IsNullOrEmpty(guid))
             {
                 return Conflict();
             }
+
+            _roomsMessageService.SetupHealthCheck(guid);
 
             return RedirectPermanent($"/Room/{guid}");
         }

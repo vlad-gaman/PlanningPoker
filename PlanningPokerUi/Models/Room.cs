@@ -9,14 +9,16 @@ namespace PlanningPokerUi.Models
     {
         private readonly ConcurrentDictionary<Guid, Person> _people;
         private readonly ConcurrentDictionary<Guid, string> _votes;
-        public readonly MyTimer Timer;
+        public readonly MyTimer VotingTimer;
+        public readonly MyTimer HealthCheckTimer;
         public VoteResultInfo VoteResultInfo { get; private set; }
 
         public Room(Person person)
         {
             _people = new ConcurrentDictionary<Guid, Person>();
             _votes = new ConcurrentDictionary<Guid, string>();
-            Timer = new MyTimer(1000);
+            VotingTimer = new MyTimer(1000);
+            HealthCheckTimer = new MyTimer(5000);
             AddPerson(person);
         }
 
@@ -59,7 +61,7 @@ namespace PlanningPokerUi.Models
         {
             _votes.Clear();
             VoteResultInfo = null;
-            Timer.ClearElapsed();
+            VotingTimer.ClearElapsed();
         }
 
         public bool IsVotingEnabled()
@@ -73,28 +75,47 @@ namespace PlanningPokerUi.Models
             {
                 _people.TryGetValue(p.Key, out var person);
                 return !person.IsObserver;
-            }).Select(p => new Vote()
+            }).Select(p =>
             {
-                Guid = p.Key, 
-                Mark = p.Value
+                _people.TryGetValue(p.Key, out var person);
+                return new Vote()
+                {
+                    Guid = p.Key,
+                    Mark = p.Value,
+                    PersonType = person.PersonType
+                };
             });
+        }
+
+        public IEnumerable<Person> GetNotConnected()
+        {
+            return _people.Values.Where(p => !p.IsConnected);
+        }
+
+        public IEnumerable<Person> AllPeople()
+        {
+            return _people.Values;
         }
 
         public VoteResultInfo GenerateResultsAndStatistics()
         {
             var votes = AllVotes();
-            var groupedVotes = votes.GroupBy(p => p.Mark).Select(group => new MarkPercentage
-            {
-                Mark = group.Key,
-                Percentage = (group.Count() / (decimal)votes.Count()) * 100
-            });
+            var groupedVotes = GroupVotes(votes);
+            var groupedVotesDev = GroupVotes(votes.Where(v => v.PersonType == "dev"));
+            var groupedVotesTest = GroupVotes(votes.Where(v => v.PersonType == "test"));
+
             var valueMarks = votes.Where(a =>
             {
                 return decimal.TryParse(a.Mark, out _);
             });
 
             var maxPercent = groupedVotes.OrderByDescending(a => a.Percentage).FirstOrDefault();
-            var otherHighestVote = groupedVotes.FirstOrDefault(a => a.Percentage == maxPercent.Percentage && a.Mark != maxPercent.Mark);
+            var maxPercentDev = groupedVotesDev.OrderByDescending(a => a.Percentage).FirstOrDefault();
+            var maxPercentTest = groupedVotesTest.OrderByDescending(a => a.Percentage).FirstOrDefault();
+
+            var otherHighestVote = GetOtherHighestVote(groupedVotes, maxPercent);
+            var otherHighestVoteDev = GetOtherHighestVote(groupedVotesDev, maxPercentDev);
+            var otherHighestVoteTest = GetOtherHighestVote(groupedVotesTest, maxPercentTest);
 
             VoteResultInfo = new VoteResultInfo()
             {
@@ -102,28 +123,65 @@ namespace PlanningPokerUi.Models
                 Votes = votes.ToList(),
                 Statistics = new Statistics()
                 {
-                    Marks = groupedVotes.OrderBy(a =>
-                    {
-                        if (decimal.TryParse(a.Mark, out var markDecimal))
-                        {
-                            return markDecimal;
-                        }
-                        else if (a.Mark == "?")
-                        {
-                            return 101;
-                        }
-                        else if (a.Mark == "coffee")
-                        {
-                            return 102;
-                        }
-                        return 103;
-                    }).ToList(),
-                    HighestMark = otherHighestVote == null ? maxPercent?.Mark : null,
-                    AverageMark = valueMarks.Any() ? (decimal?)valueMarks.Average(a => decimal.Parse(a.Mark)) : null,
+                    Marks = GetMarksOrdered(groupedVotes),
+                    HighestMark = GetHighestMark(maxPercent, otherHighestVote),
+                    AverageMark = GetAverageMark(valueMarks),
+
+                    MarksDev = GetMarksOrdered(groupedVotesDev),
+                    HighestMarkDev = GetHighestMark(maxPercentDev, otherHighestVoteDev),
+                    AverageMarkDev = GetAverageMark(valueMarks.Where(v => v.PersonType == "dev")),
+
+                    MarksTest = GetMarksOrdered(groupedVotesTest),
+                    HighestMarkTest = GetHighestMark(maxPercentTest, otherHighestVoteTest),
+                    AverageMarkTest = GetAverageMark(valueMarks.Where(v => v.PersonType == "test"))
                 }
             };
 
             return VoteResultInfo;
+        }
+
+        private static MarkPercentage GetOtherHighestVote(IEnumerable<MarkPercentage> groupedVotes, MarkPercentage maxPercent)
+        {
+            return groupedVotes.FirstOrDefault(a => a.Percentage == maxPercent.Percentage && a.Mark != maxPercent.Mark);
+        }
+
+        private static string GetHighestMark(MarkPercentage maxPercent, MarkPercentage otherHighestVote)
+        {
+            return otherHighestVote == null ? maxPercent?.Mark : null;
+        }
+
+        private static decimal? GetAverageMark(IEnumerable<Vote> valueMarks)
+        {
+            return valueMarks.Any() ? (decimal?)valueMarks.Average(a => decimal.Parse(a.Mark)) : null;
+        }
+
+        private static List<MarkPercentage> GetMarksOrdered(IEnumerable<MarkPercentage> groupedVotes)
+        {
+            return groupedVotes.OrderBy(a =>
+            {
+                if (decimal.TryParse(a.Mark, out var markDecimal))
+                {
+                    return markDecimal;
+                }
+                else if (a.Mark == "?")
+                {
+                    return 101;
+                }
+                else if (a.Mark == "coffee")
+                {
+                    return 102;
+                }
+                return 103;
+            }).ToList();
+        }
+
+        private static IEnumerable<MarkPercentage> GroupVotes(IEnumerable<Vote> votes)
+        {
+            return votes.GroupBy(p => p.Mark).Select(group => new MarkPercentage
+            {
+                Mark = group.Key,
+                Percentage = (group.Count() / (decimal)votes.Count()) * 100
+            });
         }
 
         public VoteResultInfo GetCurrentStatus()
@@ -141,7 +199,7 @@ namespace PlanningPokerUi.Models
                     Mark = "hide"
                 }).ToList(),
                 HasEveryoneVoted = DidEveryoneVote(),
-                Countdown = Timer.Countdown
+                Countdown = VotingTimer.Countdown
             };
         }
 
@@ -154,7 +212,7 @@ namespace PlanningPokerUi.Models
 
             var mark = AllVotes().FirstOrDefault(t => t.Guid == guid);
 
-            return mark == default(Vote) ? null: new Vote()
+            return mark == default(Vote) ? null : new Vote()
             {
                 Guid = guid,
                 Mark = "hide"

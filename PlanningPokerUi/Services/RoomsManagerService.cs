@@ -71,7 +71,7 @@ namespace PlanningPokerUi.Services
         {
             if (_rooms.TryGetValue(guid, out Room room))
             {
-                room.RemovePerson(person);             
+                room.RemovePerson(person);
             }
         }
     }

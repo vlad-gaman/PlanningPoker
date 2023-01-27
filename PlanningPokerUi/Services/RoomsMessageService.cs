@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json;
 using PlanningPokerUi.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -49,27 +47,34 @@ namespace PlanningPokerUi.Services
 
             var person = _peopleManagerService.GetPerson(httpContext);
             var room = _roomsManagerService.GetRoom(person);
-            if (room != null)
-            {
-                if (person.WebSocket != null && person.WebSocket == webSocket)
-                {
-                    _roomsManagerService.ExitRoom(person, room.Guid);
-                }
-                var otherPeople = room.GetPeople().Except(new List<Person>() { person });
-
-                messageToSend = new Message()
-                {
-                    Verb = "Exited",
-                    Object = person
-                };
-                await SendMessageToAll(messageToSend, otherPeople);
-
-                if (room.IsVotingEnabled() && room.DidEveryoneVote())
-                {
-                    await ShowVotesAndStatistics(room);
-                }
-            }
+            await PersonExit(webSocket, person, room);
             await base.OnDisconnectedAsync(webSocket, httpContext);
+        }
+
+        private async Task PersonExit(WebSocket webSocket, Person person, Room room)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            if (person.WebSocket != null && person.WebSocket == webSocket)
+            {
+                _roomsManagerService.ExitRoom(person, room.Guid);
+            }
+            var otherPeople = room.GetPeople().Except(new List<Person>() { person });
+
+            var messageToSend = new Message()
+            {
+                Verb = "Exited",
+                Object = person
+            };
+            await SendMessageToAll(messageToSend, otherPeople);
+
+            if (room.IsVotingEnabled() && room.DidEveryoneVote())
+            {
+                await ShowVotesAndStatisticsWithTimer(room);
+            }
         }
 
         public override async Task ReceiveAsync(HttpContext httpContext, WebSocket webSocket, WebSocketReceiveResult result, byte[] buffer)
@@ -126,13 +131,13 @@ namespace PlanningPokerUi.Services
 
                         if (room.IsVotingEnabled() && !person.IsObserver)
                         {
-                            room.Timer.ClearElapsed();
+                            room.VotingTimer.ClearElapsed();
                             messageToSend = new Message()
                             {
                                 Verb = "Countdown",
                                 Object = new
                                 {
-                                    Countdown = room.Timer.Countdown,
+                                    Countdown = room.VotingTimer.Countdown,
                                     Reset = true
                                 }
                             };
@@ -159,8 +164,8 @@ namespace PlanningPokerUi.Services
 
                         if (room.DidEveryoneVote())
                         {
-                            await ShowVotesAndStatistics(room);
-                        }                        
+                            await ShowVotesAndStatisticsWithTimer(room);
+                        }
                     }
                     break;
                 case "ClearVotes":
@@ -182,6 +187,14 @@ namespace PlanningPokerUi.Services
 
                     if (room.IsVotingEnabled())
                     {
+                        await ShowVotesAndStatisticsWithTimer(room);
+                    }
+                    break;
+                case "ForceShowVotes":
+                    person = _peopleManagerService.GetPerson(httpContext);
+                    room = _roomsManagerService.GetRoom(person);
+                    if (room.IsVotingEnabled())
+                    {
                         await ShowVotesAndStatistics(room);
                     }
                     break;
@@ -189,9 +202,9 @@ namespace PlanningPokerUi.Services
                     person = _peopleManagerService.GetPerson(httpContext);
                     room = _roomsManagerService.GetRoom(person);
 
-                    var dynObj = message.Object as dynamic;
+                    var isObserverObj = message.Object as dynamic;
 
-                    person.IsObserver = dynObj.IsObserver;
+                    person.IsObserver = isObserverObj.IsObserver;
 
                     messageToSend = new Message()
                     {
@@ -209,55 +222,89 @@ namespace PlanningPokerUi.Services
                     {
                         if (room.DidEveryoneVote())
                         {
-                            await ShowVotesAndStatistics(room);
-                        }                         
+                            await ShowVotesAndStatisticsWithTimer(room);
+                        }
                         else
                         {
-                            room.Timer.ClearElapsed();
+                            room.VotingTimer.ClearElapsed();
                         }
                     }
+                    break;
+                case "PersonTypeChange":
+                    person = _peopleManagerService.GetPerson(httpContext);
+                    room = _roomsManagerService.GetRoom(person);
+
+                    var personTypeObj = message.Object as dynamic;
+
+                    person.PersonType = personTypeObj.PersonType;
+
+                    messageToSend = new Message()
+                    {
+                        Verb = "PersonTypeChange",
+                        Object = new
+                        {
+                            Person = person,
+                            VoteResultInfo = room.GetCurrentStatus()
+                        }
+                    };
+
+                    await SendMessageToAll(messageToSend, room);
+
+                    if (room.IsVotingEnabled())
+                    {
+                        if (room.DidEveryoneVote())
+                        {
+                            await ShowVotesAndStatisticsWithTimer(room);
+                        }
+                        else
+                        {
+                            room.VotingTimer.ClearElapsed();
+                        }
+                    }
+                    break;
+                case "Healthy":
+                    person = _peopleManagerService.GetPerson(httpContext);
+                    person.IsConnected = true;
                     break;
             }
         }
 
-        private async Task ShowVotesAndStatistics(Room room)
+        private async Task ShowVotesAndStatisticsWithTimer(Room room)
         {
             var sendMessage = new ElapsedEventHandler(async (sender, e) =>
             {
-                Message messageToSend;
-                if (room.Timer.Countdown == 0)
+                if (room.VotingTimer.Countdown == 0)
                 {
-                    room.Timer.ClearElapsed();
-                    messageToSend = new Message()
-                    {
-                        Verb = "ShowVotes",
-                        Object = room.GenerateResultsAndStatistics()
-                    };
+                    await ShowVotesAndStatistics(room);
                 }
                 else
                 {
-                    messageToSend = new Message()
-                    {
-                        Verb = "Countdown",
-                        Object = new
-                        {
-                            Countdown = room.Timer.Countdown,
-                            Reset = false
-                        }
-                    };
+                    await SendCountdown(room);
                 }
-
-                await SendMessageToAll(messageToSend, room);
             });
 
-            room.Timer.SetElapsed(sendMessage);
+            room.VotingTimer.SetElapsed(sendMessage);
+            await SendCountdown(room);
+        }
 
+        private async Task ShowVotesAndStatistics(Room room)
+        {
+            room.VotingTimer.ClearElapsed();
             await SendMessageToAll(new Message()
+            {
+                Verb = "ShowVotes",
+                Object = room.GenerateResultsAndStatistics()
+            }, room);
+        }
+
+        private Task SendCountdown(Room room)
+        {
+            return SendMessageToAll(new Message()
             {
                 Verb = "Countdown",
                 Object = new
                 {
-                    Countdown = room.Timer.Countdown,
+                    Countdown = room.VotingTimer.Countdown,
                     Reset = false
                 }
             }, room);
@@ -279,6 +326,35 @@ namespace PlanningPokerUi.Services
             }
 
             return Task.WhenAll(tasks);
+        }
+
+        public void SetupHealthCheck(string roomGuid)
+        {
+            var room = _roomsManagerService.GetRoom(roomGuid);
+
+            var sendMessage = new ElapsedEventHandler(async (sender, e) =>
+            {
+                foreach (var p in room.GetNotConnected())
+                {
+                    await PersonExit(p.WebSocket, p, room);
+                    await _webSocketManagerService.RemoveWebSocket(p.Guid);
+                }
+
+                foreach (var p in room.AllPeople())
+                {
+                    p.IsConnected = false;
+                }
+
+                Message messageToSend = new Message()
+                {
+                    Verb = "HealthCheck"
+                };
+
+
+                await SendMessageToAll(messageToSend, room);
+            });
+
+            room.HealthCheckTimer.SetElapsed(sendMessage);
         }
     }
 }

@@ -8,7 +8,6 @@ using PlanningPokerUi.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace PlanningPokerUi
 {
@@ -24,11 +23,13 @@ namespace PlanningPokerUi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddTransient<SessionMiddleware>()
+            services.AddScoped<SessionMiddleware>()
+                    .AddScoped<WebSocketMiddleware>()
+
+                    .AddSingleton<WebSocketHandlerService, RoomsMessageService>()
+                    .AddSingleton<RoomsMessageService>(s => s.GetRequiredService<WebSocketHandlerService>() as RoomsMessageService)
                     .AddSingleton<PeopleManagerService>()
                     .AddSingleton<WebSocketManagerService>()
-                    .AddSingleton<WebSocketHandlerService, RoomsMessageService>()
-                    .AddSingleton<WebSocketMiddleware>()
                     .AddSingleton<RoomsManagerService>();
             ReadCsvInto("AgeAdjectives", RoomNameGenerator.AgeAdjectives);
             ReadCsvInto("ColourAdjectives", RoomNameGenerator.ColourAdjectives);
@@ -79,7 +80,7 @@ namespace PlanningPokerUi
             }
 
             app.UseSession();
-            
+
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -87,7 +88,7 @@ namespace PlanningPokerUi
             app.UseAuthorization();
             var webSocketOptions = new WebSocketOptions()
             {
-                KeepAliveInterval = TimeSpan.FromSeconds(120),                
+                KeepAliveInterval = TimeSpan.FromSeconds(120),
             };
             app.UseWebSockets(webSocketOptions);
             app.UseMiddleware<SessionMiddleware>();

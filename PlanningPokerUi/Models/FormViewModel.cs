@@ -8,5 +8,6 @@ namespace PlanningPokerUi.Models
         public bool IsObserver { get; set; }
         public string RoomName { get; set; }
         public bool UseFunRoomName { get; set; }
+        public string PersonType { get; set; }
     }
 }

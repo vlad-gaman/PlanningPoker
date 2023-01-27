@@ -14,6 +14,10 @@
         <input id="show-votes" type="button" value="Show votes" />
         <label for="isObserver" class="m-1 noselect">Observer?:</label>
         <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true" @(Model.Person.IsObserver ? "checked='checked'" : "") />
+        <label for="isDev" class="m-1 noselect">Dev?:</label>
+        <input type="radio" id="isDev" name="personType" class="m-1" value="dev" @(Model.Person.PersonType == "dev" ? "checked='checked'" : "") />
+        <label for="isTest" class="m-1 noselect">Tester?:</label>
+        <input type="radio" id="isTest" name="personType" class="m-1" value="test" @(Model.Person.PersonType == "test" ? "checked='checked'" : "") />
     </div>
     <div class="table form-row align-items-center noselect">
         <span>
@@ -72,8 +76,14 @@
     <div class="row">
         <div class="col-sm-12 col-md-6">
             <div class="form-row">
+                <span class="col-1">Developers</span>
                 <table class="table">
-                    <tbody id="people">
+                    <tbody id="people-dev">
+                    </tbody>
+                </table>
+                <span class="col-1">Testers</span>
+                <table class="table">
+                    <tbody id="people-test">
                     </tbody>
                 </table>
                 <span class="col-1">Observers</span>
@@ -88,9 +98,16 @@
                 <div><span>Showing results in </span><span id="countdown"></span><span>!</span></div>
             </div>
             <div id="statistics" class="form-row">
-                <canvas id="myChart"></canvas>
-                <div><span>Average: </span><span id="averageMark"></span></div>
-            </div>
+                <div><span>All votes</span></div>
+                <canvas id="allChart"></canvas>
+                <div><span>Average: </span><span id="allAverageMark"></span></div>
+                <div><span>Developers votes</span></div>
+                <canvas id="devChart"></canvas>
+                <div><span>Average: </span><span id="devAverageMark"></span></div>
+                <div><span>Testers votes</span></div>
+                <canvas id="testChart"></canvas>                
+                <div><span>Average: </span><span id="testAverageMark"></span></div>
+            </div>            
         </div>
     </div>
 </div>
