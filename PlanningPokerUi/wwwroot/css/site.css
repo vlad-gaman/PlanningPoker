@@ -122,3 +122,20 @@ table.table tr > td {
 #show-votes-countdown {
     font-weight: bold;
 }
+
+div.fireworks {
+    z-index: -1;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+div.main {
+    z-index: 2;
+}
+
+div.main > * {
+    z-index: 2;
+}

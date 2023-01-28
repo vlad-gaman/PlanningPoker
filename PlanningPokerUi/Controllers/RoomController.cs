@@ -19,30 +19,29 @@ namespace PlanningPokerUi.Controllers
 
         public IActionResult Room(string guid, FormViewModel formViewModel = null)
         {
-            var existingPerson = _peopleManagerService.GetPerson(HttpContext);
+            var person = _peopleManagerService.GetPerson(HttpContext);
             if (!string.IsNullOrWhiteSpace(formViewModel.Name))
             {
-                existingPerson.CopyFrom(formViewModel);
+                person = _peopleManagerService.CreatePerson(HttpContext);
+                person.CopyFrom(formViewModel);
             }
 
             if (_roomsService.DoesRoomExist(guid))
             {
-                if (existingPerson != null)
+                if (person != null)
                 {
                     return View("Room", new RoomViewModel()
                     {
                         Guid = guid,
-                        Person = existingPerson
+                        Person = person
                     });
                 }
                 else
                 {
-                    var newPerson = _peopleManagerService.CreatePerson(HttpContext);
-
                     return View("RoomJoin", new RoomJoinModel()
                     {
                         Guid = guid,
-                        Person = newPerson
+                        Person = person
                     });
                 }
             }

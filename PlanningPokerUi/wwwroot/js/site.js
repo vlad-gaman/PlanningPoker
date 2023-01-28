@@ -7,29 +7,17 @@ let webSocket
 let allChart
 let devChart
 let testChart
+let fw
 
-let createWebSocket = function (hostname, port, guid) {
+let createWebSocket = function (hostname, port, protocol, guid) {
     let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
-    let ws;
-    try {
-        ws = new WebSocket("ws://" + uri)
-    }
-    catch (err) {
-        ws = new WebSocket("wss://" + uri)
-    }
-
-    if (ws.readyState == ws.OPEN) {
-        return ws
-    }
-    else {
-        ws = new WebSocket("wss://" + uri)
-        return ws;
-    }
-
+    let wsProtocol = protocol.startsWith("https") ? "wss" : "ws";
+    let ws = new WebSocket(wsProtocol + "://" + uri);
+    return ws;
 }
 
 let connectToRoom = function (guid, personGuid) {
-    webSocket = createWebSocket(window.location.hostname, window.location.port, guid);
+    webSocket = createWebSocket(window.location.hostname, window.location.port, window.location.protocol, guid);
     webSocket.bufferedAmount = 1024 * 20;
     personId = personGuid
 
@@ -400,6 +388,18 @@ let setStatistics = function (statistics) {
     testChart.data.datasets[0].data = percentagesTest
     testChart.data.datasets[0].backgroundColor = colorsTest
     testChart.update()
+
+    if (statistics.Marks[0].Percentage == 100) {
+        let c = 0;
+        let interval = setInterval(function ()
+        {
+            c++;
+            fw.launch(10)
+            if (c >= 10) {
+                clearInterval(interval);
+            }
+        }, 1000)        
+    }
 }
 
 let setVoteResultInfo = function (voteResultInfo) {
@@ -512,4 +512,7 @@ $(document).ready(function () {
 
     $("#statistics").hide();
     $("#show-votes-countdown").hide();
+       
+
+    fw = new Fireworks.default($('.fireworks')[0])
 })

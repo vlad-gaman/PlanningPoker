@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using PlanningPokerUi.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -99,6 +100,7 @@ namespace PlanningPokerUi.Services
                 case "Join":
                     person = _peopleManagerService.GetPerson(httpContext);
                     person.WebSocket = webSocket;
+                    person.IsConnected = true;
                     var roomGuid = message.Object as string;
 
                     var isSuccessful = !string.IsNullOrWhiteSpace(person.Name) && _roomsManagerService.JoinRoom(person, roomGuid, out room);
@@ -336,8 +338,12 @@ namespace PlanningPokerUi.Services
             {
                 foreach (var p in room.GetNotConnected())
                 {
-                    await PersonExit(p.WebSocket, p, room);
-                    await _webSocketManagerService.RemoveWebSocket(p.Guid);
+                    try
+                    {
+                        await PersonExit(p.WebSocket, p, room);
+                        await _webSocketManagerService.RemoveWebSocket(p.Guid);
+                    }
+                    catch (Exception) {}
                 }
 
                 foreach (var p in room.AllPeople())
