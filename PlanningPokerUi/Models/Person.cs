@@ -8,7 +8,6 @@ namespace PlanningPokerUi.Models
     {
         public Guid Guid { get; set; }
         public string Name { get; set; }
-        public bool IsObserver { get; set; }
         public string PersonType { get; set; }
         [JsonIgnore]
         public WebSocket WebSocket { get; set; }
@@ -18,7 +17,6 @@ namespace PlanningPokerUi.Models
         public void CopyFrom(FormViewModel formViewModel)
         {
             Name = formViewModel.Name;
-            IsObserver = formViewModel.IsObserver;
             PersonType = formViewModel.PersonType;
         }
     }

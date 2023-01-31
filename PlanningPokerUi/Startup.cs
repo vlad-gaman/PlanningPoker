@@ -23,7 +23,7 @@ namespace PlanningPokerUi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<SessionMiddleware>()
+            services
                     .AddScoped<WebSocketMiddleware>()
 
                     .AddSingleton<WebSocketHandlerService, RoomsMessageService>()
@@ -91,7 +91,6 @@ namespace PlanningPokerUi
                 KeepAliveInterval = TimeSpan.FromSeconds(120),
             };
             app.UseWebSockets(webSocketOptions);
-            app.UseMiddleware<SessionMiddleware>();
             app.Map("/ws", _app => _app.UseMiddleware<WebSocketMiddleware>());
 
             app.UseEndpoints(endpoints =>

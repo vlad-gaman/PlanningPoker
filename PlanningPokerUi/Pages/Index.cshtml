@@ -4,23 +4,19 @@
     ViewData["Title"] = "Planning Poker";
 }
 
-<div class="text-center align-items-start">    
+<div class="text-center align-items-start">
     <form id="createRoom" asp-controller="Index">
         <div class="form-row align-items-center">
             <label for="name" class="m-1 noselect">Your Name:</label>
             <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
-            <label for="isObserver" class="m-1 noselect">Observer?:</label>
-            <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true"/>
-        </div>
-        <div class="form-row align-items-center">
-            <label for="isDev" class="m-1 noselect">Dev?:</label>
-            <input type="radio" id="isDev" name="personType" class="m-1" value="dev" />
-            <label for="isTest" class="m-1 noselect">Tester?:</label>
-            <input type="radio" id="isTest" name="personType" class="m-1" value="test" />
+
+            @{
+                await Html.RenderPartialAsync("_PersonType", Model?.Person?.PersonType);
+            }
         </div>
         <div class="form-row align-items-center">
             <label for="useFunRoomName" class="m-1 noselect">Use fun room name?:</label>
-            <input type="checkbox" id="useFunRoomName" name="useFunRoomName" class="m-1" value="true" />            
+            <input type="checkbox" id="useFunRoomName" name="useFunRoomName" class="m-1" value="true" />
         </div>
         <div class="form-row align-items-center">
             <span class="m-1" style="font-weight: bold">Caution! It may generate weird names!!!</span>

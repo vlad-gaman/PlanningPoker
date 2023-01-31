@@ -12,14 +12,9 @@
             <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
         </div>
         <div class="form-row align-items-center">
-            <label for="isObserver" class="m-1 noselect">Observer?:</label>
-            <input type="checkbox" id="isObserver" name="isObserver" class="m-1" value="true" />
-        </div>
-        <div class="form-row align-items-center">
-            <label for="isDev" class="m-1 noselect">Dev?:</label>
-            <input type="radio" id="isDev" name="personType" class="m-1" value="dev" />
-            <label for="isTest" class="m-1 noselect">Tester?:</label>
-            <input type="radio" id="isTest" name="personType" class="m-1" value="test" />
+            @{
+                await Html.RenderPartialAsync("_PersonType", Model?.Person?.PersonType);
+            }
         </div>
         <div class="form-row align-items-center">
             <input type="hidden" id="roomName" name="roomName" class="m-1" value="@Model.Guid" />

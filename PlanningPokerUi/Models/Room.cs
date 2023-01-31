@@ -54,7 +54,7 @@ namespace PlanningPokerUi.Models
 
         public bool DidEveryoneVote()
         {
-            return !_people.Any(p => !p.Value.IsObserver && !_votes.ContainsKey(p.Key));
+            return !_people.Any(p => p.Value.PersonType != "obs" && !_votes.ContainsKey(p.Key));
         }
 
         public void ClearVotes()
@@ -74,7 +74,7 @@ namespace PlanningPokerUi.Models
             return _votes.Where(p =>
             {
                 _people.TryGetValue(p.Key, out var person);
-                return !person.IsObserver;
+                return person.PersonType != "obs";
             }).Select(p =>
             {
                 _people.TryGetValue(p.Key, out var person);

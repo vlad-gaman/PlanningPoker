@@ -139,3 +139,17 @@ div.main {
 div.main > * {
     z-index: 2;
 }
+
+input[type='radio'][name='personType'] {
+    display: none;
+}
+
+input[type='radio'][name='personType'] + label {
+    padding: 2px 4px;
+    border: 1px solid black;
+    border-radius: 2px;
+}
+
+input[type='radio'][name='personType']:checked + label {
+    background-color: lightgray;
+}

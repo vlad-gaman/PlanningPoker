@@ -1,0 +1,8 @@
+﻿@model string
+
+<input type="radio" id="isDev" name="personType" class="m-1" value="dev" @((Model == "dev" || string.IsNullOrWhiteSpace(Model)) ? "checked='checked'" : "") />
+<label for="isDev" class="m-1 noselect">Dev</label>
+<input type="radio" id="isTest" name="personType" class="m-1" value="test" @(Model == "test" ? "checked='checked'" : "") />
+<label for="isTest" class="m-1 noselect">Tester</label>
+<input type="radio" id="isObserver" name="personType" class="m-1" value="obs" @(Model == "obs" ? "checked='checked'" : "") />
+<label for="isObserver" class="m-1 noselect">Observer</label>

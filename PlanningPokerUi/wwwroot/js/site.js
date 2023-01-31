@@ -7,7 +7,8 @@ let webSocket
 let allChart
 let devChart
 let testChart
-let fw
+let fireWorks
+let fireWorksInterval
 
 let createWebSocket = function (hostname, port, protocol, guid) {
     let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
@@ -61,14 +62,13 @@ let connectToRoom = function (guid, personGuid) {
                     setVotes([object.Vote])
                 }
 
-                if (!object.IsObserver) {
-                    if (object.PersonType == "test") {
-                        $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
-                    } else {
-                        $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
-                    }
-                } else {
+                if (object.PersonType == "test") {
+                    $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
+                }
+                else if (object.PersonType == "obs") {
                     $('#observers').append($('#observers > tr').sort(sortByIdProp))
+                } else {
+                    $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
                 }
                 break
             case "Exited":
@@ -81,7 +81,7 @@ let connectToRoom = function (guid, personGuid) {
                 $("#" + object + " .mark").text("\u25AE")
                 break
             case "ShowVotes":
-                setVoteResultInfo(object)                
+                setVoteResultInfo(object)
                 break
             case "ClearVote":
                 $("#statistics").hide();
@@ -119,7 +119,7 @@ let connectToRoom = function (guid, personGuid) {
                 $("#" + object.Person.Guid).remove()
                 addPeopleToTable([object.Person])
                 setVoteResultInfo(object.VoteResultInfo)
-                break            
+                break
             case "HealthCheck":
                 let message = {
                     verb: "Healthy"
@@ -130,18 +130,6 @@ let connectToRoom = function (guid, personGuid) {
                 break
         }
     }
-
-    $("#isObserver").change(function () {
-        let message = {
-            Verb: "ObserverChange",
-            Object: {
-                IsObserver: this.checked
-            }
-        }
-
-        let messageAsString = JSON.stringify(message)
-        webSocket.send(messageAsString)
-    })
 
     $("input[type=radio][name=personType]").change(function () {
         let message = {
@@ -155,158 +143,62 @@ let connectToRoom = function (guid, personGuid) {
         webSocket.send(messageAsString)
     })
 
-    allChart = new Chart("allChart", {
-        type: "bar",
-        data: {
-            labels: [],
-            datasets: [{
-                backgroundColor: [],
-                data: []
-            }]
-        },
-        options: {
-            tooltips: {
-                callbacks: {
-                    label: function (tooltipItem, data) {
-                        return tooltipItem.value + "%";
-                    }
-                }
-            },
-            legend: {
-                display: false
-            },
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true,
-                        suggestedMax: 100,
-                        display: false
-                    },
-                    gridLines: {
-                        display: false
-                    }
-                }],
-                xAxes: [{
-                    ticks: {
-                        fontSize: 16,
-                        callback: function (value) {
-                            if (value == '0.5') {
-                                return '\u00BD'
-                            } else if (value == 'coffee') {
-                                return '\u2615'
-                            }
-                            return value
-                        }
-                    },
-                    gridLines: {
-                        display: false
-                    }
+    let createChart = function (name) {
+        return new Chart(name, {
+            type: "bar",
+            data: {
+                labels: [],
+                datasets: [{
+                    backgroundColor: [],
+                    data: []
                 }]
-            }            
-        }
-    })
-
-    devChart = new Chart("devChart", {
-        type: "bar",
-        data: {
-            labels: [],
-            datasets: [{
-                backgroundColor: [],
-                data: []
-            }]
-        },
-        options: {
-            tooltips: {
-                callbacks: {
-                    label: function (tooltipItem, data) {
-                        return tooltipItem.value + "%";
-                    }
-                }
             },
-            legend: {
-                display: false
-            },
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true,
-                        suggestedMax: 100,
-                        display: false
-                    },
-                    gridLines: {
-                        display: false
-                    }
-                }],
-                xAxes: [{
-                    ticks: {
-                        fontSize: 16,
-                        callback: function (value) {
-                            if (value == '0.5') {
-                                return '\u00BD'
-                            } else if (value == 'coffee') {
-                                return '\u2615'
-                            }
-                            return value
+            options: {
+                tooltips: {
+                    callbacks: {
+                        label: function (tooltipItem, data) {
+                            return tooltipItem.value + "%";
                         }
-                    },
-                    gridLines: {
-                        display: false
                     }
-                }]
+                },
+                legend: {
+                    display: false
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            suggestedMax: 100,
+                            display: false
+                        },
+                        gridLines: {
+                            display: false
+                        }
+                    }],
+                    xAxes: [{
+                        ticks: {
+                            fontSize: 16,
+                            callback: function (value) {
+                                if (value == '0.5') {
+                                    return '\u00BD'
+                                } else if (value == 'coffee') {
+                                    return '\u2615'
+                                }
+                                return value
+                            }
+                        },
+                        gridLines: {
+                            display: false
+                        }
+                    }]
+                }
             }
-        }
-    })
+        })
+    }
 
-    testChart = new Chart("testChart", {
-        type: "bar",
-        data: {
-            labels: [],
-            datasets: [{
-                backgroundColor: [],
-                data: []
-            }]
-        },
-        options: {
-            tooltips: {
-                callbacks: {
-                    label: function (tooltipItem, data) {
-                        return tooltipItem.value + "%";
-                    }
-                }
-            },
-            legend: {
-                display: false
-            },
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true,
-                        suggestedMax: 100,
-                        display: false
-                    },
-                    gridLines: {
-                        display: false
-                    }
-                }],
-                xAxes: [{
-                    ticks: {
-                        fontSize: 16,
-                        callback: function (value) {
-                            if (value == '0.5') {
-                                return '\u00BD'
-                            } else if (value == 'coffee') {
-                                return '\u2615'
-                            }
-                            return value
-                        }
-                    },
-                    gridLines: {
-                        display: false
-                    }
-                }]
-            }
-        }
-    })
+    allChart = createChart("allChart")
+    devChart = createChart("devChart")
+    testChart = createChart("testChart")
 }
 
 let disableVoting = function (value) {
@@ -324,23 +216,15 @@ let sortByIdProp = function (a, b) {
     return 0;
 }
 
-let setStatistics = function (statistics) {
+let setIndividualStatistics = function (marks, highestMark, chart) {
     let labels = []
     let percentages = []
     let colors = []
 
-    let labelsDev = []
-    let percentagesDev = []
-    let colorsDev = []
-
-    let labelsTest = []
-    let percentagesTest = []
-    let colorsTest = []
-
-    for (let mark of statistics.Marks) {
+    for (let mark of marks) {
         labels.push(mark.Mark)
         percentages.push(mark.Percentage)
-        if (statistics.HighestMark == mark.Mark) {
+        if (highestMark == mark.Mark) {
             colors.push("green")
         }
         else {
@@ -348,57 +232,38 @@ let setStatistics = function (statistics) {
         }
     }
 
-    for (let mark of statistics.MarksDev) {
-        labelsDev.push(mark.Mark)
-        percentagesDev.push(mark.Percentage)
-        if (statistics.HighestMarkDev == mark.Mark) {
-            colorsDev.push("green")
-        }
-        else {
-            colorsDev.push("blue")
-        }
-    }
+    chart.data.labels = labels
+    chart.data.datasets[0].data = percentages
+    chart.data.datasets[0].backgroundColor = colors
+    chart.update()
+}
 
-    for (let mark of statistics.MarksTest) {
-        labelsTest.push(mark.Mark)
-        percentagesTest.push(mark.Percentage)
-        if (statistics.HighestMarkTest == mark.Mark) {
-            colorsTest.push("green")
-        }
-        else {
-            colorsTest.push("blue")
-        }
-    }
+let setStatistics = function (statistics) {
+    setIndividualStatistics(statistics.Marks, statistics.HighestMark, allChart)
+    setIndividualStatistics(statistics.MarksDev, statistics.HighestMarkDev, devChart)
+    setIndividualStatistics(statistics.MarksTest, statistics.HighestMarkTest, testChart)
 
     $("#allAverageMark").text(statistics.AverageMark)
     $("#devAverageMark").text(statistics.AverageMarkDev)
     $("#testAverageMark").text(statistics.AverageMarkTest)
 
-    allChart.data.labels = labels
-    allChart.data.datasets[0].data = percentages
-    allChart.data.datasets[0].backgroundColor = colors
-    allChart.update()
-
-    devChart.data.labels = labelsDev
-    devChart.data.datasets[0].data = percentagesDev
-    devChart.data.datasets[0].backgroundColor = colorsDev
-    devChart.update()
-
-    testChart.data.labels = labelsTest
-    testChart.data.datasets[0].data = percentagesTest
-    testChart.data.datasets[0].backgroundColor = colorsTest
-    testChart.update()
-
-    if (statistics.Marks[0].Percentage == 100) {
+    if (statistics.Marks[0].Percentage == 100 && statistics.Marks.length == 1) {
+        stopFireWorks();
         let c = 0;
-        let interval = setInterval(function ()
-        {
+        let fireWorksInterval = setInterval(function () {
             c++;
-            fw.launch(10)
+            fireWorks.launch(10)
             if (c >= 10) {
-                clearInterval(interval);
+                clearInterval(fireWorksInterval);
             }
-        }, 1000)        
+        }, 1000)
+    }
+}
+
+let stopFireWorks = function () {
+    fireWorks.stop()
+    if (fireWorksInterval) {
+        clearInterval(fireWorksInterval);
     }
 }
 
@@ -417,7 +282,7 @@ let setVoteResultInfo = function (voteResultInfo) {
         } else {
             $("#show-votes-countdown").hide();
         }
-        
+
     }
 }
 
@@ -445,7 +310,7 @@ let addPeopleToTable = function (otherPeople) {
     let peopleDev = $("#people-dev")
     let peopleTest = $("#people-test")
     let observers = $("#observers")
-    for (let otherPerson of otherPeople) {        
+    for (let otherPerson of otherPeople) {
         if (!($("#" + otherPerson.Guid)[0])) {
             let tr = $("<tr/>")
             tr.attr("id", otherPerson.Guid)
@@ -456,18 +321,18 @@ let addPeopleToTable = function (otherPeople) {
 
             tr.append(tdName)
 
-            if (otherPerson.IsObserver) {
+            if (otherPerson.PersonType == "obs") {
                 observers.append(tr)
             } else {
                 let tdMark = $("<td/>")
-                tdMark.attr("class", "mark")                
+                tdMark.attr("class", "mark")
                 tr.append(tdMark)
 
                 if (otherPerson.PersonType == "test") {
                     peopleTest.append(tr)
                 } else {
                     peopleDev.append(tr)
-                }                
+                }
             }
         }
     }
@@ -493,6 +358,7 @@ $(document).ready(function () {
     })
 
     $('#clear-votes').click(function () {
+        stopFireWorks();
         let message = {
             verb: "ClearVotes"
         }
@@ -502,6 +368,7 @@ $(document).ready(function () {
     })
 
     $('#show-votes').click(function () {
+        stopFireWorks();
         let message = {
             verb: "ForceShowVotes"
         }
@@ -512,7 +379,7 @@ $(document).ready(function () {
 
     $("#statistics").hide();
     $("#show-votes-countdown").hide();
-       
 
-    fw = new Fireworks.default($('.fireworks')[0])
+
+    fireWorks = new Fireworks.default($('.fireworks')[0])
 })

@@ -131,7 +131,7 @@ namespace PlanningPokerUi.Services
                         };
                         await SendMessageToAll(messageToSend, room, except: person);
 
-                        if (room.IsVotingEnabled() && !person.IsObserver)
+                        if (room.IsVotingEnabled() && person.PersonType != "obs")
                         {
                             room.VotingTimer.ClearElapsed();
                             messageToSend = new Message()
@@ -198,38 +198,6 @@ namespace PlanningPokerUi.Services
                     if (room.IsVotingEnabled())
                     {
                         await ShowVotesAndStatistics(room);
-                    }
-                    break;
-                case "ObserverChange":
-                    person = _peopleManagerService.GetPerson(httpContext);
-                    room = _roomsManagerService.GetRoom(person);
-
-                    var isObserverObj = message.Object as dynamic;
-
-                    person.IsObserver = isObserverObj.IsObserver;
-
-                    messageToSend = new Message()
-                    {
-                        Verb = "ObserverChange",
-                        Object = new
-                        {
-                            Person = person,
-                            VoteResultInfo = room.GetCurrentStatus()
-                        }
-                    };
-
-                    await SendMessageToAll(messageToSend, room);
-
-                    if (room.IsVotingEnabled())
-                    {
-                        if (room.DidEveryoneVote())
-                        {
-                            await ShowVotesAndStatisticsWithTimer(room);
-                        }
-                        else
-                        {
-                            room.VotingTimer.ClearElapsed();
-                        }
                     }
                     break;
                 case "PersonTypeChange":
@@ -343,7 +311,7 @@ namespace PlanningPokerUi.Services
                         await PersonExit(p.WebSocket, p, room);
                         await _webSocketManagerService.RemoveWebSocket(p.Guid);
                     }
-                    catch (Exception) {}
+                    catch (Exception) { }
                 }
 
                 foreach (var p in room.AllPeople())
