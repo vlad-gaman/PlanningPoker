@@ -8,7 +8,7 @@ let allChart
 let devChart
 let testChart
 let fireWorks
-let fireWorksInterval
+let fireWorksIntervals = []
 
 let createWebSocket = function (hostname, port, protocol, guid) {
     let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
@@ -247,22 +247,46 @@ let setStatistics = function (statistics) {
     $("#devAverageMark").text(statistics.AverageMarkDev)
     $("#testAverageMark").text(statistics.AverageMarkTest)
 
-    if (statistics.Marks[0].Percentage == 100 && statistics.Marks.length == 1) {
+    let marksElements = $(".mark").toArray()
+    let numberOfVotes = marksElements.length
+    let votesGrouped = groupBy(marksElements, e => $(e).text());
+
+
+    if (statistics.Marks.length > 0
+        && statistics.Marks[0].Percentage == 100
+        && statistics.Marks.length == 1
+        && votesGrouped[statistics.Marks[0].Mark].length == numberOfVotes)
+    {
         stopFireWorks();
         let c = 0;
-        let fireWorksInterval = setInterval(function () {
+        fireWorksIntervals.push(setInterval(function () {
             c++;
             fireWorks.launch(10)
             if (c >= 10) {
-                clearInterval(fireWorksInterval);
+                clearFireWorksIntervals()
             }
-        }, 1000)
+        }, 1000))
     }
 }
 
+let groupBy = (items, keySelector) => items.reduce(
+    (group, arr) => {
+        let key = keySelector(arr)
+        group[key] = group[key] ?? [];
+        group[key].push(arr)
+        return group
+    },
+    {},
+);
+
 let stopFireWorks = function () {
     fireWorks.stop()
-    if (fireWorksInterval) {
+    clearFireWorksIntervals()
+}
+
+let clearFireWorksIntervals = function () {
+    while (fireWorksIntervals.length > 0) {
+        let fireWorksInterval = fireWorksIntervals.pop()
         clearInterval(fireWorksInterval);
     }
 }
