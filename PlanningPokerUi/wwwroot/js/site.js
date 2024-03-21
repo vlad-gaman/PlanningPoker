@@ -9,6 +9,7 @@ let devChart
 let testChart
 let fireWorks
 let fireWorksIntervals = []
+let enableLog = false
 
 let createWebSocket = function (hostname, port, protocol, guid) {
     let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
@@ -43,7 +44,9 @@ let connectToRoom = function (guid, personGuid) {
 
     let handleMessage = function (data) {
         let messsage = JSON.parse(data)
-        console.log(messsage)
+        if (enableLog) {
+            console.log(messsage)
+        }
         let object = messsage.Object
         switch (messsage.Verb) {
             case "IsJoined":
@@ -256,7 +259,8 @@ let setStatistics = function (statistics) {
     if (statistics.Marks.length > 0
         && statistics.Marks[0].Percentage == 100
         && statistics.Marks.length == 1
-        && votesGrouped[statistics.Marks[0].Mark].length == numberOfVotes)
+        && votesGrouped[statistics.Marks[0].Mark].length == numberOfVotes
+        && numberOfVotes > 1)
     {
         stopFireWorks();
         let c = 0;
