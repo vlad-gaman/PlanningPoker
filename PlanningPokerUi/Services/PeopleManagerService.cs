@@ -51,6 +51,7 @@ namespace PlanningPokerUi.Services
             {
                 Guid = newGuid
             };
+            
             AddPerson(newGuid, person);
 
             return person;

@@ -16,7 +16,7 @@ namespace PlanningPokerUi.Models
 
         public void CopyFrom(FormViewModel formViewModel)
         {
-            Name = formViewModel.Name;
+            Name = formViewModel.Name.Substring(0, formViewModel.Name.Length > 20 ? 20 : formViewModel.Name.Length);
             PersonType = formViewModel.PersonType;
         }
     }
