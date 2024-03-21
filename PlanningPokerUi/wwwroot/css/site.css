@@ -124,22 +124,38 @@ table.table tr > td {
 }
 
 div.fireworks {
-    z-index: -1;
+    z-index: 2;
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
     right: 0;
+    pointer-events: none;
 }
 
-div.main {
+div.fireworks > canvas {
+    z-index: 3;
+    position: relative;
+}
+
+.form-row {
+    z-index: 0;
+    position: relative;
+}
+
+.form-row > canvas {
+    z-index: 0;
+    position: relative;
+}
+
+/*div.main {
     z-index: 2;
 }
 
 div.main > * {
     z-index: 2;
 }
-
+*/
 input[type='radio'][name='personType'] {
     display: none;
 }

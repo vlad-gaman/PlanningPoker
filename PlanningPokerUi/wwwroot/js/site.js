@@ -90,6 +90,7 @@ let connectToRoom = function (guid, personGuid) {
                 $("input[type=radio][name=mark]").prop("checked", false)
                 $("#averageMark").text("")
                 disableVoting(false)
+                stopFireWorks()
 
                 allChart.data.labels = []
                 allChart.data.datasets[0].data = []
@@ -260,9 +261,16 @@ let setStatistics = function (statistics) {
         stopFireWorks();
         let c = 0;
         fireWorksIntervals.push(setInterval(function () {
-            c++;
-            fireWorks.launch(10)
-            if (c >= 10) {
+            try {
+                c++;
+                if (!document.hidden) {
+                    fireWorks.launch(10)
+                }
+                if (c >= 10) {
+                    clearFireWorksIntervals()
+                }
+            }
+            catch {
                 clearFireWorksIntervals()
             }
         }, 1000))
@@ -280,7 +288,11 @@ let groupBy = (items, keySelector) => items.reduce(
 );
 
 let stopFireWorks = function () {
-    fireWorks.stop()
+    try {        
+        fireWorks.stop()        
+    } catch {
+        // nothing to do
+    }
     clearFireWorksIntervals()
 }
 
@@ -341,7 +353,7 @@ let addPeopleToTable = function (otherPeople) {
 
             let tdName = $("<td/>")
             tdName.attr("class", "name")
-            tdName.text(otherPerson.Name)
+            tdName.text(unescape(otherPerson.Name))
 
             tr.append(tdName)
 
@@ -404,6 +416,9 @@ $(document).ready(function () {
     $("#statistics").hide();
     $("#show-votes-countdown").hide();
 
-
-    fireWorks = new Fireworks.default($('.fireworks')[0])
+    try {
+        fireWorks = new Fireworks.default($('.fireworks')[0])
+    } catch {
+        // nothing to do
+    }
 })

@@ -20,7 +20,7 @@ namespace PlanningPokerUi.Controllers
         public IActionResult Room(string guid, FormViewModel formViewModel = null)
         {
             var person = _peopleManagerService.GetPerson(HttpContext);
-            if (!string.IsNullOrWhiteSpace(formViewModel.Name))
+            if (!string.IsNullOrEmpty(formViewModel.Name))
             {
                 person = _peopleManagerService.CreatePerson(HttpContext);
                 person.CopyFrom(formViewModel);
@@ -46,7 +46,7 @@ namespace PlanningPokerUi.Controllers
                 }
             }
 
-            return Redirect("/");
+            return RedirectPermanent("/");
         }
     }
 }

@@ -27,6 +27,10 @@ namespace PlanningPokerUi.Controllers
         [HttpPost("CreateRoom")]
         public IActionResult CreateRoom([FromForm] FormViewModel formViewModel)
         {
+            if (string.IsNullOrEmpty(formViewModel.Name))
+            {
+                return RedirectPermanent("/");
+            }
             var newPerson = _peopleManagerService.CreatePerson(HttpContext);
             newPerson.CopyFrom(formViewModel);
 
@@ -44,6 +48,11 @@ namespace PlanningPokerUi.Controllers
         [HttpPost("JoinRoom")]
         public IActionResult JoinRoom(FormViewModel formViewModel)
         {
+            if (string.IsNullOrEmpty(formViewModel.Name) || string.IsNullOrEmpty(formViewModel.RoomName))
+            {
+                return RedirectPermanent("/");
+            }
+
             var a = RedirectPermanent($"/Room/{formViewModel.RoomName}");
             a.PreserveMethod = true;
             return a;

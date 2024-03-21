@@ -8,7 +8,7 @@
     <form id="createRoom" asp-controller="Index">
         <div class="form-row align-items-center">
             <label for="name" class="m-1 noselect">Your Name:</label>
-            <input type="text" id="name" name="name" minLength="4" size="10" class="m-1" />
+            <input type="text" id="name" name="name" minLength="2" maxlength="20" size="10" class="m-1" />
 
             @{
                 await Html.RenderPartialAsync("_PersonType", Model?.Person?.PersonType);
@@ -27,7 +27,7 @@
         <br />
         <div class="form-row align-items-center">
             <label for="roomName" class="m-1 noselect">Room Name:</label>
-            <input type="text" id="roomName" name="roomName" minLength="4" size="10" class="m-1" />
+            <input type="text" id="roomName" name="roomName" minLength="2" size="10" class="m-1" />
         </div>
         <div class="form-row align-items-center">
             <input type="submit" formaction="/JoinRoom" value="Join room" class="m-1" />
