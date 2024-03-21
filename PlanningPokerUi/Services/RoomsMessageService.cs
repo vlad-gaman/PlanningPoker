@@ -103,7 +103,7 @@ namespace PlanningPokerUi.Services
                     person.IsConnected = true;
                     var roomGuid = message.Object as string;
 
-                    var isSuccessful = !string.IsNullOrWhiteSpace(person.Name) && _roomsManagerService.JoinRoom(person, roomGuid, out room);
+                    var isSuccessful = !string.IsNullOrEmpty(person.Name) && _roomsManagerService.JoinRoom(person, roomGuid, out room);
 
                     messageToSend = new Message()
                     {

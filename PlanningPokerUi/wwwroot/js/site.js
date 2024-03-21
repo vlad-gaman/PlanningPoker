@@ -353,7 +353,7 @@ let addPeopleToTable = function (otherPeople) {
 
             let tdName = $("<td/>")
             tdName.attr("class", "name")
-            tdName.text(otherPerson.Name)
+            tdName.text(unescape(otherPerson.Name))
 
             tr.append(tdName)
 
