@@ -7,7 +7,7 @@ namespace PlanningPokerUi.Models
         public string Name { get; set; }
         public string RoomName { get; set; }
         public bool UseFunRoomName { get; set; }
-        public string PersonType { get; set; }
+        public string PersonType { get; set; } = "dev";
         public string CardSet { get; set; } = "modified-fibonacci";
     }
 }

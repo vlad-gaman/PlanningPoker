@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using PlanningPokerUi.Hubs;
 using PlanningPokerUi.Models;
 using PlanningPokerUi.Services;
 using System;
@@ -11,13 +13,13 @@ namespace PlanningPokerUi.Controllers
     {
         private readonly RoomsManagerService _roomsManagerService;
         private readonly PeopleManagerService _peopleManagerService;
-        private readonly RoomsMessageService _roomsMessageService;
+        private readonly IHubContext<RoomHub> _hubContext;
 
-        public IndexController(RoomsManagerService roomsManagerService, PeopleManagerService peopleManagerService, RoomsMessageService roomsMessageService)
+        public IndexController(RoomsManagerService roomsManagerService, PeopleManagerService peopleManagerService, IHubContext<RoomHub> hubContext)
         {
             _roomsManagerService = roomsManagerService;
             _peopleManagerService = peopleManagerService;
-            _roomsMessageService = roomsMessageService;
+            _hubContext = hubContext;
         }
 
         public IActionResult Index()
@@ -53,7 +55,7 @@ namespace PlanningPokerUi.Controllers
                 return Conflict();
             }
 
-            _roomsMessageService.SetupHealthCheck(guid);
+            SetupHealthCheck(guid);
 
             return RedirectPermanent($"/Room/{guid}");
         }
@@ -69,6 +71,44 @@ namespace PlanningPokerUi.Controllers
             var a = RedirectPermanent($"/Room/{formViewModel.RoomName}");
             a.PreserveMethod = true;
             return a;
+        }
+
+        private void SetupHealthCheck(string roomGuid)
+        {
+            var room = _roomsManagerService.GetRoom(roomGuid);
+            if (room == null) return;
+
+            var sendMessage = new System.Timers.ElapsedEventHandler(async (sender, e) =>
+            {
+                foreach (var p in room.GetNotConnected())
+                {
+                    try
+                    {
+                        if (p.ConnectionId == room.Guid)
+                        {
+                            _roomsManagerService.ExitRoom(p, room.Guid);
+                        }
+                        
+                        var otherPeople = room.GetPeople().Except(new System.Collections.Generic.List<Person>() { p });
+                        await _hubContext.Clients.Group(room.Guid).SendAsync("PersonExited", p);
+
+                        if (room.IsVotingEnabled() && room.DidEveryoneVote())
+                        {
+                            await _hubContext.Clients.Group(room.Guid).SendAsync("VotesShown", room.GenerateResultsAndStatistics());
+                        }
+                    }
+                    catch (Exception) { }
+                }
+
+                foreach (var p in room.AllPeople())
+                {
+                    p.IsConnected = false;
+                }
+
+                await _hubContext.Clients.Group(roomGuid).SendAsync("HealthCheckRequest");
+            });
+
+            room.HealthCheckTimer.SetElapsed(sendMessage);
         }
     }
 }

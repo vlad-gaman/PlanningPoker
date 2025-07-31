@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Net.WebSockets;
 using System.Text;
 
 namespace PlanningPokerUi.Models
@@ -9,9 +8,9 @@ namespace PlanningPokerUi.Models
     {
         public Guid Guid { get; set; }
         public string Name { get; set; }
-        public string PersonType { get; set; }
+        public string PersonType { get; set; } = "dev";
         [JsonIgnore]
-        public WebSocket WebSocket { get; set; }
+        public string ConnectionId { get; set; }
         [JsonIgnore]
         public bool IsConnected { get; set; } = true;
 

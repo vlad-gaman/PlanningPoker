@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using PlanningPokerUi.Middleware;
+using PlanningPokerUi.Hubs;
 using PlanningPokerUi.Services;
 using System;
 using System.Collections.Generic;
@@ -24,13 +24,12 @@ namespace PlanningPokerUi
         public void ConfigureServices(IServiceCollection services)
         {
             services
-                    .AddScoped<WebSocketMiddleware>()
-
-                    .AddSingleton<WebSocketHandlerService, RoomsMessageService>()
-                    .AddSingleton<RoomsMessageService>(s => s.GetRequiredService<WebSocketHandlerService>() as RoomsMessageService)
                     .AddSingleton<PeopleManagerService>()
-                    .AddSingleton<WebSocketManagerService>()
-                    .AddSingleton<RoomsManagerService>();
+                    .AddSingleton<RoomsManagerService>()
+                    .AddSignalR(options =>
+                    {
+                        options.EnableDetailedErrors = true;
+                    });
             ReadCsvInto("AgeAdjectives", RoomNameGenerator.AgeAdjectives);
             ReadCsvInto("ColourAdjectives", RoomNameGenerator.ColourAdjectives);
             ReadCsvInto("MaterialAdjectives", RoomNameGenerator.MaterialAdjectives);
@@ -86,18 +85,13 @@ namespace PlanningPokerUi
             app.UseRouting();
 
             app.UseAuthorization();
-            var webSocketOptions = new WebSocketOptions()
-            {
-                KeepAliveInterval = TimeSpan.FromSeconds(120),
-            };
-            app.UseWebSockets(webSocketOptions);
-            app.Map("/ws", _app => _app.UseMiddleware<WebSocketMiddleware>());
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
                 endpoints.MapControllerRoute("Room", "Room/{guid}", new { controller = "Room", action = "Room" });
                 endpoints.MapControllers();
+                endpoints.MapHub<RoomHub>("/roomhub");
             });
         }
     }

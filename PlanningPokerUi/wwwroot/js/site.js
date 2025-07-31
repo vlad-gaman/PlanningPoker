@@ -3,7 +3,7 @@
 
 // Write your Javascript code.
 let personId = ""
-let webSocket
+let connection
 let allChart
 let devChart
 let testChart
@@ -20,193 +20,228 @@ let getDisplayValue = function(mark) {
     return mark
 }
 
-let createWebSocket = function (hostname, port, protocol, guid) {
-    let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
-    let wsProtocol = protocol.startsWith("https") ? "wss" : "ws";
-    let ws = new WebSocket(wsProtocol + "://" + uri);
-    return ws;
+let connectToRoom = function (guid, personGuid) {
+    personId = personGuid;
+    
+    connection = new signalR.HubConnectionBuilder()
+        .withUrl("/roomhub")
+        .build();
+
+    // Set up event handlers
+    setupSignalRHandlers(guid);
+
+    connection.start().then(function () {
+        console.log("SignalR connected");
+        connection.invoke("JoinRoom", guid).catch(function (err) {
+            console.error("Error joining room: " + err.toString());
+        });
+    }).catch(function (err) {
+        console.error("Error starting SignalR connection: " + err.toString());
+    });
 }
 
-let connectToRoom = function (guid, personGuid) {
-    webSocket = createWebSocket(window.location.hostname, window.location.port, window.location.protocol, guid);
-    webSocket.bufferedAmount = 1024 * 20;
-    personId = personGuid
+let setupSignalRHandlers = function(guid) {
+    // Room joined successfully
+    connection.on("RoomJoined", function (data) {
+        console.log("RoomJoined event received:", data);
+        console.log("isSuccessful:", data.isSuccessful);
+        console.log("people array:", data.people);
+        console.log("people count:", data.people ? data.people.length : 0);
+        
+        if (data.isSuccessful) {
+            console.log("About to add people to table");
+            addPeopleToTable(data.people)
+            setVoteResultInfo(data.voteResultInfo)
 
-    webSocket.onopen = function (event) {
-        let message = {
-            verb: "Join",
-            object: guid
-        }
-
-        let messageAsString = JSON.stringify(message)
-
-        webSocket.send(messageAsString)
-    }
-
-    webSocket.onmessage = function (event) {
-        if (event.data instanceof Blob) {
-            event.data.text().then(text => handleMessage(text))
+            $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
+            $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
+            $('#observers').append($('#observers > tr').sort(sortByIdProp))
+            console.log("Finished adding people to table");
+        } else if (data.error) {
+            console.error("Failed to join room:", data.error);
+            alert(data.error);
+            // Optionally redirect to home page
+            // window.location.href = "/";
         } else {
-            handleMessage(event.data)
+            console.warn("Room join was not successful but no error provided");
         }
-    }
+    });
 
-    let handleMessage = function (data) {
-        let messsage = JSON.parse(data)
+    // Person joined
+    connection.on("PersonJoined", function (data) {
         if (enableLog) {
-            console.log(messsage)
+            console.log("PersonJoined", data);
         }
-        let object = messsage.Object
-        switch (messsage.Verb) {
-            case "IsJoined":
-                if (object.IsSuccessful) {
-                    addPeopleToTable(object.People)
-                    setVoteResultInfo(object.VoteResultInfo)
-
-                    $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
-                    $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
-                    $('#observers').append($('#observers > tr').sort(sortByIdProp))
-                }
-                break
-            case "Joined":
-                addPeopleToTable([object.Person])
-                if (object.Vote) {
-                    setVotes([object.Vote])
-                }
-
-                if (object.PersonType == "test") {
-                    $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
-                }
-                else if (object.PersonType == "obs") {
-                    $('#observers').append($('#observers > tr').sort(sortByIdProp))
-                } else {
-                    $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
-                }
-                break
-            case "Exited":
-                removePeopleFromTable([object])
-                break
-            case "Disconnected":
-                window.location.href = "/"
-                break
-            case "AVote":
-                $("#" + object + " .mark").text("\u25AE")
-                break
-            case "ShowVotes":
-                setVoteResultInfo(object)
-                break
-            case "ClearVote":
-                $("#statistics").hide();
-                $("#show-votes-countdown").hide();
-                $(".mark").text("")
-                $("input[type=radio][name=mark]").prop("checked", false)
-                $("#averageMark").text("")
-                disableVoting(false)
-                stopFireWorks()
-
-                allChart.data.labels = []
-                allChart.data.datasets[0].data = []
-                allChart.data.datasets[0].backgroundColor = []
-                allChart.update()
-
-                devChart.data.labels = []
-                devChart.data.datasets[0].data = []
-                devChart.data.datasets[0].backgroundColor = []
-                devChart.update()
-
-                testChart.data.labels = []
-                testChart.data.datasets[0].data = []
-                testChart.data.datasets[0].backgroundColor = []
-                testChart.update()
-                break
-            case "Countdown":
-                if (object.Reset) {
-                    $("#show-votes-countdown").hide();
-                } else {
-                    $("#show-votes-countdown").show();
-                    $("#countdown").text(object.Countdown)
-                }
-                break
-            case "ObserverChange":
-            case "PersonTypeChange":
-                $("#" + object.Person.Guid).remove()
-                addPeopleToTable([object.Person])
-                setVoteResultInfo(object.VoteResultInfo)
-                break
-            case "HealthCheck":
-                let message = {
-                    verb: "Healthy"
-                }
-
-                let messageAsString = JSON.stringify(message)
-                webSocket.send(messageAsString)
-                break
+        addPeopleToTable([data.person])
+        if (data.vote) {
+            setVotes([data.vote])
         }
-    }
 
+        if (data.person.personType == "test") {
+            $('#people-test').append($('#people-test > tr').sort(sortByIdProp))
+        }
+        else if (data.person.personType == "obs") {
+            $('#observers').append($('#observers > tr').sort(sortByIdProp))
+        } else {
+            $('#people-dev').append($('#people-dev > tr').sort(sortByIdProp))
+        }
+    });
+
+    // Person exited
+    connection.on("PersonExited", function (person) {
+        if (enableLog) {
+            console.log("PersonExited", person);
+        }
+        removePeopleFromTable([person])
+    });
+
+    // Vote cast
+    connection.on("VoteCast", function (personGuid) {
+        if (enableLog) {
+            console.log("VoteCast", personGuid);
+        }
+        $("#" + personGuid + " .mark").text("\u25AE")
+    });
+
+    // Votes shown
+    connection.on("VotesShown", function (voteResultInfo) {
+        if (enableLog) {
+            console.log("VotesShown", voteResultInfo);
+        }
+        setVoteResultInfo(voteResultInfo)
+    });
+
+    // Votes cleared
+    connection.on("VotesCleared", function () {
+        if (enableLog) {
+            console.log("VotesCleared");
+        }
+        $("#statistics").hide();
+        $("#show-votes-countdown").hide();
+        $(".mark").text("")
+        $("input[type=radio][name=mark]").prop("checked", false)
+        $("#averageMark").text("")
+        disableVoting(false)
+        stopFireWorks()
+
+        allChart.data.labels = []
+        allChart.data.datasets[0].data = []
+        allChart.data.datasets[0].backgroundColor = []
+        allChart.update()
+
+        devChart.data.labels = []
+        devChart.data.datasets[0].data = []
+        devChart.data.datasets[0].backgroundColor = []
+        devChart.update()
+
+        testChart.data.labels = []
+        testChart.data.datasets[0].data = []
+        testChart.data.datasets[0].backgroundColor = []
+        testChart.update()
+    });
+
+    // Countdown update
+    connection.on("CountdownUpdate", function (data) {
+        if (enableLog) {
+            console.log("CountdownUpdate", data);
+        }
+        if (data.reset) {
+            $("#show-votes-countdown").hide();
+        } else {
+            $("#show-votes-countdown").show();
+            $("#countdown").text(data.countdown)
+        }
+    });
+
+    // Countdown reset
+    connection.on("CountdownReset", function (data) {
+        if (enableLog) {
+            console.log("CountdownReset", data);
+        }
+        $("#show-votes-countdown").hide();
+    });
+
+    // Person type changed
+    connection.on("PersonTypeChanged", function (data) {
+        if (enableLog) {
+            console.log("PersonTypeChanged", data);
+        }
+        $("#" + data.person.guid).remove()
+        addPeopleToTable([data.person])
+        setVoteResultInfo(data.voteResultInfo)
+    });
+
+    // Health check request
+    connection.on("HealthCheckRequest", function () {
+        if (enableLog) {
+            console.log("HealthCheckRequest");
+        }
+        connection.invoke("HealthCheck").catch(function (err) {
+            console.error("Error responding to health check: " + err.toString());
+        });
+    });
+    
+    // Set up event handlers for person type changes
     $("input[type=radio][name=personType]").change(function () {
-        let message = {
-            Verb: "PersonTypeChange",
-            Object: {
-                PersonType: this.value
+        if (connection && connection.state === signalR.HubConnectionState.Connected) {
+            connection.invoke("ChangePersonType", this.value).catch(function (err) {
+                console.error("Error changing person type: " + err.toString());
+            });
+        }
+    });
+
+    // Create charts
+    allChart = createChart("allChart");
+    devChart = createChart("devChart");
+    testChart = createChart("testChart");
+}
+
+let createChart = function (name) {
+    return new Chart(name, {
+        type: "bar",
+        data: {
+            labels: [],
+            datasets: [{
+                backgroundColor: [],
+                data: []
+            }]
+        },
+        options: {
+            tooltips: {
+                callbacks: {
+                    label: function (tooltipItem, data) {
+                        return tooltipItem.value + "%";
+                    }
+                }
+            },
+            legend: {
+                display: false
+            },
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        display: false
+                    },
+                    gridLines: {
+                        display: false
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                        fontSize: 16,
+                        callback: function (value) {
+                            return getDisplayValue(value)
+                        }
+                    },
+                    gridLines: {
+                        display: false
+                    }
+                }]
             }
         }
-
-        let messageAsString = JSON.stringify(message)
-        webSocket.send(messageAsString)
     })
-
-    let createChart = function (name) {
-        return new Chart(name, {
-            type: "bar",
-            data: {
-                labels: [],
-                datasets: [{
-                    backgroundColor: [],
-                    data: []
-                }]
-            },
-            options: {
-                tooltips: {
-                    callbacks: {
-                        label: function (tooltipItem, data) {
-                            return tooltipItem.value + "%";
-                        }
-                    }
-                },
-                legend: {
-                    display: false
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
-                            suggestedMax: 100,
-                            display: false
-                        },
-                        gridLines: {
-                            display: false
-                        }
-                    }],
-                    xAxes: [{
-                        ticks: {
-                            fontSize: 16,
-                            callback: function (value) {
-                                return getDisplayValue(value)
-                            }
-                        },
-                        gridLines: {
-                            display: false
-                        }
-                    }]
-                }
-            }
-        })
-    }
-
-    allChart = createChart("allChart")
-    devChart = createChart("devChart")
-    testChart = createChart("testChart")
 }
 
 let disableVoting = function (value) {
@@ -225,14 +260,16 @@ let sortByIdProp = function (a, b) {
 }
 
 let setIndividualStatistics = function (marks, highestMark, chart) {
+    if (!marks || !chart) return;
+    
     let labels = []
     let percentages = []
     let colors = []
 
     for (let mark of marks) {
-        labels.push(getDisplayValue(mark.Mark))
-        percentages.push(mark.Percentage)
-        if (highestMark == mark.Mark) {
+        labels.push(getDisplayValue(mark.mark))
+        percentages.push(mark.percentage)
+        if (highestMark == mark.mark) {
             colors.push("green")
         }
         else {
@@ -247,23 +284,30 @@ let setIndividualStatistics = function (marks, highestMark, chart) {
 }
 
 let setStatistics = function (statistics) {
-    setIndividualStatistics(statistics.Marks, statistics.HighestMark, allChart)
-    setIndividualStatistics(statistics.MarksDev, statistics.HighestMarkDev, devChart)
-    setIndividualStatistics(statistics.MarksTest, statistics.HighestMarkTest, testChart)
+    if (!statistics) return;
+    
+    if (statistics.marks) {
+        setIndividualStatistics(statistics.marks, statistics.highestMark, allChart)
+    }
+    if (statistics.marksDev) {
+        setIndividualStatistics(statistics.marksDev, statistics.highestMarkDev, devChart)
+    }
+    if (statistics.marksTest) {
+        setIndividualStatistics(statistics.marksTest, statistics.highestMarkTest, testChart)
+    }
 
-    $("#allAverageMark").text(statistics.AverageMark)
-    $("#devAverageMark").text(statistics.AverageMarkDev)
-    $("#testAverageMark").text(statistics.AverageMarkTest)
+    $("#allAverageMark").text(statistics.averageMark || "")
+    $("#devAverageMark").text(statistics.averageMarkDev || "")
+    $("#testAverageMark").text(statistics.averageMarkTest || "")
 
     let marksElements = $(".mark").toArray()
     let numberOfVotes = marksElements.length
     let votesGrouped = groupBy(marksElements, e => $(e).text());
 
-
-    if (statistics.Marks.length > 0
-        && statistics.Marks[0].Percentage == 100
-        && statistics.Marks.length == 1
-        && votesGrouped[statistics.Marks[0].Mark].length == numberOfVotes
+    if (statistics.marks && statistics.marks.length > 0
+        && statistics.marks[0].percentage == 100
+        && statistics.marks.length == 1
+        && votesGrouped[getDisplayValue(statistics.marks[0].mark)].length == numberOfVotes
         && numberOfVotes > 1)
     {
         stopFireWorks();
@@ -312,73 +356,108 @@ let clearFireWorksIntervals = function () {
 }
 
 let setVoteResultInfo = function (voteResultInfo) {
-    setVotes(voteResultInfo.Votes)
-    if (voteResultInfo.VotingFinished) {
+    if (!voteResultInfo) return;
+    
+    if (voteResultInfo.votes) {
+        setVotes(voteResultInfo.votes)
+    }
+    
+    if (voteResultInfo.votingFinished) {
         $("#statistics").show()
         $("#show-votes-countdown").hide()
-        setStatistics(voteResultInfo.Statistics)
+        if (voteResultInfo.statistics) {
+            setStatistics(voteResultInfo.statistics)
+        }
         disableVoting(true)
     } else {
         $("#statistics").hide();
-        if (voteResultInfo.HasEveryoneVoted) {
+        if (voteResultInfo.hasEveryoneVoted) {
             $("#show-votes-countdown").show();
-            $("#countdown").text(voteResultInfo.Countdown)
+            $("#countdown").text(voteResultInfo.countdown)
         } else {
             $("#show-votes-countdown").hide();
         }
-
     }
 }
 
 let setVotes = function (votes) {
     for (let vote of votes) {
-        if ($("#" + vote.Guid)[0]) {
-            let markElement = $("#" + vote.Guid + " .mark")
-            if (vote.Mark == 'hide') {
+        if ($("#" + vote.guid)[0]) {
+            let markElement = $("#" + vote.guid + " .mark")
+            if (vote.mark == 'hide') {
                 markElement.text("\u25AE")
             }
             else {
-                markElement.text(getDisplayValue(vote.Mark))
+                markElement.text(getDisplayValue(vote.mark))
             }
         }
     }
 }
 
 let addPeopleToTable = function (otherPeople) {
+    console.log("addPeopleToTable called with:", otherPeople);
+    
+    if (!otherPeople || otherPeople.length === 0) {
+        console.log("No people to add to table");
+        return;
+    }
+    
     let peopleDev = $("#people-dev")
     let peopleTest = $("#people-test")
     let observers = $("#observers")
+    
+    console.log("Table elements found:", {
+        peopleDev: peopleDev.length,
+        peopleTest: peopleTest.length,
+        observers: observers.length
+    });
+    
     for (let otherPerson of otherPeople) {
-        if (!($("#" + otherPerson.Guid)[0])) {
+        console.log("Processing person:", otherPerson);
+        console.log("Person details:", {
+            guid: otherPerson.guid,
+            name: otherPerson.name,
+            personType: otherPerson.personType
+        });
+        
+        if (!($("#" + otherPerson.guid)[0])) {
             let tr = $("<tr/>")
-            tr.attr("id", otherPerson.Guid)
+            tr.attr("id", otherPerson.guid)
 
             let tdName = $("<td/>")
             tdName.attr("class", "name")
-            tdName.text(unescape(otherPerson.Name))
+            tdName.text(unescape(otherPerson.name))
 
             tr.append(tdName)
 
-            if (otherPerson.PersonType == "obs") {
+            // Default to dev if PersonType is null/empty
+            let personType = otherPerson.personType || "dev";
+            
+            if (personType == "obs") {
+                console.log("Adding person to observers table");
                 observers.append(tr)
             } else {
                 let tdMark = $("<td/>")
                 tdMark.attr("class", "mark")
                 tr.append(tdMark)
 
-                if (otherPerson.PersonType == "test") {
+                if (personType == "test") {
+                    console.log("Adding person to test table");
                     peopleTest.append(tr)
                 } else {
+                    console.log("Adding person to dev table (default)");
                     peopleDev.append(tr)
                 }
             }
+        } else {
+            console.log("Person already exists in table:", otherPerson.guid);
         }
     }
 }
 
 let removePeopleFromTable = function (otherPeople) {
     for (let otherPerson of otherPeople) {
-        $("#" + otherPerson.Guid).remove()
+        $("#" + otherPerson.guid).remove()
     }
 }
 
@@ -386,33 +465,34 @@ $(document).ready(function () {
     $('input[type=radio][name=mark]').change(function () {
         if (!this.value)
             return;
-        let message = {
-            Verb: "Vote",
-            Object: this.value
+        
+        if (connection && connection.state === signalR.HubConnectionState.Connected) {
+            connection.invoke("Vote", this.value).catch(function (err) {
+                console.error("Error voting: " + err.toString());
+            });
         }
-
-        let messageAsString = JSON.stringify(message)
-        webSocket.send(messageAsString)
     })
 
     $('#clear-votes').click(function () {
         stopFireWorks();
-        let message = {
-            verb: "ClearVotes"
+        if (connection && connection.state === signalR.HubConnectionState.Connected) {
+            connection.invoke("ClearVotes").catch(function (err) {
+                console.error("Error clearing votes: " + err.toString());
+            });
         }
-
-        let messageAsString = JSON.stringify(message)
-        webSocket.send(messageAsString)
     })
 
     $('#show-votes').click(function () {
+        console.log("Show votes button clicked");
         stopFireWorks();
-        let message = {
-            verb: "ForceShowVotes"
+        if (connection && connection.state === signalR.HubConnectionState.Connected) {
+            console.log("Invoking ForceShowVotes");
+            connection.invoke("ForceShowVotes").catch(function (err) {
+                console.error("Error showing votes: " + err.toString());
+            });
+        } else {
+            console.error("Connection not ready for ForceShowVotes");
         }
-
-        let messageAsString = JSON.stringify(message)
-        webSocket.send(messageAsString)
     })
 
     $("#statistics").hide();
