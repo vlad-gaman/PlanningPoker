@@ -668,7 +668,7 @@ let hideRoomSettings = function() {
 
 let loadRoomSettings = function(config) {
     $('#card-set-select').val(config.cardSet || 'modified-fibonacci');
-    $('#countdown-seconds').val(config.countdownSeconds || 5);
+    $('#countdown-seconds').val(config.countdownSeconds !== undefined ? config.countdownSeconds : 5);
     $('#show-fireworks').prop('checked', config.showFireworks !== false);
     $('#max-participants').val(config.maxParticipants || 50);
 }
@@ -746,8 +746,8 @@ let updateCardSetMapping = function(cards) {
 let updateOwnershipUI = function(newOwner) {
     const settingsButton = $('#room-settings-btn');
     
-    // Try both lowercase and uppercase property names
-    const newOwnerGuid = newOwner?.guid || newOwner?.Guid;
+    // Use camelCase property name (from JSON serialization)
+    const newOwnerGuid = newOwner?.guid;
     
     if (newOwner && newOwnerGuid === personId) {
         // Current user is now the owner - show settings button

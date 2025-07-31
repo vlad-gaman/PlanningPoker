@@ -29,6 +29,10 @@ namespace PlanningPokerUi
                     .AddSignalR(options =>
                     {
                         options.EnableDetailedErrors = true;
+                    })
+                    .AddJsonProtocol(options =>
+                    {
+                        options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
                     });
             ReadCsvInto("AgeAdjectives", RoomNameGenerator.AgeAdjectives);
             ReadCsvInto("ColourAdjectives", RoomNameGenerator.ColourAdjectives);
@@ -39,7 +43,11 @@ namespace PlanningPokerUi
             ReadCsvInto("ShapeAdjectives", RoomNameGenerator.ShapeAdjectives);
             ReadCsvInto("Nouns", RoomNameGenerator.Nouns);
 
-            services.AddRazorPages();
+            services.AddRazorPages()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                });
             services.AddSession();
         }
 

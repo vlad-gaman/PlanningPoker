@@ -46,6 +46,7 @@
             const closeCreationSettings = document.getElementById('close-creation-settings');
             const cancelCreationSettings = document.getElementById('cancel-creation-settings');
             const saveCreationSettings = document.getElementById('save-creation-settings');
+            const createRoomForm = document.getElementById('createRoom');
 
             roomCreationSettingsBtn.addEventListener('click', function() {
                 if (roomCreationSettings.style.display === 'block') {
@@ -68,6 +69,14 @@
                 hideRoomCreationSettings();
             });
 
+            // Dynamically inject form values when creating a room
+            createRoomForm.addEventListener('submit', function(e) {
+                // Only inject values when creating a room (not joining)
+                if (e.submitter && e.submitter.formAction && e.submitter.formAction.includes('CreateRoom')) {
+                    injectRoomCreationValues();
+                }
+            });
+
             function showRoomCreationSettings() {
                 const overlay = document.createElement('div');
                 overlay.className = 'room-settings-overlay';
@@ -85,27 +94,39 @@
             }
 
             function saveRoomCreationSettings() {
-                // Copy values from settings modal to hidden form fields
-                document.getElementById('hidden-card-set').value = document.getElementById('creation-card-set').value;
-                document.getElementById('hidden-countdown-seconds').value = document.getElementById('creation-countdown-seconds').value;
-                document.getElementById('hidden-use-fun-room-name').checked = document.getElementById('creation-use-fun-room-name').checked;
-                document.getElementById('hidden-show-fireworks').checked = document.getElementById('creation-show-fireworks').checked;
-                document.getElementById('hidden-max-participants').value = document.getElementById('creation-max-participants').value;
-                
-                // Update hidden card set options
-                const hiddenCardSet = document.getElementById('hidden-card-set');
-                const selectedValue = document.getElementById('creation-card-set').value;
-                hiddenCardSet.innerHTML = '';
-                const option = document.createElement('option');
-                option.value = selectedValue;
-                option.selected = true;
-                hiddenCardSet.appendChild(option);
-                
-                // Visual feedback
+                // Visual feedback only - actual values will be injected on form submission
                 roomCreationSettingsBtn.innerHTML = '✅ Settings Applied';
                 setTimeout(() => {
                     roomCreationSettingsBtn.innerHTML = '⚙️ More Settings';
                 }, 2000);
+            }
+
+            function injectRoomCreationValues() {
+                // Remove any existing injected fields to avoid duplicates
+                const existingFields = createRoomForm.querySelectorAll('.injected-field');
+                existingFields.forEach(field => field.remove());
+
+                // Create and inject form fields with current modal values
+                const settings = [
+                    { name: 'cardSet', value: document.getElementById('creation-card-set').value },
+                    { name: 'countdownSeconds', value: document.getElementById('creation-countdown-seconds').value },
+                    { name: 'useFunRoomName', value: document.getElementById('creation-use-fun-room-name').checked },
+                    { name: 'showFireworks', value: document.getElementById('creation-show-fireworks').checked },
+                    { name: 'maxParticipants', value: document.getElementById('creation-max-participants').value },
+                    { name: 'healthCheckInterval', value: '5000' },
+                    { name: 'autoShowVotes', value: 'true' },
+                    { name: 'allowObserverVoting', value: 'false' },
+                    { name: 'isPublic', value: 'true' }
+                ];
+
+                settings.forEach(setting => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = setting.name;
+                    input.value = setting.value;
+                    input.className = 'injected-field';
+                    createRoomForm.appendChild(input);
+                });
             }
         });
     </script>
