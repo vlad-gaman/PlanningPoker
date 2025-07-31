@@ -77,6 +77,9 @@
                 }
             });
 
+            // Load card sets from server on page load
+            loadCardSets();
+
             function showRoomCreationSettings() {
                 const overlay = document.createElement('div');
                 overlay.className = 'room-settings-overlay';
@@ -127,6 +130,41 @@
                     input.className = 'injected-field';
                     createRoomForm.appendChild(input);
                 });
+            }
+
+            function loadCardSets() {
+                fetch('/api/cardsets')
+                    .then(response => response.json())
+                    .then(cardSets => {
+                        const cardSetSelect = document.getElementById('creation-card-set');
+                        cardSetSelect.innerHTML = ''; // Clear existing options
+                        
+                        cardSets.forEach(cardSet => {
+                            const option = document.createElement('option');
+                            option.value = cardSet.value;
+                            option.textContent = cardSet.display;
+                            
+                            // Set modified-fibonacci as default
+                            if (cardSet.value === 'modified-fibonacci') {
+                                option.selected = true;
+                            }
+                            
+                            cardSetSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading card sets:', error);
+                        // Fallback to basic options if API fails
+                        const cardSetSelect = document.getElementById('creation-card-set');
+                        cardSetSelect.innerHTML = `
+                            <option value="fibonacci">Fibonacci</option>
+                            <option value="modified-fibonacci" selected>Modified Fibonacci</option>
+                            <option value="linear">Linear (1-10)</option>
+                            <option value="powers-of-2">Powers of 2</option>
+                            <option value="t-shirt-sizes">T-Shirt Sizes</option>
+                            <option value="traffic-lights">Traffic Lights</option>
+                        `;
+                    });
             }
         });
     </script>
