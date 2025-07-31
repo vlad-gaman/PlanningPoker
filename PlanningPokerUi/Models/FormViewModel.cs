@@ -8,5 +8,6 @@ namespace PlanningPokerUi.Models
         public string RoomName { get; set; }
         public bool UseFunRoomName { get; set; }
         public string PersonType { get; set; }
+        public string CardSet { get; set; } = "modified-fibonacci";
     }
 }

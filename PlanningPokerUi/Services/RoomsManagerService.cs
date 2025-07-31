@@ -34,12 +34,12 @@ namespace PlanningPokerUi.Services
             return false;
         }
 
-        public string CreateRoom(Person person, bool useFunName)
+        public string CreateRoom(Person person, bool useFunName, string cardSet = "modified-fibonacci")
         {
             string guid = string.Empty;
             var created = false;
             var index = 0;
-            var room = new Room(person);
+            var room = new Room(person, cardSet);
 
             while (!created)
             {

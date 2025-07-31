@@ -13,16 +13,18 @@ namespace PlanningPokerUi.Models
         public readonly MyTimer HealthCheckTimer;
         public VoteResultInfo VoteResultInfo { get; private set; }
 
-        public Room(Person person)
+        public Room(Person person, string cardSet = "modified-fibonacci")
         {
             _people = new ConcurrentDictionary<Guid, Person>();
             _votes = new ConcurrentDictionary<Guid, string>();
             VotingTimer = new MyTimer(1000);
             HealthCheckTimer = new MyTimer(5000);
+            CardSet = cardSet;
             AddPerson(person);
         }
 
         public string Guid { get; set; }
+        public string CardSet { get; set; }
 
         public void AddPerson(Person person)
         {

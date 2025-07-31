@@ -30,11 +30,8 @@ namespace PlanningPokerUi.Controllers
             {
                 if (person != null)
                 {
-                    return View("Room", new RoomViewModel()
-                    {
-                        Guid = guid,
-                        Person = person
-                    });
+                    var room = _roomsService.GetRoom(guid);
+                    return View("Room", new RoomViewModel(room, person));
                 }
                 else
                 {

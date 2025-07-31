@@ -8,6 +8,17 @@ namespace PlanningPokerUi.ViewModels
         public string Guid { get; set; }
         public Person Person { get; set; }
         public List<(string value, string display)> CardSets { get; set; }
-            = new List<(string value, string display)> { ("0", null), ("0.5", "\u00BD"), ("1", null), ("2", null), ("3", null), ("5", null), ("8", null), ("13", null), ("20", null), ("40", null), ("100", null), ("?", null), ("coffee", "\u2615") };
+        
+        public RoomViewModel()
+        {
+            CardSets = Models.CardSets.GetCardSet("modified-fibonacci");
+        }
+        
+        public RoomViewModel(Room room, Person person)
+        {
+            Guid = room.Guid;
+            Person = person;
+            CardSets = Models.CardSets.GetCardSet(room.CardSet);
+        }
     }
 }

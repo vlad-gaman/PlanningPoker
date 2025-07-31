@@ -11,6 +11,15 @@ let fireWorks
 let fireWorksIntervals = []
 let enableLog = false
 
+// Function to get display value for a vote mark
+let getDisplayValue = function(mark) {
+    // Use server-provided mapping if available, otherwise fall back to the mark itself
+    if (window.cardSetMapping && window.cardSetMapping[mark]) {
+        return window.cardSetMapping[mark]
+    }
+    return mark
+}
+
 let createWebSocket = function (hostname, port, protocol, guid) {
     let uri = hostname + (port ? ":" + port : "") + "/ws/" + guid;
     let wsProtocol = protocol.startsWith("https") ? "wss" : "ws";
@@ -183,12 +192,7 @@ let connectToRoom = function (guid, personGuid) {
                         ticks: {
                             fontSize: 16,
                             callback: function (value) {
-                                if (value == '0.5') {
-                                    return '\u00BD'
-                                } else if (value == 'coffee') {
-                                    return '\u2615'
-                                }
-                                return value
+                                return getDisplayValue(value)
                             }
                         },
                         gridLines: {
@@ -226,7 +230,7 @@ let setIndividualStatistics = function (marks, highestMark, chart) {
     let colors = []
 
     for (let mark of marks) {
-        labels.push(mark.Mark)
+        labels.push(getDisplayValue(mark.Mark))
         percentages.push(mark.Percentage)
         if (highestMark == mark.Mark) {
             colors.push("green")
@@ -330,17 +334,11 @@ let setVotes = function (votes) {
     for (let vote of votes) {
         if ($("#" + vote.Guid)[0]) {
             let markElement = $("#" + vote.Guid + " .mark")
-            if (vote.Mark == 'coffee') {
-                markElement.text("\u2615")
-            }
-            else if (vote.Mark == '0.5') {
-                markElement.text("\u00BD")
-            }
-            else if (vote.Mark == 'hide') {
+            if (vote.Mark == 'hide') {
                 markElement.text("\u25AE")
             }
             else {
-                markElement.text(vote.Mark)
+                markElement.text(getDisplayValue(vote.Mark))
             }
         }
     }

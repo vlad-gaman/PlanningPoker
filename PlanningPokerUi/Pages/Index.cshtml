@@ -15,6 +15,12 @@
             }
         </div>
         <div class="form-row align-items-center">
+            <label for="cardSet" class="m-1 noselect">Card Set:</label>
+            <select id="cardSet" name="cardSet" class="m-1">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="form-row align-items-center">
             <label for="useFunRoomName" class="m-1 noselect">Use fun room name?:</label>
             <input type="checkbox" id="useFunRoomName" name="useFunRoomName" class="m-1" value="true" />
         </div>
@@ -34,3 +40,34 @@
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/cardsets')
+                .then(response => response.json())
+                .then(cardSets => {
+                    const select = document.getElementById('cardSet');
+                    select.innerHTML = '';
+                    
+                    cardSets.forEach(cardSet => {
+                        const option = document.createElement('option');
+                        option.value = cardSet.value;
+                        option.textContent = cardSet.display;
+                        
+                        // Set modified-fibonacci as default
+                        if (cardSet.value === 'modified-fibonacci') {
+                            option.selected = true;
+                        }
+                        
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading card sets:', error);
+                    const select = document.getElementById('cardSet');
+                    select.innerHTML = '<option value="modified-fibonacci">Modified Fibonacci (Default)</option>';
+                });
+        });
+    </script>
+}

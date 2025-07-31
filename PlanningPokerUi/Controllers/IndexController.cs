@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PlanningPokerUi.Models;
 using PlanningPokerUi.Services;
 using System;
+using System.Linq;
 
 namespace PlanningPokerUi.Controllers
 {
@@ -24,6 +25,18 @@ namespace PlanningPokerUi.Controllers
             return View();
         }
 
+        [HttpGet("api/cardsets")]
+        public IActionResult GetCardSets()
+        {
+            var cardSets = Models.CardSets.CardSetNames.Select(kvp => new 
+            { 
+                Value = kvp.Key, 
+                Display = kvp.Value 
+            }).ToList();
+            
+            return Json(cardSets);
+        }
+
         [HttpPost("CreateRoom")]
         public IActionResult CreateRoom([FromForm] FormViewModel formViewModel)
         {
@@ -34,7 +47,7 @@ namespace PlanningPokerUi.Controllers
             var newPerson = _peopleManagerService.CreatePerson(HttpContext);
             newPerson.CopyFrom(formViewModel);
 
-            var guid = _roomsManagerService.CreateRoom(newPerson, formViewModel.UseFunRoomName);
+            var guid = _roomsManagerService.CreateRoom(newPerson, formViewModel.UseFunRoomName, formViewModel.CardSet);
             if (string.IsNullOrEmpty(guid))
             {
                 return Conflict();
