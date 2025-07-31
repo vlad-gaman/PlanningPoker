@@ -25,19 +25,39 @@ let connectToRoom = function (guid, personGuid) {
     
     connection = new signalR.HubConnectionBuilder()
         .withUrl("/roomhub")
+        .withAutomaticReconnect([0, 2000, 10000, 30000]) // Retry after 0ms, 2s, 10s, 30s
+        .configureLogging(signalR.LogLevel.Information)
         .build();
 
     // Set up event handlers
     setupSignalRHandlers(guid);
+    setupConnectionStateHandlers(guid);
 
+    startConnection(guid);
+}
+
+let startConnection = function(guid) {
     connection.start().then(function () {
         console.log("SignalR connected");
+        updateConnectionStatus("connected");
+        joinRoom(guid);
+    }).catch(function (err) {
+        console.error("Error starting SignalR connection: " + err.toString());
+        updateConnectionStatus("disconnected");
+        // Retry connection after 5 seconds
+        setTimeout(function() {
+            console.log("Retrying connection...");
+            startConnection(guid);
+        }, 5000);
+    });
+}
+
+let joinRoom = function(guid) {
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
         connection.invoke("JoinRoom", guid).catch(function (err) {
             console.error("Error joining room: " + err.toString());
         });
-    }).catch(function (err) {
-        console.error("Error starting SignalR connection: " + err.toString());
-    });
+    }
 }
 
 let setupSignalRHandlers = function(guid) {
@@ -194,6 +214,60 @@ let setupSignalRHandlers = function(guid) {
     allChart = createChart("allChart");
     devChart = createChart("devChart");
     testChart = createChart("testChart");
+}
+
+let setupConnectionStateHandlers = function(guid) {
+    // Connection closed (will attempt to reconnect automatically)
+    connection.onclose(function(error) {
+        console.log("SignalR connection closed:", error);
+        updateConnectionStatus("disconnected");
+    });
+
+    // Connection reconnecting
+    connection.onreconnecting(function(error) {
+        console.log("SignalR reconnecting...", error);
+        updateConnectionStatus("reconnecting");
+    });
+
+    // Connection reconnected successfully
+    connection.onreconnected(function(connectionId) {
+        console.log("SignalR reconnected with connection ID:", connectionId);
+        updateConnectionStatus("connected");
+        
+        // Rejoin the room after reconnection
+        console.log("Rejoining room after reconnection...");
+        joinRoom(guid);
+    });
+}
+
+let updateConnectionStatus = function(status) {
+    const statusElement = $("#connection-status");
+    
+    // Create status element if it doesn't exist
+    if (statusElement.length === 0) {
+        $("body").prepend('<div id="connection-status" class="connection-status"></div>');
+    }
+    
+    const statusDiv = $("#connection-status");
+    statusDiv.removeClass("connected disconnected reconnecting");
+    
+    switch(status) {
+        case "connected":
+            statusDiv.addClass("connected")
+                     .text("Connected")
+                     .fadeOut(2000); // Hide after 2 seconds when connected
+            break;
+        case "disconnected":
+            statusDiv.addClass("disconnected")
+                     .text("Disconnected - Attempting to reconnect...")
+                     .show();
+            break;
+        case "reconnecting":
+            statusDiv.addClass("reconnecting")
+                     .text("Reconnecting...")
+                     .show();
+            break;
+    }
 }
 
 let createChart = function (name) {
