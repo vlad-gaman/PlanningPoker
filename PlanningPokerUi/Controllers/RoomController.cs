@@ -17,14 +17,10 @@ namespace PlanningPokerUi.Controllers
         }
 
 
-        public IActionResult Room(string guid, FormViewModel formViewModel = null)
+        [HttpGet]
+        public IActionResult Room(string guid)
         {
             var person = _peopleManagerService.GetPerson(HttpContext);
-            if (!string.IsNullOrEmpty(formViewModel.Name))
-            {
-                person = _peopleManagerService.CreatePerson(HttpContext);
-                person.CopyFrom(formViewModel);
-            }
 
             if (_roomsService.DoesRoomExist(guid))
             {
@@ -44,6 +40,19 @@ namespace PlanningPokerUi.Controllers
             }
 
             return RedirectPermanent("/");
+        }
+
+        [HttpPost]
+        public IActionResult Room(string guid, FormViewModel formViewModel)
+        {
+            if (!string.IsNullOrEmpty(formViewModel?.Name))
+            {
+                var person = _peopleManagerService.CreatePerson(HttpContext);
+                person.CopyFrom(formViewModel);
+            }
+
+            // Redirect to GET to prevent form resubmission dialog
+            return RedirectToAction("Room", new { guid = guid });
         }
     }
 }

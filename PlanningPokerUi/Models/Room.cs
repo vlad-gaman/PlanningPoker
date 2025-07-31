@@ -13,18 +13,32 @@ namespace PlanningPokerUi.Models
         public readonly MyTimer HealthCheckTimer;
         public VoteResultInfo VoteResultInfo { get; private set; }
 
-        public Room(Person person, string cardSet = "modified-fibonacci")
+        public Room(Person person, RoomConfiguration configuration = null)
         {
             _people = new ConcurrentDictionary<Guid, Person>();
             _votes = new ConcurrentDictionary<Guid, string>();
-            VotingTimer = new MyTimer(1000);
-            HealthCheckTimer = new MyTimer(5000);
-            CardSet = cardSet;
+            
+            Configuration = configuration ?? new RoomConfiguration();
+            Owner = person; // First person to create room is the owner
+            
+            VotingTimer = new MyTimer(Configuration.CountdownInterval);
+            VotingTimer.MaxTriggers = Configuration.CountdownSeconds;
+            
+            HealthCheckTimer = new MyTimer(Configuration.HealthCheckInterval);
+            
             AddPerson(person);
         }
 
         public string Guid { get; set; }
-        public string CardSet { get; set; }
+        public RoomConfiguration Configuration { get; set; }
+        public Person Owner { get; set; }
+        
+        // Backward compatibility
+        public string CardSet 
+        { 
+            get => Configuration.CardSet; 
+            set => Configuration.CardSet = value; 
+        }
 
         public void AddPerson(Person person)
         {
@@ -56,7 +70,10 @@ namespace PlanningPokerUi.Models
 
         public bool DidEveryoneVote()
         {
-            return !_people.Any(p => p.Value.PersonType != "obs" && !_votes.ContainsKey(p.Key));
+            var eligiblePeople = _people.Values.Where(p => 
+                p.PersonType != "obs" || (p.PersonType == "obs" && Configuration.AllowObserverVoting));
+            
+            return eligiblePeople.All(p => _votes.ContainsKey(p.Guid));
         }
 
         public void ClearVotes()
@@ -97,6 +114,56 @@ namespace PlanningPokerUi.Models
         public IEnumerable<Person> AllPeople()
         {
             return _people.Values;
+        }
+
+        public void UpdateConfiguration(RoomConfiguration newConfiguration)
+        {
+            // Only update properties that are actually being changed
+            if (!string.IsNullOrEmpty(newConfiguration.CardSet))
+                Configuration.CardSet = newConfiguration.CardSet;
+            
+            if (newConfiguration.CountdownSeconds >= 0)
+                Configuration.CountdownSeconds = newConfiguration.CountdownSeconds;
+            
+            if (newConfiguration.MaxParticipants > 0)
+                Configuration.MaxParticipants = newConfiguration.MaxParticipants;
+            
+            // Always update these boolean properties
+            Configuration.ShowFireworks = newConfiguration.ShowFireworks;
+            Configuration.AutoShowVotes = newConfiguration.AutoShowVotes;
+            
+            // Update timer configurations
+            VotingTimer.MaxTriggers = Configuration.CountdownSeconds;
+        }
+
+        public bool CanPersonVote(Person person)
+        {
+            if (person.PersonType == "obs" && !Configuration.AllowObserverVoting)
+                return false;
+                
+            return true;
+        }
+        
+        public bool TransferOwnership(Person newOwner)
+        {
+            if (newOwner == null || !IsPersonHere(newOwner))
+                return false;
+                
+            Owner = newOwner;
+            return true;
+        }
+        
+        public Person TransferOwnershipRandomly()
+        {
+            var eligiblePeople = GetPeople().Where(p => p.Guid != Owner?.Guid && p.IsConnected).ToList();
+            
+            if (!eligiblePeople.Any())
+                return null; // No one left to transfer to
+                
+            var random = new Random();
+            var newOwner = eligiblePeople[random.Next(eligiblePeople.Count())];
+            Owner = newOwner;
+            return newOwner;
         }
 
         public VoteResultInfo GenerateResultsAndStatistics()

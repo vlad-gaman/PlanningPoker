@@ -200,6 +200,57 @@ let setupSignalRHandlers = function(guid) {
             console.error("Error responding to health check: " + err.toString());
         });
     });
+
+    // Room configuration updated
+    connection.on("RoomConfigurationUpdated", function (data) {
+        if (enableLog) {
+            console.log("RoomConfigurationUpdated", data);
+        }
+        
+        // Update local configuration
+        window.roomConfiguration = data.configuration;
+        
+        // Show notification
+        if (data.updatedBy) {
+            console.log(`Room settings updated by ${data.updatedBy}`);
+        }
+        
+        // Clear votes if they are currently shown
+        if ($("#statistics").is(":visible")) {
+            // Clear votes on the server
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                connection.invoke("ClearVotes").catch(function (err) {
+                    console.error("Error clearing votes after settings change: " + err.toString());
+                });
+            }
+        }
+        
+        // Update card set if it changed and card details are provided
+        if (data.configuration.cardSet && data.cardSetDetails) {
+            updateCardUIFromSignalR(data.cardSetDetails);
+            updateCardSetMapping(data.cardSetDetails);
+        }
+    });
+    
+    // Ownership transferred
+    connection.on("OwnershipTransferred", function (data) {
+        if (enableLog) {
+            console.log("OwnershipTransferred", data);
+        }
+        
+        // Update UI dynamically without showing popup
+        updateOwnershipUI(data.newOwner);
+    });
+    
+    // Room disposed
+    connection.on("RoomDisposed", function (data) {
+        if (enableLog) {
+            console.log("RoomDisposed", data);
+        }
+        
+        alert(data.message || "Room has been closed.");
+        window.location.href = "/";
+    });
     
     // Set up event handlers for person type changes
     $("input[type=radio][name=personType]").change(function () {
@@ -569,6 +620,28 @@ $(document).ready(function () {
         }
     })
 
+    // Room settings functionality
+    $('#room-settings-btn').click(function () {
+        showRoomSettings();
+    });
+
+    $('#close-settings, #cancel-settings').click(function () {
+        hideRoomSettings();
+    });
+
+    $('#save-settings').click(function () {
+        saveRoomSettings();
+    });
+    
+    $('#transfer-ownership-btn').click(function () {
+        transferOwnership();
+    });
+
+    // Initialize room settings if configuration exists
+    if (typeof window.roomConfiguration !== 'undefined') {
+        loadRoomSettings(window.roomConfiguration);
+    }
+
     $("#statistics").hide();
     $("#show-votes-countdown").hide();
 
@@ -578,3 +651,155 @@ $(document).ready(function () {
         // nothing to do
     }
 })
+
+let showRoomSettings = function() {
+    $('<div class="room-settings-overlay"></div>').appendTo('body');
+    
+    // Populate transfer ownership dropdown
+    populateOwnershipTransferDropdown();
+    
+    $('#room-settings').show();
+}
+
+let hideRoomSettings = function() {
+    $('#room-settings').hide();
+    $('.room-settings-overlay').remove();
+}
+
+let loadRoomSettings = function(config) {
+    $('#card-set-select').val(config.cardSet || 'modified-fibonacci');
+    $('#countdown-seconds').val(config.countdownSeconds || 5);
+    $('#show-fireworks').prop('checked', config.showFireworks !== false);
+    $('#max-participants').val(config.maxParticipants || 50);
+}
+
+let saveRoomSettings = function() {
+    const countdownSeconds = parseInt($('#countdown-seconds').val());
+    const config = {
+        cardSet: $('#card-set-select').val(),
+        countdownSeconds: countdownSeconds,
+        autoShowVotes: countdownSeconds === 0, // Auto-enable when countdown is 0
+        showFireworks: $('#show-fireworks').is(':checked'),
+        maxParticipants: parseInt($('#max-participants').val())
+    };
+
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
+        connection.invoke("UpdateRoomConfiguration", config).then(function () {
+            hideRoomSettings();
+            // Update local configuration
+            window.roomConfiguration = config;
+        }).catch(function (err) {
+            console.error("Error updating room configuration: " + err.toString());
+            alert("Failed to update room settings. Please try again.");
+        });
+    }
+}
+
+let updateCardUIFromSignalR = function(cards) {
+    // Find the card container
+    const cardContainer = document.querySelector('.table.form-row.align-items-center.noselect');
+    if (!cardContainer) return;
+    
+    // Clear existing cards
+    cardContainer.innerHTML = '';
+    
+    // Add new cards
+    cards.forEach(card => {
+        const span = document.createElement('span');
+        
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.value = card.value;
+        input.id = card.value;
+        input.name = 'mark';
+        
+        const label = document.createElement('label');
+        label.setAttribute('for', card.value);
+        label.textContent = card.display || card.value;
+        
+        span.appendChild(input);
+        span.appendChild(label);
+        cardContainer.appendChild(span);
+    });
+    
+    // Re-attach event handlers for the new radio buttons
+    $('input[type=radio][name=mark]').change(function () {
+        if (!this.value)
+            return;
+        
+        if (connection && connection.state === signalR.HubConnectionState.Connected) {
+            connection.invoke("Vote", this.value).catch(function (err) {
+                console.error("Error voting: " + err.toString());
+            });
+        }
+    });
+}
+
+let updateCardSetMapping = function(cards) {
+    // Update the global card set mapping
+    window.cardSetMapping = {};
+    cards.forEach(card => {
+        window.cardSetMapping[card.value] = card.display || card.value;
+    });
+}
+
+let updateOwnershipUI = function(newOwner) {
+    const settingsButton = $('#room-settings-btn');
+    
+    // Try both lowercase and uppercase property names
+    const newOwnerGuid = newOwner?.guid || newOwner?.Guid;
+    
+    if (newOwner && newOwnerGuid === personId) {
+        // Current user is now the owner - show settings button
+        if (settingsButton.length === 0) {
+            // Add settings button if it doesn't exist
+            const buttonHtml = '<input id="room-settings-btn" type="button" value="⚙️ Settings" />';
+            $('.form-row.align-items-center.noselect').find('input[value="Show votes"]').after(buttonHtml);
+            
+            // Attach event handler
+            $('#room-settings-btn').click(function () {
+                showRoomSettings();
+            });
+        } else {
+            // Show existing settings button
+            settingsButton.show();
+        }
+    } else {
+        // Current user is no longer the owner - hide settings button
+        settingsButton.hide();
+    }
+}
+
+let populateOwnershipTransferDropdown = function() {
+    const dropdown = $('#transfer-ownership-select');
+    dropdown.empty();
+    dropdown.append('<option value="">Select person to transfer ownership to...</option>');
+    
+    // Get all people in the room (excluding current user)
+    const allPeople = $('#people-dev tr, #people-test tr, #observers tr');
+    allPeople.each(function() {
+        const currentPersonId = $(this).attr('id');
+        const personName = $(this).find('td:first').text();
+        
+        // Exclude current user by comparing to the global personId variable
+        if (currentPersonId && personName && currentPersonId !== personId) {
+            dropdown.append(`<option value="${currentPersonId}">${personName}</option>`);
+        }
+    });
+}
+
+let transferOwnership = function() {
+    const targetPersonGuid = $('#transfer-ownership-select').val();
+    
+    if (!targetPersonGuid) {
+        return;
+    }
+    
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
+        connection.invoke("TransferOwnership", targetPersonGuid).then(function () {
+            hideRoomSettings();
+        }).catch(function (err) {
+            console.error("Error transferring ownership: " + err.toString());
+        });
+    }
+}

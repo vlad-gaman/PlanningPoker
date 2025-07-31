@@ -6,7 +6,7 @@ namespace PlanningPokerUi.Models
     {
         private ElapsedEventHandler _elapsedEventHandler;
 
-        public int MaxTriggers { get; private set; } = 5;
+        public int MaxTriggers { get; set; } = 5;
         public int Countdown { get; private set; }
         
 

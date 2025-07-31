@@ -35,9 +35,18 @@ namespace PlanningPokerUi.Hubs
             return !input.Any(c => dangerousChars.Contains(c));
         }
 
-        private bool IsValidGuid(string guid)
+        private bool IsValidRoomIdentifier(string roomId)
         {
-            return Guid.TryParse(guid, out _);
+            // Accept GUIDs
+            if (Guid.TryParse(roomId, out _))
+                return true;
+            
+            // Accept fun room names (alphanumeric, underscore, hyphen, max 100 chars)
+            if (string.IsNullOrWhiteSpace(roomId) || roomId.Length > 100)
+                return false;
+            
+            // Fun room names should only contain letters, numbers, underscores, and hyphens
+            return System.Text.RegularExpressions.Regex.IsMatch(roomId, @"^[a-zA-Z0-9_-]+$");
         }
 
         public override async Task OnConnectedAsync()
@@ -79,25 +88,50 @@ namespace PlanningPokerUi.Hubs
                 return;
             }
 
+            (bool roomDisposed, Person newOwner) exitResult = (false, null);
+            
             if (person.ConnectionId == Context.ConnectionId)
             {
-                _roomsManagerService.ExitRoom(person, room.Guid);
+                exitResult = _roomsManagerService.ExitRoom(person, room.Guid);
             }
             
-            var otherPeople = room.GetPeople().Except(new List<Person>() { person });
-
+            // If room was disposed, no need to continue
+            if (exitResult.roomDisposed)
+            {
+                await Clients.Group(room.Guid).SendAsync("RoomDisposed", new { Message = "Room has been closed as the last person left." });
+                return;
+            }
+            
             await SendToGroupExcept(room.Guid, "PersonExited", person, person);
+            
+            // If ownership was transferred, notify all users
+            if (exitResult.newOwner != null)
+            {
+                await Clients.Group(room.Guid).SendAsync("OwnershipTransferred", new 
+                { 
+                    NewOwner = exitResult.newOwner,
+                    Message = $"Room ownership transferred to {exitResult.newOwner.Name}"
+                });
+            }
 
             if (room.IsVotingEnabled() && room.DidEveryoneVote())
             {
-                await ShowVotesAndStatisticsWithTimer(room);
+                // If countdown is 0, show votes immediately without timer
+                if (room.Configuration.CountdownSeconds == 0)
+                {
+                    await ShowVotesAndStatistics(room);
+                }
+                else
+                {
+                    await ShowVotesAndStatisticsWithTimer(room);
+                }
             }
         }
 
         public async Task JoinRoom(string roomGuid)
         {
             // Security: Input validation
-            if (!IsValidGuid(roomGuid))
+            if (!IsValidRoomIdentifier(roomGuid))
             {
                 await Clients.Caller.SendAsync("RoomJoined", new
                 {
@@ -181,15 +215,23 @@ namespace PlanningPokerUi.Hubs
             
             var room = _roomsManagerService.GetRoom(person);
 
-            if (room != null && room.IsVotingEnabled())
+            if (room != null && room.IsVotingEnabled() && room.CanPersonVote(person))
             {
                 room.Vote(person.Guid, mark);
 
                 await Clients.Group(room.Guid).SendAsync("VoteCast", person.Guid);
 
-                if (room.DidEveryoneVote())
+                if (room.DidEveryoneVote() && room.Configuration.AutoShowVotes)
                 {
-                    await ShowVotesAndStatisticsWithTimer(room);
+                    // If countdown is 0, show votes immediately without timer
+                    if (room.Configuration.CountdownSeconds == 0)
+                    {
+                        await ShowVotesAndStatistics(room);
+                    }
+                    else
+                    {
+                        await ShowVotesAndStatisticsWithTimer(room);
+                    }
                 }
             }
         }
@@ -221,7 +263,15 @@ namespace PlanningPokerUi.Hubs
 
             if (room != null && room.IsVotingEnabled())
             {
-                await ShowVotesAndStatisticsWithTimer(room);
+                // If countdown is 0, show votes immediately without timer
+                if (room.Configuration.CountdownSeconds == 0)
+                {
+                    await ShowVotesAndStatistics(room);
+                }
+                else
+                {
+                    await ShowVotesAndStatisticsWithTimer(room);
+                }
             }
         }
 
@@ -270,7 +320,15 @@ namespace PlanningPokerUi.Hubs
                 {
                     if (room.DidEveryoneVote())
                     {
-                        await ShowVotesAndStatisticsWithTimer(room);
+                        // If countdown is 0, show votes immediately without timer
+                        if (room.Configuration.CountdownSeconds == 0)
+                        {
+                            await ShowVotesAndStatistics(room);
+                        }
+                        else
+                        {
+                            await ShowVotesAndStatisticsWithTimer(room);
+                        }
                     }
                     else
                     {
@@ -292,6 +350,37 @@ namespace PlanningPokerUi.Hubs
             
             // Always respond to keep the connection alive
             await Task.CompletedTask;
+        }
+
+        public async Task UpdateRoomConfiguration(RoomConfiguration configuration)
+        {
+            // Security: Input validation
+            if (configuration == null)
+                return;
+
+            var httpContext = Context.GetHttpContext();
+            var person = _peopleManagerService.GetPerson(httpContext);
+            
+            if (person == null) return;
+            
+            var room = _roomsManagerService.GetRoom(person);
+
+            if (room != null)
+            {
+                // Update room configuration
+                room.UpdateConfiguration(configuration);
+
+                // Get the card set details for the update
+                var cardSetDetails = Models.CardSets.GetCardSet(room.Configuration.CardSet);
+                
+                // Notify all room members about the configuration change
+                await Clients.Group(room.Guid).SendAsync("RoomConfigurationUpdated", new
+                {
+                    Configuration = room.Configuration,
+                    UpdatedBy = person.Name,
+                    CardSetDetails = cardSetDetails.Select(card => new { value = card.value, display = card.display }).ToList()
+                });
+            }
         }
 
         private async Task ShowVotesAndStatisticsWithTimer(Room room)
@@ -377,6 +466,34 @@ namespace PlanningPokerUi.Hubs
             });
 
             room.HealthCheckTimer.SetElapsed(sendMessage);
+        }
+        
+        public async Task TransferOwnership(string targetPersonGuid)
+        {
+            // Security: Input validation
+            if (!Guid.TryParse(targetPersonGuid, out var targetGuid))
+                return;
+
+            var httpContext = Context.GetHttpContext();
+            var person = _peopleManagerService.GetPerson(httpContext);
+            
+            if (person == null) return;
+            
+            var room = _roomsManagerService.GetRoom(person);
+
+            if (room != null && room.Owner?.Guid == person.Guid) // Only current owner can transfer
+            {
+                var targetPerson = room.GetPeople().FirstOrDefault(p => p.Guid == targetGuid);
+                
+                if (targetPerson != null && room.TransferOwnership(targetPerson))
+                {
+                    await Clients.Group(room.Guid).SendAsync("OwnershipTransferred", new 
+                    { 
+                        NewOwner = targetPerson,
+                        Message = $"Room ownership transferred to {targetPerson.Name} by {person.Name}"
+                    });
+                }
+            }
         }
     }
 }

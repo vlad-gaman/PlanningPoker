@@ -12,6 +12,10 @@
     <div class="form-row align-items-center noselect">
         <input id="clear-votes" type="button" value="Clear votes" />
         <input id="show-votes" type="button" value="Show votes" />
+        @if (Model.IsCurrentUserOwner)
+        {
+            <input id="room-settings-btn" type="button" value="⚙️ Settings" />
+        }
         @{
             await Html.RenderPartialAsync("_PersonType", Model?.Person?.PersonType);
         }
@@ -66,6 +70,11 @@
     </div>
 </div>
 <div class="fireworks"></div>
+
+@{
+    await Html.RenderPartialAsync("_RoomSettings", Model.Configuration);
+}
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js" ></script>
     <script src="https://cdn.jsdelivr.net/npm/fireworks-js@2.x/dist/index.umd.js"></script>
@@ -78,6 +87,7 @@
                 <text>"@card.value": "@Html.Raw(card.display ?? card.value)",</text>
             }
         };
+        window.roomConfiguration = @Html.Raw(Json.Serialize(Model.Configuration));
         connectToRoom("@Model.Guid.ToString()", "@Model.Person.Guid")
     </script>
 }

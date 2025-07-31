@@ -45,21 +45,28 @@ namespace PlanningPokerUi
 
         private static void ReadCsvInto(string name, List<string> list)
         {
-            using (var reader = new StreamReader(@$".\Services\Csvs\{name}.csv"))
+            try
             {
-                while (!reader.EndOfStream)
+                using (var reader = new StreamReader(@$".\Services\Csvs\{name}.csv"))
                 {
-                    var line = reader.ReadLine();
-                    var values = line.Split(',');
-                    foreach (var val in values)
+                    while (!reader.EndOfStream)
                     {
-                        var toAdd = val.ToLower().Trim();
-                        if (!string.IsNullOrWhiteSpace(toAdd))
+                        var line = reader.ReadLine();
+                        var values = line.Split(',');
+                        foreach (var val in values)
                         {
-                            list.Add(toAdd);
+                            var toAdd = val.ToLower().Trim();
+                            if (!string.IsNullOrWhiteSpace(toAdd))
+                            {
+                                list.Add(toAdd);
+                            }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading CSV {name}: {ex.Message}");
             }
         }
 

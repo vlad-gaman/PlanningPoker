@@ -36,10 +36,20 @@ namespace PlanningPokerUi.Services
 
         public string CreateRoom(Person person, bool useFunName, string cardSet = "modified-fibonacci")
         {
+            var configuration = new RoomConfiguration
+            {
+                CardSet = cardSet
+            };
+            
+            return CreateRoom(person, useFunName, configuration);
+        }
+
+        public string CreateRoom(Person person, bool useFunName, RoomConfiguration configuration)
+        {
             string guid = string.Empty;
             var created = false;
             var index = 0;
-            var room = new Room(person, cardSet);
+            var room = new Room(person, configuration);
 
             while (!created)
             {
@@ -67,12 +77,30 @@ namespace PlanningPokerUi.Services
             return false;
         }
 
-        public void ExitRoom(Person person, string guid)
+        public (bool roomDisposed, Person newOwner) ExitRoom(Person person, string guid)
         {
             if (_rooms.TryGetValue(guid, out Room room))
             {
                 room.RemovePerson(person);
+                
+                // Check if the person leaving is the owner
+                if (room.Owner?.Guid == person.Guid)
+                {
+                    // Try to transfer ownership to another person
+                    var newOwner = room.TransferOwnershipRandomly();
+                    
+                    if (newOwner == null)
+                    {
+                        // No one left, dispose of the room
+                        _rooms.TryRemove(guid, out _);
+                        return (true, null);
+                    }
+                    
+                    return (false, newOwner);
+                }
             }
+            
+            return (false, null);
         }
     }
 }

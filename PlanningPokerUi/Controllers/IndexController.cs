@@ -39,6 +39,7 @@ namespace PlanningPokerUi.Controllers
             return Json(cardSets);
         }
 
+
         [HttpPost("CreateRoom")]
         public IActionResult CreateRoom([FromForm] FormViewModel formViewModel)
         {
@@ -49,7 +50,22 @@ namespace PlanningPokerUi.Controllers
             var newPerson = _peopleManagerService.CreatePerson(HttpContext);
             newPerson.CopyFrom(formViewModel);
 
-            var guid = _roomsManagerService.CreateRoom(newPerson, formViewModel.UseFunRoomName, formViewModel.CardSet);
+            // Create room configuration from form data
+            var configuration = new RoomConfiguration
+            {
+                CardSet = formViewModel.CardSet,
+                CountdownSeconds = formViewModel.CountdownSeconds,
+                CountdownInterval = formViewModel.CountdownInterval,
+                HealthCheckInterval = formViewModel.HealthCheckInterval,
+                AutoShowVotes = formViewModel.AutoShowVotes,
+                AllowObserverVoting = formViewModel.AllowObserverVoting,
+                ShowFireworks = formViewModel.ShowFireworks,
+                MaxParticipants = formViewModel.MaxParticipants,
+                IsPublic = formViewModel.IsPublic,
+                RoomName = formViewModel.RoomName ?? ""
+            };
+
+            var guid = _roomsManagerService.CreateRoom(newPerson, formViewModel.UseFunRoomName, configuration);
             if (string.IsNullOrEmpty(guid))
             {
                 return Conflict();
@@ -86,7 +102,12 @@ namespace PlanningPokerUi.Controllers
                     {
                         if (p.ConnectionId == room.Guid)
                         {
-                            _roomsManagerService.ExitRoom(p, room.Guid);
+                            var exitResult = _roomsManagerService.ExitRoom(p, room.Guid);
+                            // If room was disposed, exit the health check loop
+                            if (exitResult.roomDisposed)
+                            {
+                                return;
+                            }
                         }
                         
                         var otherPeople = room.GetPeople().Except(new System.Collections.Generic.List<Person>() { p });

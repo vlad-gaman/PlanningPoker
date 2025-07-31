@@ -18,7 +18,13 @@ namespace PlanningPokerUi.Services
 
         public static string Generate(int addNoOfAdjectives = 0)
         {
-            var noOfAdjectives = 2 + addNoOfAdjectives;
+            // Check if lists are populated, fallback to GUID if empty
+            if (Nouns.Count == 0 || OpinionAdjectives.Count == 0 || SizeAdjectives.Count == 0)
+            {
+                return Guid.NewGuid().ToString();
+            }
+
+            var noOfAdjectives = Math.Min(2 + addNoOfAdjectives, 7); // Ensure we don't exceed available lists
             var stringBuilder = new StringBuilder();
             var rand = new Random();
 
@@ -26,6 +32,7 @@ namespace PlanningPokerUi.Services
             var selectedAdjectivesList = new List<int>();
             for (int i = 0; i < noOfAdjectives; i++)
             {
+                if (set.Count == 0) break; // Safety check
                 var element = set.ElementAt(rand.Next(set.Count));
                 selectedAdjectivesList.Add(element);
                 set.Remove(element);
@@ -40,7 +47,11 @@ namespace PlanningPokerUi.Services
 
             AppendRandomElementFromList(stringBuilder, rand, Nouns);
 
-            stringBuilder.Remove(stringBuilder.Length - 1, 1);
+            // Remove trailing underscore
+            if (stringBuilder.Length > 0 && stringBuilder[stringBuilder.Length - 1] == '_')
+            {
+                stringBuilder.Remove(stringBuilder.Length - 1, 1);
+            }
 
             return stringBuilder.ToString();
         }
@@ -75,6 +86,11 @@ namespace PlanningPokerUi.Services
 
         private static void AppendRandomElementFromList(StringBuilder stringBuilder, Random rand, List<string> list)
         {
+            if (list.Count == 0)
+            {
+                stringBuilder.Append("unknown_");
+                return;
+            }
             stringBuilder.Append($"{list.ElementAt(rand.Next(list.Count))}_");
         }
     }

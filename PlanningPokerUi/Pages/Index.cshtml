@@ -15,17 +15,8 @@
             }
         </div>
         <div class="form-row align-items-center">
-            <label for="cardSet" class="m-1 noselect">Card Set:</label>
-            <select id="cardSet" name="cardSet" class="m-1">
-                <option value="">Loading...</option>
-            </select>
-        </div>
-        <div class="form-row align-items-center">
-            <label for="useFunRoomName" class="m-1 noselect">Use fun room name?:</label>
-            <input type="checkbox" id="useFunRoomName" name="useFunRoomName" class="m-1" value="true" />
-        </div>
-        <div class="form-row align-items-center">
-            <span class="m-1" style="font-weight: bold">Caution! It may generate weird names!!!</span>
+            <button type="button" id="room-creation-settings-btn" class="btn btn-secondary m-1">⚙️ More Settings</button>
+            <small class="text-muted m-1">Configure card set, countdown, and room options</small>
         </div>
         <div class="form-row align-items-center">
             <input type="submit" formaction="/CreateRoom" value="Create room" class="m-1" />
@@ -41,33 +32,81 @@
     </form>
 </div>
 
+@{
+    await Html.RenderPartialAsync("_RoomCreationSettings");
+}
+
 @section Scripts {
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/api/cardsets')
-                .then(response => response.json())
-                .then(cardSets => {
-                    const select = document.getElementById('cardSet');
-                    select.innerHTML = '';
-                    
-                    cardSets.forEach(cardSet => {
-                        const option = document.createElement('option');
-                        option.value = cardSet.value;
-                        option.textContent = cardSet.display;
-                        
-                        // Set modified-fibonacci as default
-                        if (cardSet.value === 'modified-fibonacci') {
-                            option.selected = true;
-                        }
-                        
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading card sets:', error);
-                    const select = document.getElementById('cardSet');
-                    select.innerHTML = '<option value="modified-fibonacci">Modified Fibonacci (Default)</option>';
-                });
+
+            // Room creation settings functionality
+            const roomCreationSettingsBtn = document.getElementById('room-creation-settings-btn');
+            const roomCreationSettings = document.getElementById('room-creation-settings');
+            const closeCreationSettings = document.getElementById('close-creation-settings');
+            const cancelCreationSettings = document.getElementById('cancel-creation-settings');
+            const saveCreationSettings = document.getElementById('save-creation-settings');
+
+            roomCreationSettingsBtn.addEventListener('click', function() {
+                if (roomCreationSettings.style.display === 'block') {
+                    hideRoomCreationSettings();
+                } else {
+                    showRoomCreationSettings();
+                }
+            });
+
+            closeCreationSettings.addEventListener('click', function() {
+                hideRoomCreationSettings();
+            });
+
+            cancelCreationSettings.addEventListener('click', function() {
+                hideRoomCreationSettings();
+            });
+
+            saveCreationSettings.addEventListener('click', function() {
+                saveRoomCreationSettings();
+                hideRoomCreationSettings();
+            });
+
+            function showRoomCreationSettings() {
+                const overlay = document.createElement('div');
+                overlay.className = 'room-settings-overlay';
+                overlay.onclick = hideRoomCreationSettings;
+                document.body.appendChild(overlay);
+                roomCreationSettings.style.display = 'block';
+            }
+
+            function hideRoomCreationSettings() {
+                roomCreationSettings.style.display = 'none';
+                const overlay = document.querySelector('.room-settings-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+
+            function saveRoomCreationSettings() {
+                // Copy values from settings modal to hidden form fields
+                document.getElementById('hidden-card-set').value = document.getElementById('creation-card-set').value;
+                document.getElementById('hidden-countdown-seconds').value = document.getElementById('creation-countdown-seconds').value;
+                document.getElementById('hidden-use-fun-room-name').checked = document.getElementById('creation-use-fun-room-name').checked;
+                document.getElementById('hidden-show-fireworks').checked = document.getElementById('creation-show-fireworks').checked;
+                document.getElementById('hidden-max-participants').value = document.getElementById('creation-max-participants').value;
+                
+                // Update hidden card set options
+                const hiddenCardSet = document.getElementById('hidden-card-set');
+                const selectedValue = document.getElementById('creation-card-set').value;
+                hiddenCardSet.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = selectedValue;
+                option.selected = true;
+                hiddenCardSet.appendChild(option);
+                
+                // Visual feedback
+                roomCreationSettingsBtn.innerHTML = '✅ Settings Applied';
+                setTimeout(() => {
+                    roomCreationSettingsBtn.innerHTML = '⚙️ More Settings';
+                }, 2000);
+            }
         });
     </script>
 }
