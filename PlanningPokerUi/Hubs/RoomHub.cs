@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Text.RegularExpressions;
 
 namespace PlanningPokerUi.Hubs
 {
@@ -16,12 +17,27 @@ namespace PlanningPokerUi.Hubs
         private readonly RoomsManagerService _roomsManagerService;
         private readonly PeopleManagerService _peopleManagerService;
         private readonly IHubContext<RoomHub> _hubContext;
-
+        
         public RoomHub(RoomsManagerService roomsManagerService, PeopleManagerService peopleManagerService, IHubContext<RoomHub> hubContext)
         {
             _roomsManagerService = roomsManagerService;
             _peopleManagerService = peopleManagerService;
             _hubContext = hubContext;
+        }
+
+        private bool ValidateInput(string input, int maxLength = 100)
+        {
+            if (string.IsNullOrEmpty(input) || input.Length > maxLength)
+                return false;
+            
+            // Basic XSS prevention - reject potentially dangerous characters
+            var dangerousChars = new[] { '<', '>', '"', '\'', '&', '\0', '\r', '\n' };
+            return !input.Any(c => dangerousChars.Contains(c));
+        }
+
+        private bool IsValidGuid(string guid)
+        {
+            return Guid.TryParse(guid, out _);
         }
 
         public override async Task OnConnectedAsync()
@@ -51,6 +67,7 @@ namespace PlanningPokerUi.Hubs
                 room.HealthCheckTimer.ClearElapsed();
             }
             
+            
             await PersonExit(person, room);
             await base.OnDisconnectedAsync(exception);
         }
@@ -79,6 +96,19 @@ namespace PlanningPokerUi.Hubs
 
         public async Task JoinRoom(string roomGuid)
         {
+            // Security: Input validation
+            if (!IsValidGuid(roomGuid))
+            {
+                await Clients.Caller.SendAsync("RoomJoined", new
+                {
+                    IsSuccessful = false,
+                    People = new List<Person>(),
+                    VoteResultInfo = (object)null,
+                    Error = "Invalid room identifier."
+                });
+                return;
+            }
+
             var httpContext = Context.GetHttpContext();
             var person = _peopleManagerService.GetPerson(httpContext);
             
@@ -138,6 +168,12 @@ namespace PlanningPokerUi.Hubs
 
         public async Task Vote(string mark)
         {
+            // Security: Input validation
+            if (!ValidateInput(mark, 20))
+            {
+                return;
+            }
+
             var httpContext = Context.GetHttpContext();
             var person = _peopleManagerService.GetPerson(httpContext);
             
@@ -206,6 +242,13 @@ namespace PlanningPokerUi.Hubs
 
         public async Task ChangePersonType(string personType)
         {
+            // Security: Input validation - only allow specific person types
+            var validPersonTypes = new[] { "dev", "test", "obs" };
+            if (!validPersonTypes.Contains(personType))
+            {
+                return;
+            }
+
             var httpContext = Context.GetHttpContext();
             var person = _peopleManagerService.GetPerson(httpContext);
             
