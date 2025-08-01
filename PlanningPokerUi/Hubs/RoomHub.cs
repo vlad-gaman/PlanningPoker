@@ -225,7 +225,7 @@ namespace PlanningPokerUi.Hubs
                 var currentStatus = room.GetCurrentStatus();
                 await Clients.Group(room.Guid).SendAsync("VoteStatusUpdate", currentStatus);
 
-                if (room.DidEveryoneVote() && room.Configuration.AutoShowVotes)
+                if (room.DidEveryoneVote())
                 {
                     // If countdown is 0, show votes immediately without timer
                     if (room.Configuration.CountdownSeconds == 0)

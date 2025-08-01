@@ -21,10 +21,10 @@ namespace PlanningPokerUi.Models
             Configuration = configuration ?? new RoomConfiguration();
             Owner = person; // First person to create room is the owner
             
-            VotingTimer = new MyTimer(Configuration.CountdownInterval);
+            VotingTimer = new MyTimer(1000); // 1 second interval
             VotingTimer.MaxTriggers = Configuration.CountdownSeconds;
             
-            HealthCheckTimer = new MyTimer(Configuration.HealthCheckInterval);
+            HealthCheckTimer = new MyTimer(5000); // 5 second interval
             
             AddPerson(person);
         }
@@ -70,8 +70,7 @@ namespace PlanningPokerUi.Models
 
         public bool DidEveryoneVote()
         {
-            var eligiblePeople = _people.Values.Where(p => 
-                p.PersonType != "obs" || (p.PersonType == "obs" && Configuration.AllowObserverVoting));
+            var eligiblePeople = _people.Values.Where(p => p.PersonType != "obs");
             
             return eligiblePeople.All(p => _votes.ContainsKey(p.Guid));
         }
@@ -130,7 +129,6 @@ namespace PlanningPokerUi.Models
             
             // Always update these boolean properties
             Configuration.ShowFireworks = newConfiguration.ShowFireworks;
-            Configuration.AutoShowVotes = newConfiguration.AutoShowVotes;
             
             // Update timer configurations
             VotingTimer.MaxTriggers = Configuration.CountdownSeconds;
@@ -138,7 +136,7 @@ namespace PlanningPokerUi.Models
 
         public bool CanPersonVote(Person person)
         {
-            if (person.PersonType == "obs" && !Configuration.AllowObserverVoting)
+            if (person.PersonType == "obs")
                 return false;
                 
             return true;

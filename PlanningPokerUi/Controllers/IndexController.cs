@@ -55,14 +55,8 @@ namespace PlanningPokerUi.Controllers
             {
                 CardSet = formViewModel.CardSet,
                 CountdownSeconds = formViewModel.CountdownSeconds,
-                CountdownInterval = formViewModel.CountdownInterval,
-                HealthCheckInterval = formViewModel.HealthCheckInterval,
-                AutoShowVotes = formViewModel.AutoShowVotes,
-                AllowObserverVoting = formViewModel.AllowObserverVoting,
                 ShowFireworks = formViewModel.ShowFireworks,
-                MaxParticipants = formViewModel.MaxParticipants,
-                IsPublic = formViewModel.IsPublic,
-                RoomName = formViewModel.RoomName ?? ""
+                MaxParticipants = formViewModel.MaxParticipants
             };
 
             var guid = _roomsManagerService.CreateRoom(newPerson, formViewModel.UseFunRoomName, configuration);
@@ -79,14 +73,14 @@ namespace PlanningPokerUi.Controllers
         [HttpPost("JoinRoom")]
         public IActionResult JoinRoom(FormViewModel formViewModel)
         {
-            if (string.IsNullOrEmpty(formViewModel.Name) || string.IsNullOrEmpty(formViewModel.RoomName))
+            if (string.IsNullOrEmpty(formViewModel.Name))
             {
                 return RedirectPermanent("/");
             }
 
-            var a = RedirectPermanent($"/Room/{formViewModel.RoomName}");
-            a.PreserveMethod = true;
-            return a;
+            // JoinRoom functionality should be handled differently
+            // since we no longer use room names, rooms are accessed by GUID
+            return RedirectPermanent("/");
         }
 
         private void SetupHealthCheck(string roomGuid)

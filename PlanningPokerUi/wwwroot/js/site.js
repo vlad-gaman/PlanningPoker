@@ -800,7 +800,7 @@ let saveRoomSettings = function() {
     const config = {
         cardSet: $('#card-set-select').val(),
         countdownSeconds: countdownSeconds,
-        autoShowVotes: true, // Always auto-show when everyone votes (countdown controls timing)
+        // Always auto-show when everyone votes (countdown controls timing)
         showFireworks: $('#show-fireworks').is(':checked'),
         maxParticipants: parseInt($('#max-participants').val())
     };
