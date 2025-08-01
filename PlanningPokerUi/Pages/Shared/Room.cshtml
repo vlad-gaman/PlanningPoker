@@ -26,7 +26,16 @@
             {
                <span>
                     <input type="radio" value="@t.value" id="@t.value" name="mark" />
-                    <label for="@t.value">@(t.display ?? t.value)</label>
+                    <label for="@t.value">
+                        @if (t.display != null && t.display.EndsWith(".png"))
+                        {
+                            <img src="/@t.display" alt="@t.value" style="width: 40px; height: 40px;" />
+                        }
+                        else
+                        {
+                            @(t.display ?? t.value)
+                        }
+                    </label>
                </span> 
             }
         }

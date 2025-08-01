@@ -47,7 +47,7 @@ namespace PlanningPokerUi.Models
             
             ["fist-of-five"] = new List<(string value, string display)>
             {
-                ("0", "0"), ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5")
+                ("0", "zero-finger-512x512.png"), ("1", "one-finger-512x512.png"), ("2", "two-finger-512x512.png"), ("3", "three-finger-512x512.png"), ("4", "four-finger-512x512.png"), ("5", "five-finger-512x512.png")
             }
         };
 

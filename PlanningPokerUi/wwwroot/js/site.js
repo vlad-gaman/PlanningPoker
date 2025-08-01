@@ -15,9 +15,27 @@ let enableLog = false
 let getDisplayValue = function(mark) {
     // Use server-provided mapping if available, otherwise fall back to the mark itself
     if (window.cardSetMapping && window.cardSetMapping[mark]) {
-        return window.cardSetMapping[mark]
+        const displayValue = window.cardSetMapping[mark];
+        // For PNG files, return just the mark value for text display contexts
+        if (displayValue.endsWith('.png')) {
+            return mark;
+        }
+        return displayValue;
     }
     return mark
+}
+
+// Function to get display value as HTML (for contexts that support images)
+let getDisplayValueAsHTML = function(mark) {
+    if (window.cardSetMapping && window.cardSetMapping[mark]) {
+        const displayValue = window.cardSetMapping[mark];
+        // For PNG files, return an img tag
+        if (displayValue.endsWith('.png')) {
+            return `<img src="/${displayValue}" alt="${mark}" style="width: 20px; height: 20px;" />`;
+        }
+        return displayValue;
+    }
+    return mark;
 }
 
 let connectToRoom = function (guid, personGuid) {
@@ -321,6 +339,59 @@ let updateConnectionStatus = function(status) {
     }
 }
 
+// Cache for loaded images to avoid reloading
+let chartImageCache = {};
+
+// Preload images for the current card set
+let preloadCardSetImages = function() {
+    if (!window.cardSetMapping) return;
+    
+    Object.values(window.cardSetMapping).forEach(displayValue => {
+        if (displayValue && displayValue.endsWith('.png')) {
+            const imagePath = '/' + displayValue;
+            if (!chartImageCache[imagePath]) {
+                const img = new Image();
+                chartImageCache[imagePath] = img;
+                img.src = imagePath;
+            }
+        }
+    });
+}
+
+let drawImagesOnChart = function(chart) {
+    const ctx = chart.chart.ctx;
+    const xAxis = chart.scales['x-axis-0'];
+    const yAxis = chart.scales['y-axis-0'];
+    
+    if (!chart.data.labels || chart.data.labels.length === 0) return;
+    
+    chart.data.labels.forEach((label, index) => {
+        if (window.cardSetMapping && window.cardSetMapping[label] && window.cardSetMapping[label].endsWith('.png')) {
+            const imagePath = '/' + window.cardSetMapping[label];
+            
+            // Check if image is already cached
+            if (chartImageCache[imagePath] && chartImageCache[imagePath].complete) {
+                const img = chartImageCache[imagePath];
+                const x = xAxis.getPixelForValue(label);
+                const imageSize = 24;
+                const imageX = x - imageSize / 2;
+                const imageY = xAxis.bottom - imageSize - 5; // Position below the axis
+                
+                ctx.drawImage(img, imageX, imageY, imageSize, imageSize);
+            } else if (!chartImageCache[imagePath]) {
+                // Create and cache image element
+                const img = new Image();
+                chartImageCache[imagePath] = img;
+                img.onload = function() {
+                    // Redraw the chart to show the newly loaded image
+                    chart.update('none');
+                };
+                img.src = imagePath;
+            }
+        }
+    });
+}
+
 let createChart = function (name) {
     return new Chart(name, {
         type: "bar",
@@ -357,6 +428,10 @@ let createChart = function (name) {
                     ticks: {
                         fontSize: 16,
                         callback: function (value) {
+                            // For PNG files, return empty string to hide text labels
+                            if (window.cardSetMapping && window.cardSetMapping[value] && window.cardSetMapping[value].endsWith('.png')) {
+                                return '';
+                            }
                             return getDisplayValue(value)
                         }
                     },
@@ -364,8 +439,24 @@ let createChart = function (name) {
                         display: false
                     }
                 }]
+            },
+            animation: {
+                onComplete: function() {
+                    drawImagesOnChart(this);
+                }
+            },
+            hover: {
+                onHover: function(event, activeElements) {
+                    // Ensure images are redrawn on hover
+                    drawImagesOnChart(this);
+                }
             }
-        }
+        },
+        plugins: [{
+            afterDraw: function(chart) {
+                drawImagesOnChart(chart);
+            }
+        }]
     })
 }
 
@@ -392,7 +483,7 @@ let setIndividualStatistics = function (marks, highestMark, chart) {
     let colors = []
 
     for (let mark of marks) {
-        labels.push(getDisplayValue(mark.mark))
+        labels.push(mark.mark) // Use the actual mark value as label
         percentages.push(mark.percentage)
         if (highestMark == mark.mark) {
             colors.push("green")
@@ -513,7 +604,8 @@ let setVotes = function (votes) {
                 markElement.text("\u25AE")
             }
             else {
-                markElement.text(getDisplayValue(vote.mark))
+                // Use HTML version to support images
+                markElement.html(getDisplayValueAsHTML(vote.mark))
             }
         }
     }
@@ -587,6 +679,9 @@ let removePeopleFromTable = function (otherPeople) {
 }
 
 $(document).ready(function () {
+    // Preload images for the current card set
+    preloadCardSetImages();
+    
     $('input[type=radio][name=mark]').change(function () {
         if (!this.value)
             return;
@@ -718,7 +813,18 @@ let updateCardUIFromSignalR = function(cards) {
         
         const label = document.createElement('label');
         label.setAttribute('for', card.value);
-        label.textContent = card.display || card.value;
+        
+        // Check if display value is a PNG filename
+        if (card.display && card.display.endsWith('.png')) {
+            const img = document.createElement('img');
+            img.src = '/' + card.display;
+            img.alt = card.value;
+            img.style.width = '40px';
+            img.style.height = '40px';
+            label.appendChild(img);
+        } else {
+            label.textContent = card.display || card.value;
+        }
         
         span.appendChild(input);
         span.appendChild(label);
@@ -744,6 +850,9 @@ let updateCardSetMapping = function(cards) {
     cards.forEach(card => {
         window.cardSetMapping[card.value] = card.display || card.value;
     });
+    
+    // Preload images for the new card set
+    preloadCardSetImages();
 }
 
 let updateOwnershipUI = function(newOwner) {
