@@ -658,6 +658,9 @@ let showRoomSettings = function() {
     // Populate transfer ownership dropdown
     populateOwnershipTransferDropdown();
     
+    // Load card sets from API
+    loadCardSetsForRoomSettings();
+    
     $('#room-settings').show();
 }
 
@@ -752,8 +755,8 @@ let updateOwnershipUI = function(newOwner) {
     if (newOwner && newOwnerGuid === personId) {
         // Current user is now the owner - show settings button
         if (settingsButton.length === 0) {
-            // Add settings button if it doesn't exist
-            const buttonHtml = '<input id="room-settings-btn" type="button" value="⚙️ Settings" />';
+            // Add settings button if it doesn't exist with proper spacing
+            const buttonHtml = ' <input id="room-settings-btn" type="button" value="⚙️ Settings" />';
             $('.form-row.align-items-center.noselect').find('input[value="Show votes"]').after(buttonHtml);
             
             // Attach event handler
@@ -802,4 +805,33 @@ let transferOwnership = function() {
             console.error("Error transferring ownership: " + err.toString());
         });
     }
+}
+
+let loadCardSetsForRoomSettings = function() {
+    fetch('/api/cardsets')
+        .then(response => response.json())
+        .then(cardSets => {
+            const cardSetSelect = $('#card-set-select');
+            cardSetSelect.empty(); // Clear existing options
+            
+            cardSets.forEach(cardSet => {
+                const option = $('<option></option>');
+                option.attr('value', cardSet.value);
+                option.text(cardSet.display);
+                cardSetSelect.append(option);
+            });
+            
+            // Set the current card set selection if configuration exists
+            if (window.roomConfiguration && window.roomConfiguration.cardSet) {
+                cardSetSelect.val(window.roomConfiguration.cardSet);
+            } else {
+                // Default to modified-fibonacci if no configuration
+                cardSetSelect.val('modified-fibonacci');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading card sets for room settings:', error);
+            // Keep the loading message if API fails
+            $('#card-set-select').html('<option value="">Failed to load card sets</option>');
+        });
 }

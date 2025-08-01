@@ -154,16 +154,9 @@
                     })
                     .catch(error => {
                         console.error('Error loading card sets:', error);
-                        // Fallback to basic options if API fails
+                        // Show error message if API fails
                         const cardSetSelect = document.getElementById('creation-card-set');
-                        cardSetSelect.innerHTML = `
-                            <option value="fibonacci">Fibonacci</option>
-                            <option value="modified-fibonacci" selected>Modified Fibonacci</option>
-                            <option value="linear">Linear (1-10)</option>
-                            <option value="powers-of-2">Powers of 2</option>
-                            <option value="t-shirt-sizes">T-Shirt Sizes</option>
-                            <option value="traffic-lights">Traffic Lights</option>
-                        `;
+                        cardSetSelect.innerHTML = '<option value="">Failed to load card sets</option>';
                     });
             }
         });

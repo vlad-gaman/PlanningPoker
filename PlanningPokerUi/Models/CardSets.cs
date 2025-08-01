@@ -43,6 +43,11 @@ namespace PlanningPokerUi.Models
             ["traffic-lights"] = new List<(string value, string display)>
             {
                 ("green", "🟢"), ("yellow", "🟡"), ("red", "🔴")
+            },
+            
+            ["fist-of-five"] = new List<(string value, string display)>
+            {
+                ("0", "0"), ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5")
             }
         };
 
@@ -53,7 +58,8 @@ namespace PlanningPokerUi.Models
             ["linear"] = "Linear (1-10)",
             ["powers-of-2"] = "Powers of 2",
             ["t-shirt-sizes"] = "T-Shirt Sizes",
-            ["traffic-lights"] = "Traffic Lights"
+            ["traffic-lights"] = "Traffic Lights",
+            ["fist-of-five"] = "Fist of Five"
         };
 
         public static List<(string value, string display)> GetCardSet(string cardSetKey)
