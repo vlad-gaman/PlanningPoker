@@ -39,6 +39,27 @@ namespace PlanningPokerUi.Controllers
             return Json(cardSets);
         }
 
+        [HttpPost("api/updatename")]
+        public IActionResult UpdateName([FromBody] UpdateNameRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Name))
+            {
+                return BadRequest("Name is required");
+            }
+
+            // Get or create person in session
+            var person = _peopleManagerService.GetPerson(HttpContext);
+            if (person == null)
+            {
+                person = _peopleManagerService.CreatePerson(HttpContext);
+            }
+
+            // Update the person's name
+            person.Name = request.Name.Trim();
+            
+            return Ok(new { success = true, name = person.Name });
+        }
+
 
         [HttpPost("CreateRoom")]
         public IActionResult CreateRoom([FromForm] FormViewModel formViewModel)
@@ -125,5 +146,10 @@ namespace PlanningPokerUi.Controllers
 
             room.HealthCheckTimer.SetElapsed(sendMessage);
         }
+    }
+
+    public class UpdateNameRequest
+    {
+        public string Name { get; set; }
     }
 }

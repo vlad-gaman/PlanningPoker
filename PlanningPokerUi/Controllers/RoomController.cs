@@ -18,8 +18,14 @@ namespace PlanningPokerUi.Controllers
 
 
         [HttpGet]
-        public IActionResult Room(string guid)
+        public IActionResult Room(string guid, bool clearSession = false)
         {
+            // Clear session if requested (for testing or when user wants to enter different name)
+            if (clearSession)
+            {
+                HttpContext.Session.Remove("Guid");
+            }
+            
             var person = _peopleManagerService.GetPerson(HttpContext);
 
             if (_roomsService.DoesRoomExist(guid))
@@ -31,10 +37,14 @@ namespace PlanningPokerUi.Controllers
                 }
                 else
                 {
+                    // Check if there's a person in session but not in room
+                    // This happens when user updated name on main page but hasn't joined a room yet
+                    var sessionPerson = _peopleManagerService.GetPerson(HttpContext);
+                    
                     return View("RoomJoin", new RoomJoinModel()
                     {
                         Guid = guid,
-                        Person = person
+                        Person = sessionPerson // This will be null if no session, or contain the person with updated name
                     });
                 }
             }

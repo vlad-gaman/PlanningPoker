@@ -19,6 +19,109 @@
         <div class="form-row align-items-center">
             <input type="hidden" id="roomName" name="roomName" class="m-1" value="@Model.Guid" />
             <input type="submit" value="Join room" class="m-1" />
+            <a href="/Room/@Model.Guid?clearSession=true" class="btn btn-sm btn-secondary m-1">Use Different Name</a>
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            const joinForm = document.getElementById('join');
+            const nameInput = document.getElementById('name');
+            
+            // Function to cache user name
+            function cacheUserNameDirect(userName) {
+                console.log('=== CACHING USER NAME (Room Join) ===');
+                console.log('User name to cache:', userName);
+                
+                try {
+                    // Try multiple storage methods
+                    localStorage.setItem('planningpoker_user_name', JSON.stringify(userName));
+                    localStorage.setItem('planningpoker_user_name_simple', userName);
+                    console.log('✓ Cached user name successfully');
+                    
+                    // Verify it was saved
+                    const saved = localStorage.getItem('planningpoker_user_name');
+                    console.log('✓ Verification - localStorage contains:', saved);
+                } catch (error) {
+                    console.error('✗ Failed to cache user name:', error);
+                }
+            }
+            
+            // Function to load cached user name
+            function loadCachedUserName() {
+                console.log('=== LOADING CACHED USER NAME (Room Join) ===');
+                
+                // First priority: Server-side session name
+                const serverName = '@Model.Person?.Name';
+                if (serverName && serverName !== '' && nameInput && !nameInput.value.trim()) {
+                    nameInput.value = serverName;
+                    console.log('✓ Auto-filled name field with server name:', serverName);
+                    return;
+                }
+                
+                // Second priority: Client-side cache
+                try {
+                    let cachedName = localStorage.getItem('planningpoker_user_name');
+                    if (cachedName) {
+                        cachedName = JSON.parse(cachedName);
+                    } else {
+                        // Fallback to simple string version
+                        cachedName = localStorage.getItem('planningpoker_user_name_simple');
+                    }
+                    
+                    console.log('Found cached name:', cachedName);
+                    
+                    if (cachedName && nameInput && !nameInput.value.trim()) {
+                        nameInput.value = cachedName;
+                        console.log('✓ Auto-filled name field with cached name:', cachedName);
+                    } else if (cachedName) {
+                        console.log('Name field already has value, not overwriting');
+                    } else {
+                        console.log('No cached name found');
+                    }
+                } catch (error) {
+                    console.error('✗ Error loading cached name:', error);
+                }
+            }
+            
+            // Load cached name when page loads
+            loadCachedUserName();
+            
+            // Cache name on form submission
+            if (joinForm) {
+                joinForm.addEventListener('submit', function(e) {
+                    console.log('=== ROOM JOIN FORM SUBMITTED ===');
+                    
+                    if (nameInput && nameInput.value.trim()) {
+                        const userName = nameInput.value.trim();
+                        cacheUserNameDirect(userName);
+                    }
+                });
+            }
+            
+            // Cache name when user leaves the field
+            if (nameInput) {
+                nameInput.addEventListener('blur', function() {
+                    if (this.value.trim()) {
+                        console.log('=== NAME FIELD BLUR (Room Join) ===');
+                        cacheUserNameDirect(this.value.trim());
+                    }
+                });
+                
+                // Cache name as user types (debounced)
+                let inputTimeout;
+                nameInput.addEventListener('input', function() {
+                    clearTimeout(inputTimeout);
+                    if (this.value.trim()) {
+                        inputTimeout = setTimeout(() => {
+                            console.log('=== INPUT EVENT DEBOUNCED (Room Join) ===');
+                            cacheUserNameDirect(this.value.trim());
+                        }, 500);
+                    }
+                });
+            }
+        });
+    </script>
+}

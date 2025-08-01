@@ -11,6 +11,15 @@ let fireWorks
 let fireWorksIntervals = []
 let enableLog = false
 
+// Client-side caching configuration
+const CACHE_KEYS = {
+    ROOM_CREATION_PREFERENCES: 'planningpoker_creation_preferences',
+    USER_NAME: 'planningpoker_user_name',
+    CARD_SETS: 'planningpoker_card_sets',
+    CARD_SETS_TIMESTAMP: 'planningpoker_card_sets_timestamp'
+}
+const CARD_SETS_CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+
 // Function to get display value for a vote mark
 let getDisplayValue = function(mark) {
     // Use server-provided mapping if available, otherwise fall back to the mark itself
@@ -36,6 +45,126 @@ let getDisplayValueAsHTML = function(mark) {
         return displayValue;
     }
     return mark;
+}
+
+// Client-side caching utilities
+let saveToLocalStorage = function(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+        console.warn('Failed to save to localStorage:', error);
+    }
+}
+
+let loadFromLocalStorage = function(key) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    } catch (error) {
+        console.warn('Failed to load from localStorage:', error);
+        return null;
+    }
+}
+
+let isCardSetsCacheValid = function() {
+    const timestamp = loadFromLocalStorage(CACHE_KEYS.CARD_SETS_TIMESTAMP);
+    if (!timestamp) return false;
+    
+    const now = Date.now();
+    return (now - timestamp) < CARD_SETS_CACHE_DURATION;
+}
+
+let getCachedCardSets = function() {
+    if (isCardSetsCacheValid()) {
+        return loadFromLocalStorage(CACHE_KEYS.CARD_SETS);
+    }
+    return null;
+}
+
+let cacheCardSets = function(cardSets) {
+    saveToLocalStorage(CACHE_KEYS.CARD_SETS, cardSets);
+    saveToLocalStorage(CACHE_KEYS.CARD_SETS_TIMESTAMP, Date.now());
+}
+
+let getCachedCreationPreferences = function() {
+    return loadFromLocalStorage(CACHE_KEYS.ROOM_CREATION_PREFERENCES);
+}
+
+let cacheCreationPreferences = function(preferences) {
+    saveToLocalStorage(CACHE_KEYS.ROOM_CREATION_PREFERENCES, preferences);
+    console.log('Cached room creation preferences:', preferences);
+}
+
+let clearCachedCardSets = function() {
+    localStorage.removeItem(CACHE_KEYS.CARD_SETS);
+    localStorage.removeItem(CACHE_KEYS.CARD_SETS_TIMESTAMP);
+}
+
+let clearCachedCreationPreferences = function() {
+    localStorage.removeItem(CACHE_KEYS.ROOM_CREATION_PREFERENCES);
+}
+
+let getCachedUserName = function() {
+    return loadFromLocalStorage(CACHE_KEYS.USER_NAME);
+}
+
+let cacheUserName = function(userName) {
+    if (userName && userName.trim()) {
+        saveToLocalStorage(CACHE_KEYS.USER_NAME, userName.trim());
+        console.log('Cached user name:', userName.trim());
+    }
+}
+
+let clearCachedUserName = function() {
+    localStorage.removeItem(CACHE_KEYS.USER_NAME);
+}
+
+let getDefaultCreationPreferences = function() {
+    return {
+        cardSet: 'modified-fibonacci',
+        countdownSeconds: 5,
+        showFireworks: true,
+        maxParticipants: 50,
+        useFunRoomName: false
+    };
+}
+
+let loadCreationPreferences = function() {
+    const cached = getCachedCreationPreferences();
+    return cached || getDefaultCreationPreferences();
+}
+
+let saveCurrentCreationPreferences = function(preferences) {
+    // This function can be called with preferences object from the room creation modal
+    if (!preferences) {
+        // Fallback: try to read from creation modal elements if they exist
+        const cardSetElement = document.getElementById('creation-card-set');
+        const countdownElement = document.getElementById('creation-countdown-seconds');
+        const fireworksElement = document.getElementById('creation-show-fireworks');
+        const maxParticipantsElement = document.getElementById('creation-max-participants');
+        const funRoomNameElement = document.getElementById('creation-use-fun-room-name');
+        
+        preferences = {
+            cardSet: cardSetElement ? cardSetElement.value : 'modified-fibonacci',
+            countdownSeconds: countdownElement ? parseInt(countdownElement.value) || 5 : 5,
+            showFireworks: fireworksElement ? fireworksElement.checked : true,
+            maxParticipants: maxParticipantsElement ? parseInt(maxParticipantsElement.value) || 50 : 50,
+            useFunRoomName: funRoomNameElement ? funRoomNameElement.checked : false
+        };
+    }
+    
+    cacheCreationPreferences(preferences);
+    return preferences;
+}
+
+// Debug function to inspect cached creation preferences
+let debugCachedPreferences = function() {
+    console.log('=== Cached Room Creation Preferences ===');
+    const prefs = getCachedCreationPreferences();
+    const userName = getCachedUserName();
+    console.log('Creation Preferences:', prefs);
+    console.log('Cached User Name:', userName);
+    console.log('=========================================');
 }
 
 let connectToRoom = function (guid, personGuid) {
@@ -233,8 +362,9 @@ let setupSignalRHandlers = function(guid) {
             console.log("RoomConfigurationUpdated", data);
         }
         
-        // Update local configuration
+        // Update and cache local configuration
         window.roomConfiguration = data.configuration;
+        cacheRoomConfig(data.configuration);
         
         // Show notification
         if (data.updatedBy) {
@@ -255,6 +385,8 @@ let setupSignalRHandlers = function(guid) {
         if (data.configuration.cardSet && data.cardSetDetails) {
             updateCardUIFromSignalR(data.cardSetDetails);
             updateCardSetMapping(data.cardSetDetails);
+            // Clear card sets cache to force refresh on next load
+            clearCachedCardSets();
         }
     });
     
@@ -756,10 +888,7 @@ $(document).ready(function () {
         transferOwnership();
     });
 
-    // Initialize room settings if configuration exists
-    if (typeof window.roomConfiguration !== 'undefined') {
-        loadRoomSettings(window.roomConfiguration);
-    }
+    // Room creation preferences are handled by the creation modal
 
     $("#statistics").hide();
     $("#show-votes-countdown").hide();
@@ -777,7 +906,7 @@ let showRoomSettings = function() {
     // Populate transfer ownership dropdown
     populateOwnershipTransferDropdown();
     
-    // Load card sets from API
+    // Load card sets (prioritize cache)
     loadCardSetsForRoomSettings();
     
     $('#room-settings').show();
@@ -800,10 +929,12 @@ let saveRoomSettings = function() {
     const config = {
         cardSet: $('#card-set-select').val(),
         countdownSeconds: countdownSeconds,
-        // Always auto-show when everyone votes (countdown controls timing)
         showFireworks: $('#show-fireworks').is(':checked'),
         maxParticipants: parseInt($('#max-participants').val())
     };
+
+    // Cache the configuration locally
+    cacheRoomConfig(config);
 
     if (connection && connection.state === signalR.HubConnectionState.Connected) {
         connection.invoke("UpdateRoomConfiguration", config).then(function () {
@@ -941,30 +1072,55 @@ let transferOwnership = function() {
 }
 
 let loadCardSetsForRoomSettings = function() {
+    // Try to load from cache first
+    const cachedCardSets = getCachedCardSets();
+    
+    if (cachedCardSets) {
+        console.log('Loading card sets from cache');
+        populateCardSetDropdown(cachedCardSets);
+        return;
+    }
+    
+    // Show loading state
+    const cardSetSelect = $('#card-set-select');
+    cardSetSelect.html('<option value="">Loading card sets...</option>');
+    
+    // Load from API if cache is empty or expired
+    console.log('Loading card sets from API');
     fetch('/api/cardsets')
-        .then(response => response.json())
-        .then(cardSets => {
-            const cardSetSelect = $('#card-set-select');
-            cardSetSelect.empty(); // Clear existing options
-            
-            cardSets.forEach(cardSet => {
-                const option = $('<option></option>');
-                option.attr('value', cardSet.value);
-                option.text(cardSet.display);
-                cardSetSelect.append(option);
-            });
-            
-            // Set the current card set selection if configuration exists
-            if (window.roomConfiguration && window.roomConfiguration.cardSet) {
-                cardSetSelect.val(window.roomConfiguration.cardSet);
-            } else {
-                // Default to modified-fibonacci if no configuration
-                cardSetSelect.val('modified-fibonacci');
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+            return response.json();
+        })
+        .then(cardSets => {
+            // Cache the result
+            cacheCardSets(cardSets);
+            populateCardSetDropdown(cardSets);
+            console.log('Card sets loaded and cached successfully');
         })
         .catch(error => {
             console.error('Error loading card sets for room settings:', error);
-            // Keep the loading message if API fails
-            $('#card-set-select').html('<option value="">Failed to load card sets</option>');
+            cardSetSelect.html('<option value="">Failed to load card sets</option>');
         });
+}
+
+let populateCardSetDropdown = function(cardSets) {
+    const cardSetSelect = $('#card-set-select');
+    cardSetSelect.empty();
+    
+    cardSets.forEach(cardSet => {
+        const option = $('<option></option>');
+        option.attr('value', cardSet.value);
+        option.text(cardSet.display);
+        cardSetSelect.append(option);
+    });
+    
+    // Set the current card set selection if configuration exists
+    if (window.roomConfiguration && window.roomConfiguration.cardSet) {
+        cardSetSelect.val(window.roomConfiguration.cardSet);
+    } else {
+        cardSetSelect.val('modified-fibonacci');
+    }
 }
