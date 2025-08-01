@@ -189,6 +189,7 @@ namespace PlanningPokerUi.Models
             VoteResultInfo = new VoteResultInfo()
             {
                 VotingFinished = true,
+                HasEveryoneVoted = DidEveryoneVote(), // Set this when results are generated
                 Votes = votes.ToList(),
                 Statistics = new Statistics()
                 {

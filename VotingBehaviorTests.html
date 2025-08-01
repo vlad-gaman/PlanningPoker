@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voting Behavior Test Suite</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { border: 1px solid #ddd; padding: 15px; margin: 10px 0; }
+        .test-pass { background-color: #d4edda; border-color: #c3e6cb; }
+        .test-fail { background-color: #f8d7da; border-color: #f5c6cb; }
+        .test-pending { background-color: #fff3cd; border-color: #ffeaa7; }
+        .step { margin: 5px 0; padding: 5px; background: #f8f9fa; }
+        .expected { color: #28a745; font-weight: bold; }
+        .actual { color: #dc3545; font-weight: bold; }
+        button { margin: 5px; padding: 8px 16px; }
+        .controls { background: #e9ecef; padding: 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Planning Poker - Voting Behavior Test Suite</h1>
+    
+    <div class="controls">
+        <h3>Test Controls</h3>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="resetTests()">Reset All Tests</button>
+        <button onclick="openConsole()">Open Browser Console</button>
+        <p><strong>Instructions:</strong> Open browser console (F12) to see detailed logs. Test each scenario manually.</p>
+    </div>
+
+    <div class="test-case test-pending" id="test-single-person">
+        <h3>Test 1: Single Person Room</h3>
+        <div class="step">1. Create room with 1 person</div>
+        <div class="step">2. Person votes</div>
+        <div class="step">3. <span class="expected">Expected: Cards should be disabled immediately</span></div>
+        <div class="step">4. <span class="expected">Expected: Results should show after countdown</span></div>
+        <div class="step">5. Click "Clear votes"</div>
+        <div class="step">6. <span class="expected">Expected: Cards should be enabled again</span></div>
+        <button onclick="testSinglePerson()">Test Single Person</button>
+        <div id="result-single-person"></div>
+    </div>
+
+    <div class="test-case test-pending" id="test-multi-person-auto">
+        <h3>Test 2: Multi-Person Room - Auto Show</h3>
+        <div class="step">1. Create room with 2+ people</div>
+        <div class="step">2. First person votes</div>
+        <div class="step">3. <span class="expected">Expected: Cards remain enabled</span></div>
+        <div class="step">4. Last person votes</div>
+        <div class="step">5. <span class="expected">Expected: Cards disabled, countdown starts</span></div>
+        <div class="step">6. <span class="expected">Expected: Results show after countdown</span></div>
+        <div class="step">7. Click "Clear votes"</div>
+        <div class="step">8. <span class="expected">Expected: Cards enabled again</span></div>
+        <button onclick="testMultiPersonAuto()">Test Multi-Person Auto</button>
+        <div id="result-multi-person-auto"></div>
+    </div>
+
+    <div class="test-case test-pending" id="test-force-show">
+        <h3>Test 3: Force Show Votes</h3>
+        <div class="step">1. Create room with 2+ people</div>
+        <div class="step">2. Some people vote (not all)</div>
+        <div class="step">3. <span class="expected">Expected: Cards remain enabled</span></div>
+        <div class="step">4. Click "Show votes" button</div>
+        <div class="step">5. <span class="expected">Expected: Cards should be disabled immediately</span></div>
+        <div class="step">6. <span class="expected">Expected: Results should show immediately</span></div>
+        <div class="step">7. Click "Clear votes"</div>
+        <div class="step">8. <span class="expected">Expected: Cards enabled again</span></div>
+        <button onclick="testForceShow()">Test Force Show</button>
+        <div id="result-force-show"></div>
+    </div>
+
+    <div class="test-case test-pending" id="test-countdown-zero">
+        <h3>Test 4: Countdown = 0 (Immediate Show)</h3>
+        <div class="step">1. Set countdown to 0 seconds</div>
+        <div class="step">2. Everyone votes</div>
+        <div class="step">3. <span class="expected">Expected: Cards disabled immediately</span></div>
+        <div class="step">4. <span class="expected">Expected: Results show immediately (no countdown)</span></div>
+        <button onclick="testCountdownZero()">Test Countdown Zero</button>
+        <div id="result-countdown-zero"></div>
+    </div>
+
+    <div class="test-case test-pending" id="test-auto-show-disabled">
+        <h3>Test 5: AutoShowVotes = false</h3>
+        <div class="step">1. Set AutoShowVotes to false (if possible)</div>
+        <div class="step">2. Everyone votes</div>
+        <div class="step">3. <span class="expected">Expected: Cards remain enabled (no auto-show)</span></div>
+        <div class="step">4. Click "Show votes"</div>
+        <div class="step">5. <span class="expected">Expected: Cards disabled, results show</span></div>
+        <button onclick="testAutoShowDisabled()">Test AutoShow Disabled</button>
+        <div id="result-auto-show-disabled"></div>
+    </div>
+
+    <script>
+        // Test helper functions
+        function checkVotingDisabled() {
+            const cards = document.querySelectorAll('input[type=radio][name=mark]');
+            const disabled = Array.from(cards).every(card => card.disabled);
+            console.log('Voting cards disabled:', disabled);
+            return disabled;
+        }
+
+        function checkVotingEnabled() {
+            return !checkVotingDisabled();
+        }
+
+        function checkStatisticsVisible() {
+            const stats = document.getElementById('statistics');
+            const visible = stats && stats.style.display !== 'none';
+            console.log('Statistics visible:', visible);
+            return visible;
+        }
+
+        function checkCountdownVisible() {
+            const countdown = document.getElementById('show-votes-countdown');
+            const visible = countdown && countdown.style.display !== 'none';
+            console.log('Countdown visible:', visible);
+            return visible;
+        }
+
+        // Test functions
+        function testSinglePerson() {
+            console.log('=== Testing Single Person Room ===');
+            const result = document.getElementById('result-single-person');
+            result.innerHTML = 'Manual test - check console logs and verify behavior matches expected results';
+        }
+
+        function testMultiPersonAuto() {
+            console.log('=== Testing Multi-Person Auto Show ===');
+            const result = document.getElementById('result-multi-person-auto');
+            result.innerHTML = 'Manual test - check console logs and verify behavior matches expected results';
+        }
+
+        function testForceShow() {
+            console.log('=== Testing Force Show Votes ===');
+            const result = document.getElementById('result-force-show');
+            result.innerHTML = 'Manual test - check console logs and verify behavior matches expected results';
+            
+            // Simulate clicking show votes button
+            console.log('Simulating Show Votes button click...');
+            const showVotesBtn = document.getElementById('show-votes');
+            if (showVotesBtn) {
+                showVotesBtn.click();
+            } else {
+                console.error('Show votes button not found!');
+            }
+        }
+
+        function testCountdownZero() {
+            console.log('=== Testing Countdown Zero ===');
+            const result = document.getElementById('result-countdown-zero');
+            result.innerHTML = 'Manual test - set countdown to 0 in room settings first';
+        }
+
+        function testAutoShowDisabled() {
+            console.log('=== Testing AutoShow Disabled ===');
+            const result = document.getElementById('result-auto-show-disabled');
+            result.innerHTML = 'This test may not be possible with current implementation';
+        }
+
+        function runAllTests() {
+            console.log('=== Running All Voting Behavior Tests ===');
+            console.log('These are manual tests - follow the steps and verify expected behavior');
+            
+            // Log current state
+            console.log('Current voting state - Cards enabled:', checkVotingEnabled());
+            console.log('Current voting state - Statistics visible:', checkStatisticsVisible());
+            console.log('Current voting state - Countdown visible:', checkCountdownVisible());
+        }
+
+        function resetTests() {
+            const results = document.querySelectorAll('[id^="result-"]');
+            results.forEach(result => result.innerHTML = '');
+            
+            // Reset test case classes
+            const testCases = document.querySelectorAll('.test-case');
+            testCases.forEach(testCase => {
+                testCase.className = 'test-case test-pending';
+            });
+            
+            console.log('Tests reset');
+        }
+
+        function openConsole() {
+            alert('Press F12 to open browser console and see detailed logs');
+        }
+
+        // Auto-check current state when page loads
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                console.log('=== Current Page State ===');
+                console.log('Cards enabled:', checkVotingEnabled());
+                console.log('Statistics visible:', checkStatisticsVisible());
+                console.log('Countdown visible:', checkCountdownVisible());
+            }, 1000);
+        });
+
+        // Monitor voting events
+        if (typeof connection !== 'undefined') {
+            console.log('SignalR connection detected - monitoring events');
+            
+            // Override the original disableVoting function to log calls
+            if (typeof disableVoting !== 'undefined') {
+                const originalDisableVoting = disableVoting;
+                window.disableVoting = function(value) {
+                    console.log('🔒 disableVoting called with:', value);
+                    return originalDisableVoting(value);
+                };
+            }
+        }
+    </script>
+</body>
+</html>

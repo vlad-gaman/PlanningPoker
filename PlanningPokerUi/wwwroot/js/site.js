@@ -141,6 +141,14 @@ let setupSignalRHandlers = function(guid) {
         $("#" + personGuid + " .mark").text("\u25AE")
     });
 
+    // Vote status update (new event to track voting status)
+    connection.on("VoteStatusUpdate", function (voteResultInfo) {
+        if (enableLog) {
+            console.log("VoteStatusUpdate", voteResultInfo);
+        }
+        setVoteResultInfo(voteResultInfo)
+    });
+
     // Votes shown
     connection.on("VotesShown", function (voteResultInfo) {
         if (enableLog) {
@@ -502,6 +510,8 @@ let setIndividualStatistics = function (marks, highestMark, chart) {
 let setStatistics = function (statistics) {
     if (!statistics) return;
     
+    try {
+    
     if (statistics.marks) {
         setIndividualStatistics(statistics.marks, statistics.highestMark, allChart)
     }
@@ -516,32 +526,11 @@ let setStatistics = function (statistics) {
     $("#devAverageMark").text(statistics.averageMarkDev || "")
     $("#testAverageMark").text(statistics.averageMarkTest || "")
 
-    let marksElements = $(".mark").toArray()
-    let numberOfVotes = marksElements.length
-    let votesGrouped = groupBy(marksElements, e => $(e).text());
-
-    if (statistics.marks && statistics.marks.length > 0
-        && statistics.marks[0].percentage == 100
-        && statistics.marks.length == 1
-        && votesGrouped[getDisplayValue(statistics.marks[0].mark)].length == numberOfVotes
-        && numberOfVotes > 1)
-    {
-        stopFireWorks();
-        let c = 0;
-        fireWorksIntervals.push(setInterval(function () {
-            try {
-                c++;
-                if (!document.hidden) {
-                    fireWorks.launch(10)
-                }
-                if (c >= 10) {
-                    clearFireWorksIntervals()
-                }
-            }
-            catch {
-                clearFireWorksIntervals()
-            }
-        }, 1000))
+    // Fireworks logic has been moved to setVoteResultInfo where we have access to hasEveryoneVoted
+    
+    } catch (error) {
+        console.error("Error in setStatistics:", error);
+        // Continue gracefully - don't let fireworks errors break the statistics display
     }
 }
 
@@ -583,15 +572,50 @@ let setVoteResultInfo = function (voteResultInfo) {
         $("#show-votes-countdown").hide()
         if (voteResultInfo.statistics) {
             setStatistics(voteResultInfo.statistics)
+            
+            // Trigger fireworks if everyone voted the same thing
+            // Only when results are shown AND everyone actually voted
+            if (voteResultInfo.statistics.marks && voteResultInfo.statistics.marks.length === 1 
+                && voteResultInfo.statistics.marks[0].percentage === 100
+                && voteResultInfo.hasEveryoneVoted) {
+                
+                // Count people who can vote (exclude observers)
+                let eligiblePeople = $("#people-dev tr, #people-test tr").length;
+                
+                if (eligiblePeople > 1) {
+                    // Everyone voted for the same mark - trigger fireworks!
+                    stopFireWorks();
+                    let c = 0;
+                    fireWorksIntervals.push(setInterval(function () {
+                        try {
+                            c++;
+                            if (!document.hidden) {
+                                fireWorks.launch(10)
+                            }
+                            if (c >= 10) {
+                                clearFireWorksIntervals()
+                            }
+                        }
+                        catch {
+                            clearFireWorksIntervals()
+                        }
+                    }, 1000))
+                }
+            }
         }
+        // ONLY disable voting when results are actually shown
         disableVoting(true)
     } else {
         $("#statistics").hide();
         if (voteResultInfo.hasEveryoneVoted) {
             $("#show-votes-countdown").show();
             $("#countdown").text(voteResultInfo.countdown)
+            // IMPORTANT: Allow vote changes during countdown - do NOT disable voting
+            // disableVoting(true) -- REMOVED
         } else {
             $("#show-votes-countdown").hide();
+            // Enable voting when not everyone has voted
+            disableVoting(false)
         }
     }
 }
@@ -776,7 +800,7 @@ let saveRoomSettings = function() {
     const config = {
         cardSet: $('#card-set-select').val(),
         countdownSeconds: countdownSeconds,
-        autoShowVotes: countdownSeconds === 0, // Auto-enable when countdown is 0
+        autoShowVotes: true, // Always auto-show when everyone votes (countdown controls timing)
         showFireworks: $('#show-fireworks').is(':checked'),
         maxParticipants: parseInt($('#max-participants').val())
     };

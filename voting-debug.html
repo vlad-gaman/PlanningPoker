@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voting Debug Console</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .debug { background: #f8f9fa; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
+        .error { background: #f8d7da; border-left-color: #dc3545; }
+        .success { background: #d4edda; border-left-color: #28a745; }
+        .warning { background: #fff3cd; border-left-color: #ffc107; }
+        button { margin: 5px; padding: 10px; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Voting Behavior Debug Console</h1>
+    
+    <div class="debug">
+        <h3>Current State Checker</h3>
+        <button onclick="checkCurrentState()">Check Current State</button>
+        <button onclick="simulateVote()">Simulate Vote</button>
+        <button onclick="simulateForceShow()">Simulate Force Show</button>
+        <button onclick="simulateClearVotes()">Simulate Clear Votes</button>
+    </div>
+
+    <div id="test-results"></div>
+
+    <div class="debug">
+        <h3>Event Monitoring</h3>
+        <p>This will intercept and log all relevant events:</p>
+        <div id="event-log"></div>
+    </div>
+
+    <script>
+        let eventLog = [];
+        
+        function log(message, type = 'debug') {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            const logEntry = `[${timestamp}] ${message}`;
+            eventLog.push(logEntry);
+            
+            const logDiv = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = logEntry;
+            logDiv.appendChild(entry);
+            
+            console.log(logEntry);
+            
+            // Keep only last 50 entries
+            if (logDiv.children.length > 50) {
+                logDiv.removeChild(logDiv.firstChild);
+            }
+        }
+
+        function checkCurrentState() {
+            log('=== CHECKING CURRENT STATE ===', 'debug');
+            
+            // Check if voting cards exist
+            const cards = document.querySelectorAll('input[type=radio][name=mark]');
+            log(`Found ${cards.length} voting cards`, 'debug');
+            
+            if (cards.length === 0) {
+                log('ERROR: No voting cards found! Are we on the room page?', 'error');
+                return;
+            }
+            
+            // Check if cards are disabled
+            const disabledCards = Array.from(cards).filter(card => card.disabled);
+            const enabledCards = Array.from(cards).filter(card => !card.disabled);
+            
+            log(`Disabled cards: ${disabledCards.length}`, disabledCards.length > 0 ? 'warning' : 'debug');
+            log(`Enabled cards: ${enabledCards.length}`, enabledCards.length > 0 ? 'success' : 'debug');
+            
+            // Check statistics visibility
+            const stats = document.getElementById('statistics');
+            if (stats) {
+                const statsVisible = stats.style.display !== 'none' && !stats.hidden;
+                log(`Statistics visible: ${statsVisible}`, statsVisible ? 'success' : 'debug');
+            } else {
+                log('Statistics element not found', 'warning');
+            }
+            
+            // Check countdown visibility
+            const countdown = document.getElementById('show-votes-countdown');
+            if (countdown) {
+                const countdownVisible = countdown.style.display !== 'none' && !countdown.hidden;
+                log(`Countdown visible: ${countdownVisible}`, countdownVisible ? 'success' : 'debug');
+            } else {
+                log('Countdown element not found', 'warning');
+            }
+            
+            // Check connection state
+            if (typeof connection !== 'undefined') {
+                log(`SignalR connection state: ${connection.state}`, 'debug');
+            } else {
+                log('SignalR connection not found', 'error');
+            }
+            
+            // Check room configuration
+            if (typeof window.roomConfiguration !== 'undefined') {
+                log(`Room configuration found:`, 'debug');
+                log(`  AutoShowVotes: ${window.roomConfiguration.AutoShowVotes}`, 'debug');
+                log(`  CountdownSeconds: ${window.roomConfiguration.CountdownSeconds}`, 'debug');
+            } else {
+                log('Room configuration not found', 'warning');
+            }
+        }
+
+        function simulateVote() {
+            log('=== SIMULATING VOTE ===', 'debug');
+            
+            const cards = document.querySelectorAll('input[type=radio][name=mark]:not(:disabled)');
+            if (cards.length === 0) {
+                log('ERROR: No enabled voting cards found!', 'error');
+                return;
+            }
+            
+            const firstCard = cards[0];
+            log(`Selecting card with value: ${firstCard.value}`, 'debug');
+            
+            // Trigger the change event
+            firstCard.checked = true;
+            firstCard.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Check state after a delay
+            setTimeout(() => {
+                log('--- State after vote ---', 'debug');
+                checkCurrentState();
+            }, 1000);
+        }
+
+        function simulateForceShow() {
+            log('=== SIMULATING FORCE SHOW VOTES ===', 'debug');
+            
+            const showButton = document.getElementById('show-votes');
+            if (!showButton) {
+                log('ERROR: Show votes button not found!', 'error');
+                return;
+            }
+            
+            log('Clicking show votes button', 'debug');
+            showButton.click();
+            
+            // Check state after a delay
+            setTimeout(() => {
+                log('--- State after force show ---', 'debug');
+                checkCurrentState();
+            }, 1000);
+        }
+
+        function simulateClearVotes() {
+            log('=== SIMULATING CLEAR VOTES ===', 'debug');
+            
+            const clearButton = document.getElementById('clear-votes');
+            if (!clearButton) {
+                log('ERROR: Clear votes button not found!', 'error');
+                return;
+            }
+            
+            log('Clicking clear votes button', 'debug');
+            clearButton.click();
+            
+            // Check state after a delay
+            setTimeout(() => {
+                log('--- State after clear votes ---', 'debug');
+                checkCurrentState();
+            }, 1000);
+        }
+
+        // Intercept SignalR events if available
+        function interceptSignalREvents() {
+            if (typeof connection === 'undefined') {
+                setTimeout(interceptSignalREvents, 1000);
+                return;
+            }
+            
+            log('SignalR connection found - setting up event interception', 'success');
+            
+            // Intercept VotesShown
+            const originalVotesShown = connection._callbacks['VotesShown'];
+            if (originalVotesShown) {
+                connection.off('VotesShown');
+                connection.on('VotesShown', function(voteResultInfo) {
+                    log(`SignalR: VotesShown event received`, 'success');
+                    log(`  votingFinished: ${voteResultInfo?.votingFinished}`, 'debug');
+                    log(`  hasEveryoneVoted: ${voteResultInfo?.hasEveryoneVoted}`, 'debug');
+                    log(`  votes count: ${voteResultInfo?.votes?.length || 0}`, 'debug');
+                    
+                    // Call original handlers
+                    originalVotesShown.forEach(handler => handler(voteResultInfo));
+                    
+                    // Check state after processing
+                    setTimeout(() => {
+                        log('--- State after VotesShown processing ---', 'debug');
+                        checkCurrentState();
+                    }, 100);
+                });
+            }
+            
+            // Intercept VoteCast
+            const originalVoteCast = connection._callbacks['VoteCast'];
+            if (originalVoteCast) {
+                connection.off('VoteCast');
+                connection.on('VoteCast', function(personGuid) {
+                    log(`SignalR: VoteCast event received for ${personGuid}`, 'success');
+                    
+                    // Call original handlers
+                    originalVoteCast.forEach(handler => handler(personGuid));
+                });
+            }
+            
+            // Intercept VotesCleared
+            const originalVotesCleared = connection._callbacks['VotesCleared'];
+            if (originalVotesCleared) {
+                connection.off('VotesCleared');
+                connection.on('VotesCleared', function() {
+                    log(`SignalR: VotesCleared event received`, 'success');
+                    
+                    // Call original handlers
+                    originalVotesCleared.forEach(handler => handler());
+                    
+                    // Check state after processing
+                    setTimeout(() => {
+                        log('--- State after VotesCleared processing ---', 'debug');
+                        checkCurrentState();
+                    }, 100);
+                });
+            }
+        }
+
+        // Intercept disableVoting function
+        function interceptDisableVoting() {
+            if (typeof disableVoting === 'undefined') {
+                setTimeout(interceptDisableVoting, 1000);
+                return;
+            }
+            
+            log('disableVoting function found - setting up interception', 'success');
+            
+            const originalDisableVoting = disableVoting;
+            window.disableVoting = function(value) {
+                log(`disableVoting called with: ${value}`, value ? 'warning' : 'success');
+                
+                const cards = document.querySelectorAll('input[type=radio][name=mark]');
+                log(`  Affecting ${cards.length} cards`, 'debug');
+                
+                const result = originalDisableVoting(value);
+                
+                // Verify the change took effect
+                setTimeout(() => {
+                    const disabledCount = document.querySelectorAll('input[type=radio][name=mark]:disabled').length;
+                    const enabledCount = document.querySelectorAll('input[type=radio][name=mark]:not(:disabled)').length;
+                    log(`  Result: ${disabledCount} disabled, ${enabledCount} enabled`, 'debug');
+                }, 10);
+                
+                return result;
+            };
+        }
+
+        // Start intercepting when page loads
+        window.addEventListener('load', function() {
+            log('Page loaded - starting debug console', 'success');
+            setTimeout(() => {
+                interceptSignalREvents();
+                interceptDisableVoting();
+                checkCurrentState();
+            }, 2000);
+        });
+
+        // Clear log button
+        function clearLog() {
+            eventLog = [];
+            document.getElementById('event-log').innerHTML = '';
+            log('Event log cleared', 'debug');
+        }
+    </script>
+    
+    <div class="debug">
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="checkCurrentState()">Refresh State</button>
+    </div>
+</body>
+</html>
