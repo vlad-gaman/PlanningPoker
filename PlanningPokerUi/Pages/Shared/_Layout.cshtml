@@ -17,7 +17,10 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container d-flex">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">PlanningPokerUi</a>
+                <a class="navbar-brand d-flex align-items-center" asp-area="" asp-page="/Index">
+                    <img src="~/favicon-32x32.png" alt="Planning Poker Logo" width="28" height="28" class="me-2">
+                    PlanningPokerUi
+                </a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -39,8 +42,15 @@
     </div>
 
     <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - PlanningPokerUi
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <span>&copy; 2025 - PlanningPokerUi</span>
+                <span class="mx-2">|</span>
+                <a href="/Credits" class="text-muted">Credits</a>
+            </div>
+            <a href="https://buymeacoffee.com/vladg" target="_blank" rel="noopener noreferrer" class="buymeacoffee-link">
+                <img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy Me A Coffee" width="12" height="12">
+            </a>
         </div>
     </footer>
 

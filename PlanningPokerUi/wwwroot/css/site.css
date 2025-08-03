@@ -660,3 +660,65 @@ label {
     background: rgba(0,0,0,0.7);
 }
 
+/* Buy Me a Coffee link styles */
+.buymeacoffee-link {
+    display: inline-block;
+    text-decoration: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.buymeacoffee-link:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+    text-decoration: none;
+}
+
+.buymeacoffee-link img {
+    border-radius: 50%;
+    box-shadow: 0 1px 3px var(--shadow-color);
+    transition: box-shadow 0.2s ease;
+    padding: 2px;
+    background-color: #ffdd00;
+}
+
+.buymeacoffee-link:hover img {
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+/* Dark mode adjustments for Buy Me a Coffee button */
+[data-theme="dark"] .buymeacoffee-link img {
+    filter: brightness(0.95) contrast(1.05);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .buymeacoffee-link img {
+        filter: brightness(0.95) contrast(1.05);
+    }
+}
+
+/* Bootstrap card styling for dark mode */
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.card-header {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.card-body {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6 {
+    color: var(--text-color);
+}
+
+.card p {
+    color: var(--text-color);
+}
+
