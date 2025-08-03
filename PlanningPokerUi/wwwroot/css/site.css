@@ -329,15 +329,16 @@ input[type='radio'][name='personType']:checked + label {
 /* Connection status indicator */
 .connection-status {
     position: fixed;
-    top: 10px;
-    right: 10px;
+    bottom: 20px;
+    right: 20px;
     padding: 8px 12px;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     z-index: 1000;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease;
+    max-width: 200px;
 }
 
 .connection-status.connected {
@@ -417,6 +418,20 @@ select option {
     color: var(--text-color);
 }
 
+/* Force dark mode option styling */
+[data-theme="dark"] select option {
+    background-color: #2d2d2d !important;
+    color: #e9ecef !important;
+}
+
+/* Auto mode for system dark preference */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) select option {
+        background-color: #2d2d2d !important;
+        color: #e9ecef !important;
+    }
+}
+
 select:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
@@ -492,3 +507,17 @@ label {
         padding: 2px;
     }
 }
+
+/* Additional dark mode fixes for room settings modal form controls */
+[data-theme="dark"] .room-settings .form-control option {
+    background-color: #2d2d2d !important;
+    color: #e9ecef !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .room-settings .form-control option {
+        background-color: #2d2d2d !important;
+        color: #e9ecef !important;
+    }
+}
+

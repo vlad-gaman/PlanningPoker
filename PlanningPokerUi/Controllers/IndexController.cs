@@ -66,6 +66,7 @@ namespace PlanningPokerUi.Controllers
         {
             if (string.IsNullOrEmpty(formViewModel.Name))
             {
+                TempData["ErrorMessage"] = "Please enter your name to create a room.";
                 return RedirectPermanent("/");
             }
             var newPerson = _peopleManagerService.CreatePerson(HttpContext);
@@ -96,12 +97,29 @@ namespace PlanningPokerUi.Controllers
         {
             if (string.IsNullOrEmpty(formViewModel.Name))
             {
+                TempData["ErrorMessage"] = "Please enter your name to join a room.";
                 return RedirectPermanent("/");
             }
 
-            // JoinRoom functionality should be handled differently
-            // since we no longer use room names, rooms are accessed by GUID
-            return RedirectPermanent("/");
+            if (string.IsNullOrEmpty(formViewModel.RoomName))
+            {
+                TempData["ErrorMessage"] = "Please enter a room name to join.";
+                return RedirectPermanent("/");
+            }
+
+            // Validate that the room exists
+            if (!_roomsManagerService.DoesRoomExist(formViewModel.RoomName))
+            {
+                TempData["ErrorMessage"] = $"Room '{formViewModel.RoomName}' does not exist.";
+                return RedirectPermanent("/");
+            }
+
+            // Create/update person in session with the provided name
+            var person = _peopleManagerService.CreatePerson(HttpContext);
+            person.CopyFrom(formViewModel);
+
+            // Redirect to the room
+            return RedirectPermanent($"/Room/{formViewModel.RoomName}");
         }
 
         private void SetupHealthCheck(string roomGuid)

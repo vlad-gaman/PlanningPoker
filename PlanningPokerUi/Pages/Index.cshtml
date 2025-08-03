@@ -5,10 +5,17 @@
 }
 
 <div class="text-center align-items-start">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div id="server-error" class="text-danger" style="font-size: 0.875em; margin-bottom: 10px;">
+            @TempData["ErrorMessage"]
+        </div>
+    }
     <form id="createRoom" asp-controller="Index">
         <div class="form-row align-items-center">
             <label for="name" class="m-1 noselect">Your Name:</label>
-            <input type="text" id="name" name="name" minLength="2" maxlength="20" size="10" class="m-1" />
+            <input type="text" id="name" name="name" minLength="2" maxlength="20" size="10" class="m-1" required />
+            <div id="name-error" class="text-danger" style="display: none; font-size: 0.875em; margin-left: 5px;"></div>
 
             @{
                 await Html.RenderPartialAsync("_PersonType", Model?.Person?.PersonType);
@@ -25,6 +32,7 @@
         <div class="form-row align-items-center">
             <label for="roomName" class="m-1 noselect">Room Name:</label>
             <input type="text" id="roomName" name="roomName" minLength="2" size="10" class="m-1" />
+            <div id="room-name-error" class="text-danger" style="display: none; font-size: 0.875em; margin-left: 5px;"></div>
         </div>
         <div class="form-row align-items-center">
             <input type="submit" formaction="/JoinRoom" value="Join room" class="m-1" />
@@ -144,21 +152,51 @@
                 });
             }
 
-            // Dynamically inject form values when creating a room
+            // Form validation and submission handling
             createRoomForm.addEventListener('submit', function(e) {
                 console.log('=== FORM SUBMITTED ===');
                 console.log('Submitter:', e.submitter);
                 console.log('Form action:', e.submitter?.formAction);
                 
-                // Cache user name for both create and join actions
+                // Validate form based on action
+                const isCreateRoom = e.submitter && e.submitter.formAction && e.submitter.formAction.includes('CreateRoom');
+                const isJoinRoom = e.submitter && e.submitter.formAction && e.submitter.formAction.includes('JoinRoom');
+                
+                // Clear previous errors
+                clearFormErrors();
+                
+                let hasErrors = false;
+                
+                // Validate name for both create and join
                 const nameInput = document.getElementById('name');
+                if (!nameInput || !nameInput.value.trim()) {
+                    showError('name-error', 'Please enter your name');
+                    hasErrors = true;
+                }
+                
+                // Validate room name for join room
+                if (isJoinRoom) {
+                    const roomNameInput = document.getElementById('roomName');
+                    if (!roomNameInput || !roomNameInput.value.trim()) {
+                        showError('room-name-error', 'Please enter a room name');
+                        hasErrors = true;
+                    }
+                }
+                
+                // Prevent form submission if there are errors
+                if (hasErrors) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Cache user name for both create and join actions
                 if (nameInput && nameInput.value.trim()) {
                     const userName = nameInput.value.trim();
                     cacheUserNameSync(userName);
                 }
                 
                 // Only inject room creation values when creating a room (not joining)
-                if (e.submitter && e.submitter.formAction && e.submitter.formAction.includes('CreateRoom')) {
+                if (isCreateRoom) {
                     injectRoomCreationValues();
                 }
             });
@@ -168,6 +206,18 @@
             
             // Load cached user name on page load (with slight delay to ensure site.js is loaded)
             setTimeout(loadCachedUserName, 100);
+            
+            // Auto-hide server error message after 8 seconds
+            const serverError = document.getElementById('server-error');
+            if (serverError) {
+                setTimeout(() => {
+                    serverError.style.transition = 'opacity 0.5s ease';
+                    serverError.style.opacity = '0';
+                    setTimeout(() => {
+                        serverError.style.display = 'none';
+                    }, 500);
+                }, 8000);
+            }
             
             // Save user name with multiple event handlers for maximum reliability
             const nameInput = document.getElementById('name');
@@ -202,6 +252,23 @@
                 });
             }
             
+            // Helper functions for form validation
+            function showError(errorId, message) {
+                const errorElement = document.getElementById(errorId);
+                if (errorElement) {
+                    errorElement.textContent = message;
+                    errorElement.style.display = 'inline';
+                }
+            }
+            
+            function clearFormErrors() {
+                const errorElements = document.querySelectorAll('[id$="-error"]');
+                errorElements.forEach(element => {
+                    element.style.display = 'none';
+                    element.textContent = '';
+                });
+            }
+
             // Functions to handle cached preferences
             function loadCachedPreferences() {
                 // Check if the functions from site.js are available

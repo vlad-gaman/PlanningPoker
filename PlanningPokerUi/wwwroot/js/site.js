@@ -120,6 +120,16 @@ let clearCachedUserName = function() {
     localStorage.removeItem(CACHE_KEYS.USER_NAME);
 }
 
+let cacheRoomConfig = function(config) {
+    // Cache room configuration for potential future use
+    try {
+        localStorage.setItem('planningpoker_room_config', JSON.stringify(config));
+        console.log('Cached room configuration:', config);
+    } catch (error) {
+        console.warn('Failed to cache room configuration:', error);
+    }
+}
+
 // Theme management functions
 let getThemePreference = function() {
     return loadFromLocalStorage(CACHE_KEYS.THEME_PREFERENCE) || 'auto';
@@ -1036,18 +1046,30 @@ let loadRoomSettings = function(config) {
 
 let saveRoomSettings = function() {
     const countdownSeconds = parseInt($('#countdown-seconds').val());
+    const cardSetValue = $('#card-set-select').val();
+    
+    console.log('=== SAVING ROOM SETTINGS ===');
+    console.log('Card set dropdown value:', cardSetValue);
+    console.log('Countdown seconds:', countdownSeconds);
+    console.log('Show fireworks:', $('#show-fireworks').is(':checked'));
+    console.log('Max participants:', parseInt($('#max-participants').val()));
+    
     const config = {
-        cardSet: $('#card-set-select').val(),
+        cardSet: cardSetValue,
         countdownSeconds: countdownSeconds,
         showFireworks: $('#show-fireworks').is(':checked'),
         maxParticipants: parseInt($('#max-participants').val())
     };
 
+    console.log('Final config object:', config);
+
     // Cache the configuration locally
     cacheRoomConfig(config);
 
     if (connection && connection.state === signalR.HubConnectionState.Connected) {
+        console.log('Invoking UpdateRoomConfiguration with config:', config);
         connection.invoke("UpdateRoomConfiguration", config).then(function () {
+            console.log('UpdateRoomConfiguration succeeded');
             hideRoomSettings();
             // Update local configuration
             window.roomConfiguration = config;
@@ -1055,6 +1077,9 @@ let saveRoomSettings = function() {
             console.error("Error updating room configuration: " + err.toString());
             alert("Failed to update room settings. Please try again.");
         });
+    } else {
+        console.error('SignalR connection not ready. State:', connection ? connection.state : 'No connection');
+        alert("Connection error. Please try again.");
     }
 }
 
