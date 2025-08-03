@@ -16,7 +16,8 @@ const CACHE_KEYS = {
     ROOM_CREATION_PREFERENCES: 'planningpoker_creation_preferences',
     USER_NAME: 'planningpoker_user_name',
     CARD_SETS: 'planningpoker_card_sets',
-    CARD_SETS_TIMESTAMP: 'planningpoker_card_sets_timestamp'
+    CARD_SETS_TIMESTAMP: 'planningpoker_card_sets_timestamp',
+    THEME_PREFERENCE: 'planningpoker_theme_preference'
 }
 const CARD_SETS_CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 
@@ -117,6 +118,105 @@ let cacheUserName = function(userName) {
 
 let clearCachedUserName = function() {
     localStorage.removeItem(CACHE_KEYS.USER_NAME);
+}
+
+// Theme management functions
+let getThemePreference = function() {
+    return loadFromLocalStorage(CACHE_KEYS.THEME_PREFERENCE) || 'auto';
+}
+
+let saveThemePreference = function(theme) {
+    saveToLocalStorage(CACHE_KEYS.THEME_PREFERENCE, theme);
+    console.log('Cached theme preference:', theme);
+}
+
+let applyTheme = function(theme) {
+    const html = document.documentElement;
+    
+    // Remove existing theme attributes
+    html.removeAttribute('data-theme');
+    
+    // Apply the selected theme
+    if (theme === 'dark') {
+        html.setAttribute('data-theme', 'dark');
+    } else if (theme === 'light') {
+        html.setAttribute('data-theme', 'light');
+    }
+    // For 'auto', we don't set any attribute and let CSS media queries handle it
+    
+    // Update charts if they exist
+    updateChartsForTheme();
+}
+
+let initializeTheme = function() {
+    const savedTheme = getThemePreference();
+    applyTheme(savedTheme);
+    
+    // Update the theme toggle to reflect current theme
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+        themeSelect.value = savedTheme;
+    }
+}
+
+let getCurrentThemeColors = function() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+        primary: style.getPropertyValue('--chart-color-primary').trim(),
+        success: style.getPropertyValue('--chart-color-success').trim(),
+        textColor: style.getPropertyValue('--text-color').trim(),
+        bgColor: style.getPropertyValue('--bg-color').trim()
+    };
+}
+
+let updateChartsForTheme = function() {
+    // Update chart colors when theme changes
+    if (typeof allChart !== 'undefined' && allChart) {
+        updateChartTheme(allChart);
+    }
+    if (typeof devChart !== 'undefined' && devChart) {
+        updateChartTheme(devChart);
+    }
+    if (typeof testChart !== 'undefined' && testChart) {
+        updateChartTheme(testChart);
+    }
+}
+
+let updateChartTheme = function(chart) {
+    if (!chart || !chart.data || !chart.data.datasets) return;
+    
+    const colors = getCurrentThemeColors();
+    
+    // Update chart background colors to use theme-appropriate colors
+    const dataset = chart.data.datasets[0];
+    if (dataset && dataset.backgroundColor && Array.isArray(dataset.backgroundColor)) {
+        dataset.backgroundColor = dataset.backgroundColor.map(color => {
+            if (color === 'green') {
+                return colors.success;
+            } else if (color === 'blue') {
+                return colors.primary;
+            }
+            return color;
+        });
+    }
+    
+    // Update chart text color
+    if (chart.options && chart.options.scales) {
+        if (chart.options.scales.xAxes && chart.options.scales.xAxes[0]) {
+            chart.options.scales.xAxes[0].ticks.fontColor = colors.textColor;
+        }
+        if (chart.options.scales.yAxes && chart.options.scales.yAxes[0]) {
+            chart.options.scales.yAxes[0].ticks.fontColor = colors.textColor;
+        }
+    }
+    
+    chart.update();
+}
+
+let createThemeToggle = function() {
+    // This function is now deprecated - theme toggle is in navbar
+    // Keeping for backward compatibility but does nothing
+    console.log('Theme toggle is now in navbar, createThemeToggle() is deprecated');
 }
 
 let getDefaultCreationPreferences = function() {
@@ -533,6 +633,8 @@ let drawImagesOnChart = function(chart) {
 }
 
 let createChart = function (name) {
+    const themeColors = getCurrentThemeColors();
+    
     return new Chart(name, {
         type: "bar",
         data: {
@@ -548,7 +650,10 @@ let createChart = function (name) {
                     label: function (tooltipItem, data) {
                         return tooltipItem.value + "%";
                     }
-                }
+                },
+                backgroundColor: themeColors.bgColor || '#000',
+                titleFontColor: themeColors.textColor || '#fff',
+                bodyFontColor: themeColors.textColor || '#fff'
             },
             legend: {
                 display: false
@@ -558,7 +663,8 @@ let createChart = function (name) {
                     ticks: {
                         beginAtZero: true,
                         suggestedMax: 100,
-                        display: false
+                        display: false,
+                        fontColor: themeColors.textColor || '#666'
                     },
                     gridLines: {
                         display: false
@@ -567,6 +673,7 @@ let createChart = function (name) {
                 xAxes: [{
                     ticks: {
                         fontSize: 16,
+                        fontColor: themeColors.textColor || '#666',
                         callback: function (value) {
                             // For PNG files, return empty string to hide text labels
                             if (window.cardSetMapping && window.cardSetMapping[value] && window.cardSetMapping[value].endsWith('.png')) {
@@ -621,15 +728,18 @@ let setIndividualStatistics = function (marks, highestMark, chart) {
     let labels = []
     let percentages = []
     let colors = []
+    
+    // Get theme-appropriate colors
+    const themeColors = getCurrentThemeColors();
 
     for (let mark of marks) {
         labels.push(mark.mark) // Use the actual mark value as label
         percentages.push(mark.percentage)
         if (highestMark == mark.mark) {
-            colors.push("green")
+            colors.push(themeColors.success || "#28a745")
         }
         else {
-            colors.push("blue")
+            colors.push(themeColors.primary || "#007bff")
         }
     }
 

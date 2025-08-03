@@ -9,7 +9,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/PlanningPokerUi/bin/Debug/net6.0/PlanningPokerUi.dll",
+      "program": "${workspaceFolder}/PlanningPokerUi/bin/Debug/net8.0/PlanningPokerUi.dll",
       "args": [],
       "cwd": "${workspaceFolder}/PlanningPokerUi",
       "stopAtEntry": false,

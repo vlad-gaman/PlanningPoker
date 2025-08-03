@@ -16,12 +16,19 @@
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
+            <div class="container d-flex">
                 <a class="navbar-brand" asp-area="" asp-page="/Index">PlanningPokerUi</a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+                <div class="theme-toggle" id="navbar-theme-toggle" style="display: none;">
+                    🎨 <select id="theme-select">
+                        <option value="auto">Auto</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
             </div>
         </nav>
     </header>
@@ -33,13 +40,42 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2022 - PlanningPokerUi - <a asp-area="" asp-page="/Privacy">Privacy</a>
+            &copy; 2022 - PlanningPokerUi
         </div>
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        // Initialize theme system on all pages
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initializeTheme !== 'undefined') {
+                initializeTheme();
+                // Show the navbar theme toggle
+                const navbarThemeToggle = document.getElementById('navbar-theme-toggle');
+                if (navbarThemeToggle) {
+                    navbarThemeToggle.style.display = 'block';
+                    
+                    // Add event listener for theme changes
+                    const themeSelect = document.getElementById('theme-select');
+                    if (themeSelect && typeof saveThemePreference !== 'undefined' && typeof applyTheme !== 'undefined') {
+                        themeSelect.addEventListener('change', function() {
+                            const selectedTheme = this.value;
+                            saveThemePreference(selectedTheme);
+                            applyTheme(selectedTheme);
+                        });
+                        
+                        // Set initial value
+                        if (typeof getThemePreference !== 'undefined') {
+                            themeSelect.value = getThemePreference();
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 
     @RenderSection("Scripts", required: false)
 </body>
