@@ -74,9 +74,9 @@ for details on configuring this project to bundle and minify static web assets. 
 /* Theme Toggle Button - Now in navbar */
 .theme-toggle {
     margin-left: auto;
-    background: transparent;
+    background-color: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
+    border-radius: 0px;
     padding: 4px 12px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -91,7 +91,7 @@ for details on configuring this project to bundle and minify static web assets. 
 }
 
 .theme-toggle select {
-    background: transparent;
+    background-color: var(--card-bg);
     border: none;
     color: var(--text-color);
     font-size: 14px;
@@ -103,6 +103,20 @@ for details on configuring this project to bundle and minify static web assets. 
 .theme-toggle select option {
     background: var(--card-bg);
     color: var(--text-color);
+}
+
+/* Force dark mode option styling for theme toggle */
+[data-theme="dark"] .theme-toggle select option {
+    background-color: #2d2d2d !important;
+    color: #e9ecef !important;
+}
+
+/* Auto mode for system dark preference for theme toggle */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .theme-toggle select option {
+        background-color: #2d2d2d !important;
+        color: #e9ecef !important;
+    }
 }
 
 /* Base theme styles */
@@ -519,5 +533,130 @@ label {
         background-color: #2d2d2d !important;
         color: #e9ecef !important;
     }
+}
+
+/* Error message styles */
+.error-message {
+    font-size: 0.875em; 
+    margin-bottom: 10px;
+}
+
+.field-error {
+    display: none; 
+    font-size: 0.875em; 
+    margin-left: 5px;
+}
+
+/* Modal/Settings styles */
+.room-settings {
+    display: none;
+}
+
+.hidden-theme-toggle {
+    display: none;
+}
+
+/* Card image styles */
+.card-image {
+    width: 40px; 
+    height: 40px;
+}
+
+/* Room settings modal styles */
+.room-settings {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+.settings-header h4 {
+    color: var(--text-color);
+    margin: 0;
+}
+
+.settings-content {
+    padding: 15px;
+    background: var(--card-bg);
+}
+
+.settings-footer {
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    background: var(--card-bg);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    color: var(--text-color);
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-check {
+    margin-bottom: 10px;
+}
+
+.form-check-label {
+    color: var(--text-color);
+}
+
+.room-settings .form-control,
+.room-settings .form-check-input {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.room-settings .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+.room-settings .text-muted {
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.room-settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+[data-theme="dark"] .room-settings-overlay {
+    background: rgba(0,0,0,0.7);
 }
 

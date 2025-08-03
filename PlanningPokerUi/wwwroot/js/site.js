@@ -1259,3 +1259,476 @@ let populateCardSetDropdown = function(cardSets) {
         cardSetSelect.val('modified-fibonacci');
     }
 }
+
+// Index page functionality
+let initializeIndexPage = function() {
+    // Function to cache user name synchronously (client + server)
+    function cacheUserNameSync(userName) {
+        console.log('=== CACHING USER NAME ===');
+        console.log('User name to cache:', userName);
+        
+        // Method 1: Try site.js function
+        if (typeof cacheUserName === 'function') {
+            try {
+                cacheUserName(userName);
+                console.log('✓ Method 1: Cached via site.js function');
+            } catch (error) {
+                console.error('✗ Method 1 failed:', error);
+            }
+        }
+        
+        // Method 2: Direct localStorage (always try this as backup)
+        try {
+            localStorage.setItem('planningpoker_user_name', JSON.stringify(userName));
+            console.log('✓ Method 2: Cached via direct localStorage');
+        } catch (error) {
+            console.error('✗ Method 2 failed:', error);
+        }
+        
+        // Method 3: Try without JSON.stringify
+        try {
+            localStorage.setItem('planningpoker_user_name_simple', userName);
+            console.log('✓ Method 3: Cached simple string version');
+        } catch (error) {
+            console.error('✗ Method 3 failed:', error);
+        }
+        
+        // Method 4: Update server-side session
+        updateServerSideName(userName);
+        
+        // Verification
+        setTimeout(() => {
+            try {
+                const saved1 = localStorage.getItem('planningpoker_user_name');
+                const saved2 = localStorage.getItem('planningpoker_user_name_simple');
+                console.log('=== VERIFICATION ===');
+                console.log('JSON version saved:', saved1);
+                console.log('Simple version saved:', saved2);
+                console.log('All localStorage keys:', Object.keys(localStorage));
+            } catch (error) {
+                console.error('Verification failed:', error);
+            }
+        }, 10);
+    }
+    
+    // Function to update server-side session name
+    function updateServerSideName(userName) {
+        console.log('=== UPDATING SERVER-SIDE SESSION ===');
+        console.log('Updating server session with name:', userName);
+        
+        fetch('/api/updatename', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: userName })
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        })
+        .then(data => {
+            console.log('✓ Server-side session updated:', data);
+        })
+        .catch(error => {
+            console.error('✗ Failed to update server-side session:', error);
+        });
+    }
+
+    // Functions to handle cached preferences
+    function loadCachedPreferences() {
+        // Check if the functions from site.js are available
+        if (typeof loadCreationPreferences === 'function') {
+            const preferences = loadCreationPreferences();
+            console.log('Loading cached room creation preferences:', preferences);
+            
+            // Apply cached preferences to form elements
+            const cardSetSelect = document.getElementById('creation-card-set');
+            const countdownInput = document.getElementById('creation-countdown-seconds');
+            const funRoomNameCheckbox = document.getElementById('creation-use-fun-room-name');
+            const fireworksCheckbox = document.getElementById('creation-show-fireworks');
+            const maxParticipantsInput = document.getElementById('creation-max-participants');
+            
+            if (cardSetSelect && preferences.cardSet) {
+                cardSetSelect.value = preferences.cardSet;
+            }
+            if (countdownInput && preferences.countdownSeconds !== undefined) {
+                countdownInput.value = preferences.countdownSeconds;
+                console.log('Modal: Set countdown to:', preferences.countdownSeconds);
+            }
+            if (funRoomNameCheckbox && preferences.useFunRoomName !== undefined) {
+                funRoomNameCheckbox.checked = preferences.useFunRoomName;
+            }
+            if (fireworksCheckbox && preferences.showFireworks !== undefined) {
+                fireworksCheckbox.checked = preferences.showFireworks;
+            }
+            if (maxParticipantsInput && preferences.maxParticipants !== undefined) {
+                maxParticipantsInput.value = preferences.maxParticipants;
+            }
+        }
+    }
+    
+    function saveCachedPreferences() {
+        const countdownValue = document.getElementById('creation-countdown-seconds').value;
+        const preferences = {
+            cardSet: document.getElementById('creation-card-set').value,
+            countdownSeconds: countdownValue !== '' ? parseInt(countdownValue) : 5,
+            useFunRoomName: document.getElementById('creation-use-fun-room-name').checked,
+            showFireworks: document.getElementById('creation-show-fireworks').checked,
+            maxParticipants: parseInt(document.getElementById('creation-max-participants').value) || 50
+        };
+        
+        console.log('About to save preferences:', preferences);
+        
+        // Use the caching function from site.js if available
+        if (typeof cacheCreationPreferences === 'function') {
+            cacheCreationPreferences(preferences);
+            console.log('Saved room creation preferences to cache:', preferences);
+        }
+    }
+
+    function showRoomCreationSettings() {
+        const roomCreationSettings = document.getElementById('room-creation-settings');
+        const overlay = document.createElement('div');
+        overlay.className = 'room-settings-overlay';
+        overlay.onclick = hideRoomCreationSettings;
+        document.body.appendChild(overlay);
+        
+        // Load cached preferences when showing the modal
+        loadCachedPreferences();
+        
+        roomCreationSettings.style.display = 'block';
+    }
+
+    function hideRoomCreationSettings() {
+        const roomCreationSettings = document.getElementById('room-creation-settings');
+        roomCreationSettings.style.display = 'none';
+        const overlay = document.querySelector('.room-settings-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
+    function saveRoomCreationSettings() {
+        const roomCreationSettingsBtn = document.getElementById('room-creation-settings-btn');
+        
+        // Save current preferences to cache
+        saveCachedPreferences();
+        
+        // Visual feedback
+        roomCreationSettingsBtn.innerHTML = '✅ Settings Applied';
+        setTimeout(() => {
+            roomCreationSettingsBtn.innerHTML = '⚙️ More Settings';
+        }, 2000);
+    }
+
+    function injectRoomCreationValues() {
+        const createRoomForm = document.getElementById('createRoom');
+        
+        // Remove any existing injected fields to avoid duplicates
+        const existingFields = createRoomForm.querySelectorAll('.injected-field');
+        existingFields.forEach(field => field.remove());
+
+        // Create and inject form fields with current modal values
+        const settings = [
+            { name: 'cardSet', value: document.getElementById('creation-card-set').value },
+            { name: 'countdownSeconds', value: document.getElementById('creation-countdown-seconds').value },
+            { name: 'useFunRoomName', value: document.getElementById('creation-use-fun-room-name').checked },
+            { name: 'showFireworks', value: document.getElementById('creation-show-fireworks').checked },
+            { name: 'maxParticipants', value: document.getElementById('creation-max-participants').value }
+        ];
+
+        settings.forEach(setting => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = setting.name;
+            input.value = setting.value;
+            input.className = 'injected-field';
+            createRoomForm.appendChild(input);
+        });
+    }
+
+    function loadCardSets() {
+        // Try to load from cache first (using site.js functions if available)
+        if (typeof getCachedCardSets === 'function') {
+            const cachedCardSets = getCachedCardSets();
+            if (cachedCardSets) {
+                console.log('Loading card sets from cache');
+                populateCardSetDropdownForCreation(cachedCardSets);
+                // Load initial preferences after card sets are populated
+                setTimeout(loadInitialPreferences, 100);
+                return;
+            }
+        }
+        
+        // Load from API if no cache available
+        console.log('Loading card sets from API');
+        const cardSetSelect = document.getElementById('creation-card-set');
+        cardSetSelect.innerHTML = '<option value="">Loading card sets...</option>';
+        
+        fetch('/api/cardsets')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(cardSets => {
+                // Cache the result if caching function is available
+                if (typeof cacheCardSets === 'function') {
+                    cacheCardSets(cardSets);
+                }
+                
+                populateCardSetDropdownForCreation(cardSets);
+                // Load initial preferences after card sets are populated
+                setTimeout(loadInitialPreferences, 100);
+            })
+            .catch(error => {
+                console.error('Error loading card sets:', error);
+                cardSetSelect.innerHTML = '<option value="">Failed to load card sets</option>';
+            });
+    }
+    
+    function populateCardSetDropdownForCreation(cardSets) {
+        const cardSetSelect = document.getElementById('creation-card-set');
+        cardSetSelect.innerHTML = ''; // Clear existing options
+        
+        cardSets.forEach(cardSet => {
+            const option = document.createElement('option');
+            option.value = cardSet.value;
+            option.textContent = cardSet.display;
+            cardSetSelect.appendChild(option);
+        });
+    }
+    
+    function loadCachedUserName() {
+        // Load cached user name if available
+        console.log('Attempting to load cached user name...');
+        
+        if (typeof getCachedUserName === 'function') {
+            const cachedName = getCachedUserName();
+            console.log('getCachedUserName returned:', cachedName);
+            
+            if (cachedName) {
+                const nameInput = document.getElementById('name');
+                console.log('Name input element:', nameInput);
+                console.log('Current name input value:', nameInput?.value);
+                
+                if (nameInput && !nameInput.value.trim()) {
+                    nameInput.value = cachedName;
+                    console.log('Successfully loaded cached user name:', cachedName);
+                } else if (nameInput) {
+                    console.log('Name input already has a value, not overwriting');
+                }
+            } else {
+                console.log('No cached user name found');
+            }
+        } else {
+            console.log('getCachedUserName function not available, trying fallback...');
+            // Fallback: try to read directly from localStorage
+            try {
+                const cachedName = localStorage.getItem('planningpoker_user_name');
+                if (cachedName) {
+                    const parsedName = JSON.parse(cachedName);
+                    const nameInput = document.getElementById('name');
+                    if (nameInput && !nameInput.value.trim()) {
+                        nameInput.value = parsedName;
+                        console.log('Loaded cached user name via fallback:', parsedName);
+                    }
+                }
+            } catch (error) {
+                console.log('Error loading cached user name:', error);
+            }
+        }
+    }
+    
+    function loadInitialPreferences() {
+        // Load cached preferences and apply default values on page load
+        if (typeof loadCreationPreferences === 'function') {
+            const preferences = loadCreationPreferences();
+            console.log('Loading initial room creation preferences:', preferences);
+            
+            // Apply cached preferences to form elements
+            const cardSetSelect = document.getElementById('creation-card-set');
+            const countdownInput = document.getElementById('creation-countdown-seconds');
+            const funRoomNameCheckbox = document.getElementById('creation-use-fun-room-name');
+            const fireworksCheckbox = document.getElementById('creation-show-fireworks');
+            const maxParticipantsInput = document.getElementById('creation-max-participants');
+            
+            if (cardSetSelect && preferences.cardSet) {
+                cardSetSelect.value = preferences.cardSet;
+            }
+            if (countdownInput && preferences.countdownSeconds !== undefined) {
+                countdownInput.value = preferences.countdownSeconds;
+                console.log('Set countdown to:', preferences.countdownSeconds);
+            }
+            if (funRoomNameCheckbox) {
+                funRoomNameCheckbox.checked = preferences.useFunRoomName || false;
+            }
+            if (fireworksCheckbox) {
+                fireworksCheckbox.checked = preferences.showFireworks !== undefined ? preferences.showFireworks : true;
+            }
+            if (maxParticipantsInput && preferences.maxParticipants !== undefined) {
+                maxParticipantsInput.value = preferences.maxParticipants;
+            }
+        }
+    }
+
+    // Helper functions for form validation
+    function showError(errorId, message) {
+        const errorElement = document.getElementById(errorId);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'inline';
+        }
+    }
+    
+    function clearFormErrors() {
+        const errorElements = document.querySelectorAll('[id$="-error"]');
+        errorElements.forEach(element => {
+            element.style.display = 'none';
+            element.textContent = '';
+        });
+    }
+
+    // Initialize page functionality
+    const roomCreationSettingsBtn = document.getElementById('room-creation-settings-btn');
+    const roomCreationSettings = document.getElementById('room-creation-settings');
+    const closeCreationSettings = document.getElementById('close-creation-settings');
+    const cancelCreationSettings = document.getElementById('cancel-creation-settings');
+    const saveCreationSettings = document.getElementById('save-creation-settings');
+    const createRoomForm = document.getElementById('createRoom');
+
+    if (roomCreationSettingsBtn) {
+        roomCreationSettingsBtn.addEventListener('click', function() {
+            if (roomCreationSettings.style.display === 'block') {
+                hideRoomCreationSettings();
+            } else {
+                showRoomCreationSettings();
+            }
+        });
+    }
+
+    if (closeCreationSettings) {
+        closeCreationSettings.addEventListener('click', function() {
+            hideRoomCreationSettings();
+        });
+    }
+
+    if (cancelCreationSettings) {
+        cancelCreationSettings.addEventListener('click', function() {
+            hideRoomCreationSettings();
+        });
+    }
+
+    if (saveCreationSettings) {
+        saveCreationSettings.addEventListener('click', function() {
+            saveRoomCreationSettings();
+            hideRoomCreationSettings();
+        });
+    }
+
+    // Form validation and submission handling
+    if (createRoomForm) {
+        createRoomForm.addEventListener('submit', function(e) {
+            console.log('=== FORM SUBMITTED ===');
+            console.log('Submitter:', e.submitter);
+            console.log('Form action:', e.submitter?.formAction);
+            
+            // Validate form based on action
+            const isCreateRoom = e.submitter && e.submitter.formAction && e.submitter.formAction.includes('CreateRoom');
+            const isJoinRoom = e.submitter && e.submitter.formAction && e.submitter.formAction.includes('JoinRoom');
+            
+            // Clear previous errors
+            clearFormErrors();
+            
+            let hasErrors = false;
+            
+            // Validate name for both create and join
+            const nameInput = document.getElementById('name');
+            if (!nameInput || !nameInput.value.trim()) {
+                showError('name-error', 'Please enter your name');
+                hasErrors = true;
+            }
+            
+            // Validate room name for join room
+            if (isJoinRoom) {
+                const roomNameInput = document.getElementById('roomName');
+                if (!roomNameInput || !roomNameInput.value.trim()) {
+                    showError('room-name-error', 'Please enter a room name');
+                    hasErrors = true;
+                }
+            }
+            
+            // Prevent form submission if there are errors
+            if (hasErrors) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Cache user name for both create and join actions
+            if (nameInput && nameInput.value.trim()) {
+                const userName = nameInput.value.trim();
+                cacheUserNameSync(userName);
+            }
+            
+            // Only inject room creation values when creating a room (not joining)
+            if (isCreateRoom) {
+                injectRoomCreationValues();
+            }
+        });
+    }
+
+    // Load card sets from server on page load
+    loadCardSets();
+    
+    // Load cached user name on page load (with slight delay to ensure site.js is loaded)
+    setTimeout(loadCachedUserName, 100);
+    
+    // Auto-hide server error message after 8 seconds
+    const serverError = document.getElementById('server-error');
+    if (serverError) {
+        setTimeout(() => {
+            serverError.style.transition = 'opacity 0.5s ease';
+            serverError.style.opacity = '0';
+            setTimeout(() => {
+                serverError.style.display = 'none';
+            }, 500);
+        }, 8000);
+    }
+    
+    // Save user name with multiple event handlers for maximum reliability
+    const nameInput = document.getElementById('name');
+    
+    if (nameInput) {
+        // Cache on blur (when user leaves field)
+        nameInput.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                console.log('=== BLUR EVENT ===');
+                cacheUserNameSync(this.value.trim());
+            }
+        });
+        
+        // Cache on input (as user types - debounced)
+        let inputTimeout;
+        nameInput.addEventListener('input', function() {
+            clearTimeout(inputTimeout);
+            if (this.value.trim()) {
+                inputTimeout = setTimeout(() => {
+                    console.log('=== INPUT EVENT (DEBOUNCED) ===');
+                    cacheUserNameSync(this.value.trim());
+                }, 500); // Wait 500ms after user stops typing
+            }
+        });
+        
+        // Cache on keyup (immediate for Enter key)
+        nameInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                console.log('=== ENTER KEY PRESSED ===');
+                cacheUserNameSync(this.value.trim());
+            }
+        });
+    }
+}

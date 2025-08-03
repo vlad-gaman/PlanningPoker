@@ -1,6 +1,6 @@
 @model PlanningPokerUi.Models.RoomConfiguration
 
-<div id="room-settings" class="room-settings" style="display:none;">
+<div id="room-settings" class="room-settings">
     <div class="settings-header">
         <h4>Room Settings</h4>
         <button type="button" id="close-settings" class="btn btn-sm btn-secondary">×</button>
@@ -47,101 +47,3 @@
         <button type="button" id="cancel-settings" class="btn btn-secondary">Cancel</button>
     </div>
 </div>
-
-<style>
-.room-settings {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 8px var(--shadow-color);
-    width: 400px;
-    max-height: 80vh;
-    overflow-y: auto;
-    z-index: 1000;
-}
-
-.settings-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--card-bg);
-    color: var(--text-color);
-}
-
-.settings-header h4 {
-    color: var(--text-color);
-    margin: 0;
-}
-
-.settings-content {
-    padding: 15px;
-    background: var(--card-bg);
-}
-
-.settings-footer {
-    padding: 15px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    background: var(--card-bg);
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    color: var(--text-color);
-    display: block;
-    margin-bottom: 5px;
-}
-
-.form-check {
-    margin-bottom: 10px;
-}
-
-.form-check-label {
-    color: var(--text-color);
-}
-
-.room-settings .form-control,
-.room-settings .form-check-input {
-    background-color: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
-.room-settings .form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
-    background-color: var(--card-bg);
-    color: var(--text-color);
-}
-
-.room-settings .text-muted {
-    color: var(--text-color);
-    opacity: 0.7;
-}
-
-.room-settings-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-}
-
-[data-theme="dark"] .room-settings-overlay {
-    background: rgba(0,0,0,0.7);
-}
-</style>
