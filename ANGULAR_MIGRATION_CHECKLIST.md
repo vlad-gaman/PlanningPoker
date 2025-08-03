@@ -52,11 +52,17 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
   - Maintain SignalR integration for real-time updates
 
 ### 1.2 Update Startup Configuration
-- [ ] **Task**: Add CORS policy for Angular development
+- [ ] **Task**: Add CORS policy for development and production
   ```csharp
   services.AddCors(options => {
-      options.AddDefaultPolicy(builder => {
-          builder.WithOrigins("http://localhost:4200")
+      options.AddPolicy("Development", builder => {
+          builder.WithOrigins("http://localhost:4200", "https://localhost:4200")
+                 .AllowAnyHeader()
+                 .AllowAnyMethod()
+                 .AllowCredentials();
+      });
+      options.AddPolicy("Production", builder => {
+          builder.WithOrigins("https://yourdomain.azurewebsites.net")
                  .AllowAnyHeader()
                  .AllowAnyMethod()
                  .AllowCredentials();
@@ -64,11 +70,42 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
   });
   ```
 - [ ] **Task**: Configure API routing alongside existing MVC routes
-- [ ] **Task**: Ensure session middleware works with API calls
+- [ ] **Task**: Add session configuration for API calls
+  ```csharp
+  services.AddSession(options => {
+      options.Cookie.SameSite = SameSiteMode.None;
+      options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+      options.Cookie.HttpOnly = true;
+  });
+  ```
 
 ### 1.3 Session Management for API
 - [ ] **Task**: Create `SessionService.cs` for consistent session handling
 - [ ] **Task**: Add session validation middleware for API endpoints
+  ```csharp
+  public class SessionValidationMiddleware
+  {
+      public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+      {
+          if (context.Request.Path.StartsWithSegments("/api"))
+          {
+              if (string.IsNullOrEmpty(context.Session.GetString("UserId")))
+              {
+                  context.Response.StatusCode = 401;
+                  return;
+              }
+          }
+          await next(context);
+      }
+  }
+  ```
+- [ ] **Task**: Add CSRF protection for API endpoints
+  ```csharp
+  services.AddAntiforgery(options => {
+      options.HeaderName = "X-XSRF-TOKEN";
+      options.Cookie.SameSite = SameSiteMode.None;
+  });
+  ```
 - [ ] **Task**: Test API endpoints maintain user sessions correctly
 
 ### 1.4 Testing Phase 1
@@ -87,12 +124,8 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
   ```bash
   ng new ClientApp --routing --style=css --skip-git
   cd ClientApp
-  ng add @microsoft/signalr
-  ```
-- [ ] **Task**: Install dependencies:
-  ```bash
-  npm install chart.js fireworks-js
-  npm install @types/chart.js --save-dev
+  npm install @microsoft/signalr chart.js fireworks-js
+  npm install @types/signalr @types/chart.js --save-dev
   ```
 
 ### 2.2 Angular Project Structure
@@ -121,8 +154,49 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
 
 ### 2.4 Development Environment Setup
 - [ ] **Task**: Configure proxy for Angular dev server to ASP.NET Core
-  - Create `proxy.conf.json` for API calls
-  - Update `angular.json` to use proxy configuration
+  - Create `proxy.conf.json`:
+    ```json
+    {
+      "/api/*": {
+        "target": "https://localhost:5001",
+        "secure": true,
+        "changeOrigin": true,
+        "logLevel": "debug"
+      },
+      "/hubs/*": {
+        "target": "https://localhost:5001",
+        "secure": true,
+        "changeOrigin": true,
+        "ws": true
+      }
+    }
+    ```
+  - Update `angular.json` serve options:
+    ```json
+    "serve": {
+      "builder": "@angular-devkit/build-angular:dev-server",
+      "options": {
+        "proxyConfig": "proxy.conf.json"
+      }
+    }
+    ```
+- [ ] **Task**: Create environment configuration files
+  - `src/environments/environment.ts`:
+    ```typescript
+    export const environment = {
+      production: false,
+      apiUrl: '/api',
+      signalRUrl: '/hubs'
+    };
+    ```
+  - `src/environments/environment.prod.ts`:
+    ```typescript
+    export const environment = {
+      production: true,
+      apiUrl: '/api',
+      signalRUrl: '/hubs'
+    };
+    ```
 - [ ] **Task**: Update ASP.NET Core to serve Angular app in production
 
 ### 2.5 Basic Angular Components
@@ -242,8 +316,28 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
   - Clean up unused ViewModels
   
 - [ ] **Task**: Update routing to serve Angular app
-  - Configure SPA routing for all non-API routes
-  - Ensure proper 404 handling
+  - Configure SPA routing in `Program.cs`/`Startup.cs`:
+    ```csharp
+    app.UseStaticFiles();
+    app.UseRouting();
+    app.UseCors(env.IsDevelopment() ? "Development" : "Production");
+    app.UseSession();
+    
+    app.MapControllers();
+    app.MapHub<PlanningPokerHub>("/hubs/planningpoker");
+    
+    app.MapFallbackToFile("index.html");
+    ```
+  - Configure Angular routing for deep links:
+    ```typescript
+    @NgModule({
+      imports: [RouterModule.forRoot(routes, {
+        useHash: false,
+        enableTracing: false
+      })],
+      exports: [RouterModule]
+    })
+    ```
 
 ### 5.2 Production Build Configuration
 - [ ] **Task**: Configure Angular production build
@@ -258,14 +352,39 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
 
 ### 5.3 Azure Deployment Configuration
 - [ ] **Task**: Update Docker configuration
-  - Multi-stage build: Node.js for Angular, .NET for backend
-  - Copy Angular build output to wwwroot
-  - Optimize Docker image size
+  - Create multi-stage Dockerfile:
+    ```dockerfile
+    # Build Angular app
+    FROM node:18-alpine AS angular-build
+    WORKDIR /app
+    COPY ClientApp/package*.json ./
+    RUN npm ci
+    COPY ClientApp/ .
+    RUN npm run build --prod
+    
+    # Build .NET app
+    FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dotnet-build
+    WORKDIR /app
+    COPY *.csproj .
+    RUN dotnet restore
+    COPY . .
+    RUN dotnet publish -c Release -o out
+    
+    # Runtime image
+    FROM mcr.microsoft.com/dotnet/aspnet:8.0
+    WORKDIR /app
+    COPY --from=dotnet-build /app/out .
+    COPY --from=angular-build /app/dist/ ./wwwroot/
+    EXPOSE 80
+    ENTRYPOINT ["dotnet", "PlanningPoker.dll"]
+    ```
   
 - [ ] **Task**: Update Azure Web App settings
-  - Configure startup command for SPA
-  - Set environment variables
+  - Set environment variables:
+    - `ASPNETCORE_ENVIRONMENT=Production`
+    - `WEBSITE_NODE_DEFAULT_VERSION=18.x`
   - Configure Application Insights if needed
+  - Update CORS origins in app settings
 
 ### 5.4 Testing and Validation
 - [ ] **Task**: Full end-to-end testing
@@ -285,6 +404,30 @@ This checklist provides a step-by-step migration plan from the current ASP.NET C
   - Monitor for errors and performance issues
 
 **Milestone 5 Completion**: Full Angular application successfully deployed to Azure Web App.
+
+---
+
+## Security Considerations
+
+### CSRF Protection
+- **Implementation**: Use anti-forgery tokens for state-changing API calls
+- **Angular Integration**: Include XSRF token in HTTP headers
+- **Validation**: Validate tokens on all POST/PUT/DELETE endpoints
+
+### XSS Prevention
+- **Angular Built-in**: Sanitization enabled by default in Angular
+- **API Response**: Ensure API responses don't include executable content
+- **Input Validation**: Validate and sanitize all user inputs on backend
+
+### Session Security
+- **Cookie Settings**: HttpOnly, Secure, SameSite=None for CORS
+- **Session Timeout**: Implement proper session expiration
+- **HTTPS Only**: Enforce HTTPS in production environment
+
+### SignalR Security
+- **Authentication**: Validate user session for SignalR connections
+- **Group Authorization**: Ensure users can only join authorized rooms
+- **Connection Limits**: Implement connection rate limiting
 
 ---
 
