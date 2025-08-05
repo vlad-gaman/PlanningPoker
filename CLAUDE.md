@@ -60,8 +60,12 @@
             }
         ]
     }
+    - Http status code 204 - No Content is the only response that doesn't need a response body
     - Make use of dotnet middlewares where all REST responses and/or requests need to be handled in a specific way.
     - All classes need their own file
     - All models need to be in Models folders
     - Where hardcoded values are needed, then it is best to put those values in a static class with const/static fields.
     - For all models with non-nullable properties, best to use "= default!", unless described otherwise
+    - All REST endpoints will need to be described in swagger
+    - All the responses will need to be described in swagger
+    
