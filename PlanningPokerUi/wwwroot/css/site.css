@@ -292,6 +292,7 @@ div.fireworks {
     left: 0;
     right: 0;
     pointer-events: none;
+    line-height: 0;
 }
 
 div.fireworks > canvas {
@@ -668,7 +669,6 @@ label {
 }
 
 .buymeacoffee-link:hover {
-    transform: scale(1.05);
     opacity: 0.9;
     text-decoration: none;
 }
