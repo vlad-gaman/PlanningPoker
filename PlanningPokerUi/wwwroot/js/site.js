@@ -41,7 +41,7 @@ let getDisplayValueAsHTML = function(mark) {
         const displayValue = window.cardSetMapping[mark];
         // For PNG files, return an img tag
         if (displayValue.endsWith('.png')) {
-            return `<img src="/${displayValue}" alt="${mark}" style="width: 20px; height: 20px;" />`;
+            return `<img src="/${displayValue}" alt="${mark}" style="width: 25px; height: 25px;" />`;
         }
         return displayValue;
     }
@@ -158,6 +158,57 @@ let applyTheme = function(theme) {
     updateChartsForTheme();
 }
 
+// Helper function to check if dark mode is currently active
+function isDarkMode() {
+    const html = document.documentElement;
+    const theme = html.getAttribute('data-theme');
+    
+    if (theme === 'dark') {
+        return true;
+    } else if (theme === 'light') {
+        return false;
+    } else {
+        // For 'auto' theme, check system preference
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+}
+
+// Preload finger images to prevent chart disappearing issues
+function preloadFingerImages() {
+    const fingerImages = [
+        'zero-finger-512x512.png',
+        'one-finger-512x512.png',
+        'two-finger-512x512.png',
+        'three-finger-512x512.png',
+        'four-finger-512x512.png',
+        'five-finger-512x512.png'
+    ];
+    
+    fingerImages.forEach(imageName => {
+        // Preload both black and white versions
+        const blackPath = '/' + imageName;
+        const whitePath = '/' + imageName.replace('.png', '-white.png');
+        
+        // Preload black version
+        if (!chartImageCache[blackPath]) {
+            const blackImg = new Image();
+            chartImageCache[blackPath] = blackImg;
+            blackImg.src = blackPath;
+        }
+        
+        // Preload white version (if it exists)
+        if (!chartImageCache[whitePath]) {
+            const whiteImg = new Image();
+            chartImageCache[whitePath] = whiteImg;
+            whiteImg.onerror = function() {
+                // White version doesn't exist yet, remove from cache
+                delete chartImageCache[whitePath];
+            };
+            whiteImg.src = whitePath;
+        }
+    });
+}
+
 let initializeTheme = function() {
     const savedTheme = getThemePreference();
     applyTheme(savedTheme);
@@ -180,6 +231,12 @@ let getCurrentThemeColors = function() {
 }
 
 let updateChartsForTheme = function() {
+    // Clear image cache so finger images can be reloaded with correct version (black/white)
+    chartImageCache = {};
+    
+    // Preload finger images again for the new theme
+    preloadFingerImages();
+    
     // Update chart colors when theme changes
     if (typeof allChart !== 'undefined' && allChart) {
         updateChartTheme(allChart);
@@ -617,13 +674,18 @@ let drawImagesOnChart = function(chart) {
     
     chart.data.labels.forEach((label, index) => {
         if (window.cardSetMapping && window.cardSetMapping[label] && window.cardSetMapping[label].endsWith('.png')) {
-            const imagePath = '/' + window.cardSetMapping[label];
+            let imagePath = '/' + window.cardSetMapping[label];
+            
+            // Use white versions for finger images in dark mode
+            if (imagePath.includes('finger') && isDarkMode()) {
+                imagePath = imagePath.replace('.png', '-white.png');
+            }
             
             // Check if image is already cached
             if (chartImageCache[imagePath] && chartImageCache[imagePath].complete) {
                 const img = chartImageCache[imagePath];
                 const x = xAxis.getPixelForValue(label);
-                const imageSize = 24;
+                const imageSize = 28;
                 const imageX = x - imageSize / 2;
                 const imageY = xAxis.bottom - imageSize - 5; // Position below the axis
                 
@@ -633,8 +695,23 @@ let drawImagesOnChart = function(chart) {
                 const img = new Image();
                 chartImageCache[imagePath] = img;
                 img.onload = function() {
-                    // Redraw the chart to show the newly loaded image
-                    chart.update('none');
+                    // Only redraw if the chart still exists and is valid
+                    if (chart && chart.chart && chart.chart.ctx && !chart.chart.destroyed) {
+                        // Use requestAnimationFrame to ensure proper timing
+                        requestAnimationFrame(() => {
+                            try {
+                                // Trigger a redraw without animation
+                                chart.draw();
+                            } catch (e) {
+                                console.warn('Chart redraw failed:', e);
+                            }
+                        });
+                    }
+                };
+                img.onerror = function() {
+                    console.warn('Failed to load chart image:', imagePath);
+                    // Remove failed image from cache so it can be retried
+                    delete chartImageCache[imagePath];
                 };
                 img.src = imagePath;
             }
@@ -870,6 +947,13 @@ let setVoteResultInfo = function (voteResultInfo) {
             disableVoting(false)
         }
     }
+    
+    // Update scrollbar when vote results are shown (charts/statistics might make page scrollable)
+    setTimeout(() => {
+        if (typeof window.updateCustomScrollbar === 'function') {
+            window.updateCustomScrollbar();
+        }
+    }, 200); // Small delay to let content render
 }
 
 let setVotes = function (votes) {
@@ -958,6 +1042,12 @@ $(document).ready(function () {
     // Preload images for the current card set
     preloadCardSetImages();
     
+    // Preload finger images to prevent chart issues
+    preloadFingerImages();
+    
+    // Initialize custom scrollbar
+    initializeCustomScrollbar();
+    
     $('input[type=radio][name=mark]').change(function () {
         if (!this.value)
             return;
@@ -1015,6 +1105,9 @@ $(document).ready(function () {
 
     try {
         fireWorks = new Fireworks.default($('.fireworks')[0])
+        
+        // Remove hardcoded width and height attributes to let CSS control sizing
+        $('.fireworks canvas').removeAttr('width').removeAttr('height');
     } catch {
         // nothing to do
     }
@@ -1680,7 +1773,7 @@ let initializeIndexPage = function() {
             }
         });
     }
-
+    
     // Load card sets from server on page load
     loadCardSets();
     
@@ -1731,4 +1824,157 @@ let initializeIndexPage = function() {
             }
         });
     }
+}
+
+// Custom Scrollbar Implementation
+function initializeCustomScrollbar() {
+    // Create custom scrollbar elements
+    const scrollbarContainer = document.createElement('div');
+    scrollbarContainer.className = 'custom-scrollbar';
+    scrollbarContainer.innerHTML = `
+        <div class="custom-scrollbar-track"></div>
+        <div class="custom-scrollbar-thumb"></div>
+    `;
+    document.body.appendChild(scrollbarContainer);
+
+    const thumb = scrollbarContainer.querySelector('.custom-scrollbar-thumb');
+    const track = scrollbarContainer.querySelector('.custom-scrollbar-track');
+    
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+    let hideTimeout = null;
+    let needsScrolling = false;
+
+    // Update scrollbar visibility and position
+    function updateScrollbar() {
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        const bodyHeight = document.body.scrollHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Simple and accurate check - only show if we can actually scroll
+        const canScroll = documentHeight > windowHeight || bodyHeight > windowHeight;
+        const hasOverflow = canScroll && (documentHeight - windowHeight > 5 || bodyHeight - windowHeight > 5);
+        
+        needsScrolling = hasOverflow;
+        
+        if (!needsScrolling) {
+            scrollbarContainer.classList.remove('visible', 'auto-hide');
+            scrollbarContainer.style.display = 'none';
+            return;
+        }
+
+        // Show scrollbar only if scrolling is actually needed
+        scrollbarContainer.style.display = 'block';
+        scrollbarContainer.classList.add('visible');
+        scrollbarContainer.classList.remove('auto-hide');
+
+        // Calculate thumb position and size using the actual scrollable height
+        const actualScrollHeight = Math.max(documentHeight, bodyHeight);
+        const thumbHeight = Math.max(20, (windowHeight / actualScrollHeight) * windowHeight);
+        const thumbTop = (scrollTop / (actualScrollHeight - windowHeight)) * (windowHeight - thumbHeight);
+
+        thumb.style.height = thumbHeight + 'px';
+        thumb.style.top = thumbTop + 'px';
+
+        // Auto-hide after inactivity
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(() => {
+            if (!isDragging) {
+                scrollbarContainer.classList.add('auto-hide');
+            }
+        }, 2000);
+    }
+
+    // Handle thumb and track dragging
+    function startDragging(e) {
+        isDragging = true;
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'grabbing';
+        scrollbarContainer.classList.remove('auto-hide');
+        e.preventDefault();
+    }
+    
+    thumb.addEventListener('mousedown', startDragging);
+    track.addEventListener('mousedown', startDragging);
+
+    // Handle track clicking
+    track.addEventListener('click', (e) => {
+        if (e.target === thumb || !needsScrolling) return;
+        
+        const rect = track.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        const documentHeight = document.documentElement.scrollHeight;
+        const bodyHeight = document.body.scrollHeight;
+        const maxScrollableHeight = Math.max(documentHeight, bodyHeight);
+        const windowHeight = window.innerHeight;
+        const scrollRatio = clickY / windowHeight;
+        const targetScroll = scrollRatio * (maxScrollableHeight - windowHeight);
+        
+        window.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth'
+        });
+    });
+
+    // Simple, direct mouse dragging
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const mouseY = e.clientY;
+        const scrollPercent = mouseY / window.innerHeight;
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        
+        window.scrollTo(0, scrollPercent * maxScroll);
+        e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        }
+    });
+
+    // Handle mouse wheel over scrollbar
+    scrollbarContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        window.scrollBy(0, e.deltaY);
+    });
+
+    // Update on scroll and resize
+    window.addEventListener('scroll', updateScrollbar);
+    window.addEventListener('resize', updateScrollbar);
+    
+    // Show scrollbar on mouse movement near right edge (only if scrolling is needed)
+    let edgeTimeout = null;
+    document.addEventListener('mousemove', (e) => {
+        // Only respond to mouse movement if scrolling is actually needed
+        if (!needsScrolling) return;
+        
+        const isNearRightEdge = e.clientX > window.innerWidth - 50;
+        
+        if (isNearRightEdge && scrollbarContainer.classList.contains('auto-hide')) {
+            scrollbarContainer.classList.remove('auto-hide');
+            clearTimeout(edgeTimeout);
+            edgeTimeout = setTimeout(() => {
+                if (needsScrolling) { // Double check before hiding
+                    scrollbarContainer.classList.add('auto-hide');
+                }
+            }, 1000);
+        }
+    });
+
+    // Ensure scrollbar starts hidden
+    scrollbarContainer.style.display = 'none';
+    
+    // Make updateScrollbar function globally accessible
+    window.updateCustomScrollbar = updateScrollbar;
+    
+    // Initial update - wait for page to fully settle
+    setTimeout(() => {
+        updateScrollbar();
+    }, 500); // Longer delay to ensure page is fully loaded
 }
