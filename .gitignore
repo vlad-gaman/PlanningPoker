@@ -5,3 +5,4 @@ obj/
 
 # Client build copied into the API
 /PlanningPoker.Api/wwwroot/
+/publish/
