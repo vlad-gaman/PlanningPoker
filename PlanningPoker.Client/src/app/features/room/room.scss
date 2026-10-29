@@ -16,6 +16,29 @@
   color: var(--text-color);
 }
 
+.countdown {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+
+  img {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+}
+
 .owner {
   color: var(--primary-color);
   font-size: 0.85em;

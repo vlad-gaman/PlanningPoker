@@ -5,6 +5,11 @@ export const HUB_EVENTS = {
   OwnershipTransferred: 'OwnershipTransferred',
   RoomDisposed: 'RoomDisposed',
   CountdownReset: 'CountdownReset',
+  VoteCast: 'VoteCast',
+  VoteStatusUpdate: 'VoteStatusUpdate',
+  CountdownUpdate: 'CountdownUpdate',
+  VotesShown: 'VotesShown',
+  VotesCleared: 'VotesCleared',
 } as const;
 
 export type HubEvent = (typeof HUB_EVENTS)[keyof typeof HUB_EVENTS];

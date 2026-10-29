@@ -28,6 +28,21 @@
       </form>
     }
     @case ('joined') {
+      <app-card-picker
+        [cards]="store.cards()"
+        [selected]="store.myMark()"
+        [disabled]="store.votingFinished() || isObserver()"
+        (markSelected)="store.vote($event)"
+      />
+      @if (store.countdown(); as seconds) {
+        <p class="countdown" role="status">Showing results in {{ seconds }}!</p>
+      }
+      <div class="actions">
+        <button mat-stroked-button type="button" (click)="store.clearVotes()">Clear votes</button>
+        <button mat-stroked-button type="button" [disabled]="store.votingFinished()" (click)="store.showVotes()">
+          Show votes
+        </button>
+      </div>
       <table mat-table [dataSource]="store.people()" class="people" aria-label="Participants">
         <ng-container matColumnDef="name">
           <th mat-header-cell *matHeaderCellDef>Name</th>
@@ -41,6 +56,19 @@
         <ng-container matColumnDef="role">
           <th mat-header-cell *matHeaderCellDef>Role</th>
           <td mat-cell *matCellDef="let person">{{ roleLabel(person.personType) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="mark">
+          <th mat-header-cell *matHeaderCellDef>Vote</th>
+          <td mat-cell *matCellDef="let person">
+            <span class="mark">
+              @let mark = markOf(person);
+              @if (mark.image; as src) {
+                <img [src]="src" [alt]="mark.text" />
+              } @else {
+                {{ mark.text }}
+              }
+            </span>
+          </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns"></tr>

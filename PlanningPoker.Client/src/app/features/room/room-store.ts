@@ -7,15 +7,21 @@ import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
 import { Person } from '../../models/person';
 import {
+  CardOption,
+  CountdownEvent,
   JoinRoomResponse,
   OwnershipTransferredEvent,
   PersonExitedEvent,
   PersonJoinedEvent,
   RoomConfiguration,
   RoomDisposedEvent,
+  VoteCastEvent,
+  VoteStatus,
 } from '../../models/room';
 
 export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
+/** The mark the server sends for a vote that is not revealed yet. */
+export const HIDDEN_MARK = 'hide';
 export const ROOM_DISPOSED_MESSAGE = 'The room was closed because everyone left.';
 
 /** True when the server says the room cannot be joined because it does not exist (any more). */
@@ -38,6 +44,11 @@ export class RoomStore {
   private readonly ownerState = signal<string | null>(null);
   private readonly votesState = signal<Record<string, string>>({});
   private readonly configurationState = signal<RoomConfiguration | null>(null);
+  private readonly cardsState = signal<CardOption[]>([]);
+  private readonly votingFinishedState = signal(false);
+  private readonly countdownState = signal<number | null>(null);
+  private readonly everyoneVotedState = signal(false);
+  private readonly myMarkState = signal<string | null>(null);
 
   private roomId = '';
   private bound = false;
@@ -56,6 +67,14 @@ export class RoomStore {
   /** Marks are masked as "hide" until votes are revealed. */
   readonly votes = this.votesState.asReadonly();
   readonly configuration = this.configurationState.asReadonly();
+  readonly cards = this.cardsState.asReadonly();
+  /** True once the votes are revealed, until they are cleared. */
+  readonly votingFinished = this.votingFinishedState.asReadonly();
+  /** Seconds left before the votes are revealed; null when no countdown runs. */
+  readonly countdown = this.countdownState.asReadonly();
+  readonly hasEveryoneVoted = this.everyoneVotedState.asReadonly();
+  /** The card this client picked, shown as selected; null before a pick and after the votes are cleared. */
+  readonly myMark = this.myMarkState.asReadonly();
 
   async join(roomId: string): Promise<void> {
     const gen = ++this.generation;
@@ -74,6 +93,24 @@ export class RoomStore {
     await this.router.navigateByUrl('/');
   }
 
+  /** Picks a card at once and tells the room; a refused vote puts the previous pick back. */
+  async vote(mark: string): Promise<void> {
+    const gen = this.generation;
+    const previous = this.myMarkState();
+    this.myMarkState.set(mark);
+    if (!(await this.send(gen, 'Vote', mark)) && gen === this.generation) {
+      this.myMarkState.set(previous);
+    }
+  }
+
+  async clearVotes(): Promise<void> {
+    await this.send(this.generation, 'ClearVotes');
+  }
+
+  async showVotes(): Promise<void> {
+    await this.send(this.generation, 'ForceShowVotes');
+  }
+
   /** Drops the hub connection and clears the room state; leaving the page triggers this too. */
   async close(): Promise<void> {
     this.generation++;
@@ -83,8 +120,10 @@ export class RoomStore {
     await this.hub.disconnect();
     this.peopleState.set([]);
     this.ownerState.set(null);
-    this.votesState.set({});
     this.configurationState.set(null);
+    this.cardsState.set([]);
+    this.myMarkState.set(null);
+    this.applyVoteStatus({ votes: {}, hasEveryoneVoted: false, votingFinished: false, countdown: null });
   }
 
   private bind(): void {
@@ -98,6 +137,12 @@ export class RoomStore {
       this.apply(() => this.ownerState.set(event.newOwner.guid)),
     );
     this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => this.apply(() => void this.roomDisposed(event)));
+    this.hub.on(HUB_EVENTS.VoteCast, (event: VoteCastEvent) => this.apply(() => this.voteCast(event)));
+    this.hub.on(HUB_EVENTS.VoteStatusUpdate, (status: VoteStatus) => this.apply(() => this.applyVoteStatus(status)));
+    this.hub.on(HUB_EVENTS.VotesShown, (status: VoteStatus) => this.apply(() => this.applyVoteStatus(status)));
+    this.hub.on(HUB_EVENTS.CountdownUpdate, (event: CountdownEvent) => this.apply(() => this.countdownUpdate(event)));
+    this.hub.on(HUB_EVENTS.CountdownReset, () => this.apply(() => this.countdownState.set(null)));
+    this.hub.on(HUB_EVENTS.VotesCleared, () => this.apply(() => this.votesCleared()));
     this.hub.onReconnected(() => void this.rejoin());
   }
 
@@ -131,7 +176,8 @@ export class RoomStore {
     }
     this.peopleState.set(response.people);
     this.ownerState.set(response.ownerGuid);
-    this.votesState.set(response.voteStatus.votes);
+    this.applyVoteStatus(response.voteStatus);
+    this.cardsState.set(response.cards);
     this.configurationState.set(response.configuration);
     for (const change of queued) {
       if (gen !== this.generation) {
@@ -161,6 +207,43 @@ export class RoomStore {
     }
     this.flash.show(isRoomGone(error) ? ROOM_NOT_FOUND_MESSAGE : errorMessage(error));
     await this.leave();
+  }
+
+  /** Runs a hub command; returns false after showing why it failed. A result that arrives after close() is dropped. */
+  private async send(gen: number, method: string, ...args: unknown[]): Promise<boolean> {
+    try {
+      await this.hub.invoke(method, ...args);
+      return true;
+    } catch (error) {
+      if (gen === this.generation) {
+        this.flash.show(errorMessage(error));
+      }
+      return false;
+    }
+  }
+
+  private applyVoteStatus(status: VoteStatus): void {
+    this.votesState.set(status.votes);
+    this.everyoneVotedState.set(status.hasEveryoneVoted);
+    this.votingFinishedState.set(status.votingFinished);
+    this.countdownState.set(status.countdown);
+  }
+
+  private voteCast(event: VoteCastEvent): void {
+    if (!this.votingFinishedState()) {
+      this.votesState.update((votes) => ({ ...votes, [event.personGuid]: HIDDEN_MARK }));
+    }
+  }
+
+  private countdownUpdate(event: CountdownEvent): void {
+    if (!this.votingFinishedState()) {
+      this.countdownState.set(event.countdown);
+    }
+  }
+
+  private votesCleared(): void {
+    this.myMarkState.set(null);
+    this.applyVoteStatus({ votes: {}, hasEveryoneVoted: false, votingFinished: false, countdown: null });
   }
 
   private personJoined(event: PersonJoinedEvent): void {

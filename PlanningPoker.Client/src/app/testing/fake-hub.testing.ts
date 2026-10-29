@@ -20,7 +20,12 @@ export const BOB = { guid: 'g-bob', name: 'Bob', personType: 'test' } as const;
 
 export const JOIN_RESPONSE = {
   people: [ANN],
-  voteStatus: { votes: {}, hasEveryoneVoted: false },
+  voteStatus: { votes: {}, hasEveryoneVoted: false, votingFinished: false, countdown: null },
+  cards: [
+    { value: '1', display: null },
+    { value: '5', display: null },
+    { value: 'coffee', display: '☕' },
+  ],
   ownerGuid: ANN.guid,
   configuration: { cardSet: 'linear', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
 };

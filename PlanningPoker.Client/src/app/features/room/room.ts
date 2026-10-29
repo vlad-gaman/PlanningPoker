@@ -7,6 +7,7 @@ import {
   SimpleChanges,
   inject,
   input,
+  computed,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -22,15 +23,17 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
-import { PERSON_TYPES } from '../../models/person';
+import { PERSON_TYPES, Person } from '../../models/person';
 import { createPersonForm } from '../shared/person-form';
-import { ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
+import { CardPicker, cardImage } from './card-picker/card-picker';
+import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 type Phase = 'loading' | 'name' | 'joined';
 
 @Component({
   selector: 'app-room',
   imports: [
+    CardPicker,
     ReactiveFormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -52,7 +55,8 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly flash = inject(FlashMessageService);
 
   protected readonly personTypes = PERSON_TYPES;
-  protected readonly columns = ['name', 'role'];
+  protected readonly columns = ['name', 'role', 'mark'];
+  protected readonly cardImage = cardImage;
   protected readonly phase = signal<Phase>('loading');
   protected readonly error = signal<string | null>(null);
 
@@ -63,6 +67,11 @@ export class Room implements OnInit, OnChanges, OnDestroy {
    * stops if a newer step has started, so a stale step never joins a room or changes the phase.
    */
   private generation = 0;
+
+  private readonly myGuid = signal<string | null>(null);
+  protected readonly isObserver = computed(
+    () => this.store.people().find((person) => person.guid === this.myGuid())?.personType === 'obs',
+  );
 
   async ngOnInit(): Promise<void> {
     await this.enter();
@@ -88,7 +97,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     const gen = this.generation;
     this.error.set(null);
     try {
-      await firstValueFrom(this.meService.update(this.form.getRawValue()));
+      this.myGuid.set((await firstValueFrom(this.meService.update(this.form.getRawValue()))).guid);
     } catch (error) {
       if (gen === this.generation) {
         this.error.set(errorMessage(error));
@@ -103,6 +112,19 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected leave(): void {
     this.generation++;
     void this.store.leave();
+  }
+
+  /** What a participant's mark cell shows: nothing for no vote or an observer, a block while hidden, the card once revealed. */
+  protected markOf(person: Person): { text: string; image: string | null } {
+    const mark = this.store.votes()[person.guid];
+    if (mark === undefined || person.personType === 'obs') {
+      return { text: '', image: null };
+    }
+    if (mark === HIDDEN_MARK && !this.store.votingFinished()) {
+      return { text: '▮', image: null };
+    }
+    const card = this.store.cards().find((option) => option.value === mark);
+    return { text: card?.display ?? mark, image: card ? cardImage(card) : null };
   }
 
   protected roleLabel(type: string): string {
@@ -130,6 +152,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
         return;
       }
       if (me.name) {
+        this.myGuid.set(me.guid);
         await this.join(gen);
         return;
       }

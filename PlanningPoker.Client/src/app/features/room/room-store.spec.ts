@@ -126,7 +126,7 @@ describe('RoomStore', () => {
   it('binds the hub handlers only once across joins', async () => {
     await store.join('room-1');
 
-    expect(hub.on).toHaveBeenCalledTimes(4);
+    expect(hub.on).toHaveBeenCalledTimes(10);
   });
 
   it('aborts a join quietly when the store is closed while connecting', async () => {
@@ -152,7 +152,7 @@ describe('RoomStore', () => {
     await store.join('room-1');
 
     expect(store.people()).toEqual([ANN]);
-    expect(hub.on).toHaveBeenCalledTimes(8);
+    expect(hub.on).toHaveBeenCalledTimes(20);
   });
 
   /** Starts a join whose JoinRoom response is held until respond() is called. */
@@ -244,6 +244,164 @@ describe('RoomStore', () => {
 
     expect(store.people()).toEqual([ANN]);
     expect(store.ownerGuid()).toBe(ANN.guid);
+  });
+
+  describe('voting', () => {
+    const hidden = { votes: { [BOB.guid]: 'hide' }, hasEveryoneVoted: false, votingFinished: false, countdown: null };
+
+    it('exposes the cards and an open, empty vote state from the join response', () => {
+      expect(store.cards().map((card) => card.value)).toEqual(['1', '5', 'coffee']);
+      expect(store.votingFinished()).toBe(false);
+      expect(store.countdown()).toBeNull();
+      expect(store.hasEveryoneVoted()).toBe(false);
+      expect(store.myMark()).toBeNull();
+    });
+
+    it('applies a revealed snapshot with a running countdown', async () => {
+      hub.invoke.mockResolvedValue({
+        ...JOIN_RESPONSE,
+        voteStatus: { votes: { [ANN.guid]: '5' }, hasEveryoneVoted: true, votingFinished: false, countdown: 3 },
+      });
+
+      await store.join('room-2');
+
+      expect(store.votes()).toEqual({ [ANN.guid]: '5' });
+      expect(store.hasEveryoneVoted()).toBe(true);
+      expect(store.countdown()).toBe(3);
+    });
+
+    it('applies a snapshot of revealed votes', async () => {
+      hub.invoke.mockResolvedValue({
+        ...JOIN_RESPONSE,
+        voteStatus: { votes: { [ANN.guid]: '5' }, hasEveryoneVoted: true, votingFinished: true, countdown: null },
+      });
+
+      await store.join('room-2');
+
+      expect(store.votingFinished()).toBe(true);
+    });
+
+    it('adds a hidden entry when somebody votes', () => {
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
+
+      expect(store.votes()).toEqual({ [BOB.guid]: 'hide' });
+    });
+
+    it('does not hide a mark that was already revealed when a late VoteCast arrives', () => {
+      hub.emit(HUB_EVENTS.VotesShown, { votes: { [BOB.guid]: '5' }, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
+
+      expect(store.votes()).toEqual({ [BOB.guid]: '5' });
+    });
+
+    it('replaces the vote state on VoteStatusUpdate', () => {
+      hub.emit(HUB_EVENTS.VoteStatusUpdate, { ...hidden, hasEveryoneVoted: true });
+
+      expect(store.votes()).toEqual(hidden.votes);
+      expect(store.hasEveryoneVoted()).toBe(true);
+    });
+
+    it('shows the real marks and closes voting on VotesShown, ending the countdown', () => {
+      hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 1, reset: false });
+
+      hub.emit(HUB_EVENTS.VotesShown, { votes: { [BOB.guid]: '8' }, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+
+      expect(store.votes()).toEqual({ [BOB.guid]: '8' });
+      expect(store.votingFinished()).toBe(true);
+      expect(store.countdown()).toBeNull();
+    });
+
+    it('follows CountdownUpdate and clears the countdown on CountdownReset', () => {
+      hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 4, reset: false });
+      expect(store.countdown()).toBe(4);
+
+      hub.emit(HUB_EVENTS.CountdownReset, { countdown: 5, reset: true });
+
+      expect(store.countdown()).toBeNull();
+    });
+
+    it('ignores a CountdownUpdate once the votes are revealed', () => {
+      hub.emit(HUB_EVENTS.VotesShown, { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+
+      hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 1, reset: false });
+
+      expect(store.countdown()).toBeNull();
+    });
+
+    it('clears votes, countdown, selection and reopens voting on VotesCleared', async () => {
+      await store.vote('5');
+      hub.emit(HUB_EVENTS.VotesShown, { votes: { [ANN.guid]: '5' }, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+
+      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+
+      expect(store.votes()).toEqual({});
+      expect(store.votingFinished()).toBe(false);
+      expect(store.hasEveryoneVoted()).toBe(false);
+      expect(store.myMark()).toBeNull();
+    });
+
+    it('replays voting events received during the join after the snapshot', async () => {
+      let respond!: () => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(JOIN_RESPONSE))));
+      const joining = store.join('room-2');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
+
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
+      hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 5, reset: false });
+      respond();
+      await joining;
+
+      expect(store.votes()).toEqual({ [BOB.guid]: 'hide' });
+      expect(store.countdown()).toBe(5);
+    });
+
+    it('vote sends the mark and selects it at once', async () => {
+      const voting = store.vote('5');
+
+      expect(store.myMark()).toBe('5');
+      await voting;
+      expect(hub.invoke).toHaveBeenLastCalledWith('Vote', '5');
+    });
+
+    it('vote restores the previous selection and shows the message when the hub refuses', async () => {
+      await store.vote('1');
+      hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'voting_closed', message: 'Voting is closed.' }]));
+
+      await store.vote('5');
+
+      expect(store.myMark()).toBe('1');
+      expect(TestBed.inject(FlashMessageService).message()).toBe('Voting is closed.');
+    });
+
+    it('vote leaves the state alone when the room was closed while it was in flight', async () => {
+      let fail!: (error: unknown) => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((_, reject) => (fail = reject)));
+      const voting = store.vote('5');
+
+      await store.close();
+      fail(new ApiRequestError(0, [{ code: 'voting_closed', message: 'Voting is closed.' }]));
+      await voting;
+
+      expect(store.myMark()).toBeNull();
+      expect(TestBed.inject(FlashMessageService).message()).toBeNull();
+    });
+
+    it('clearVotes and showVotes invoke the hub', async () => {
+      await store.clearVotes();
+      expect(hub.invoke).toHaveBeenLastCalledWith('ClearVotes');
+
+      await store.showVotes();
+      expect(hub.invoke).toHaveBeenLastCalledWith('ForceShowVotes');
+    });
+
+    it('clearVotes and showVotes show the message when the hub refuses', async () => {
+      hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'not_in_room', message: 'Not in the room.' }]));
+
+      await store.showVotes();
+
+      expect(TestBed.inject(FlashMessageService).message()).toBe('Not in the room.');
+    });
   });
 
   it('ignores a reconnect after the store was closed', async () => {
