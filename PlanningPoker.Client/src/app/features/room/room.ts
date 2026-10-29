@@ -115,16 +115,16 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   }
 
   /** What a participant's mark cell shows: nothing for no vote or an observer, a block while hidden, the card once revealed. */
-  protected markOf(person: Person): { text: string; image: string | null } {
+  protected markOf(person: Person): { text: string; image: string | null; alt: string } {
     const mark = this.store.votes()[person.guid];
     if (mark === undefined || person.personType === 'obs') {
-      return { text: '', image: null };
+      return { text: '', image: null, alt: '' };
     }
     if (mark === HIDDEN_MARK && !this.store.votingFinished()) {
-      return { text: '▮', image: null };
+      return { text: '▮', image: null, alt: '' };
     }
     const card = this.store.cards().find((option) => option.value === mark);
-    return { text: card?.display ?? mark, image: card ? cardImage(card) : null };
+    return { text: card?.display ?? mark, image: card ? cardImage(card) : null, alt: mark };
   }
 
   protected roleLabel(type: string): string {

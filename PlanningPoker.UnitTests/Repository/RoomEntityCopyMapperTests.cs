@@ -15,6 +15,9 @@ public class RoomEntityCopyMapperTests
             OwnerGuid = owner,
             VotingEnabled = true,
             IsDisposed = true,
+            Revision = 4,
+            CountdownRevision = 3,
+            CountdownRemaining = 2,
             MemberGuids = [owner],
             MemberConnections = new Dictionary<Guid, HashSet<string>> { [owner] = ["c1"] },
             Votes = new Dictionary<Guid, string> { [owner] = "5" },
@@ -27,6 +30,9 @@ public class RoomEntityCopyMapperTests
         Assert.Equal(owner, copy.OwnerGuid);
         Assert.True(copy.VotingEnabled);
         Assert.True(copy.IsDisposed);
+        Assert.Equal(4, copy.Revision);
+        Assert.Equal(3, copy.CountdownRevision);
+        Assert.Equal(2, copy.CountdownRemaining);
         Assert.Equal(source.MemberGuids, copy.MemberGuids);
         Assert.Equal(["c1"], copy.MemberConnections[owner]);
         Assert.Equal("5", copy.Votes[owner]);

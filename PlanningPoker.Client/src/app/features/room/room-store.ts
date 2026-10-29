@@ -98,7 +98,7 @@ export class RoomStore {
     const gen = this.generation;
     const previous = this.myMarkState();
     this.myMarkState.set(mark);
-    if (!(await this.send(gen, 'Vote', mark)) && gen === this.generation) {
+    if (!(await this.send(gen, 'Vote', mark)) && gen === this.generation && this.myMarkState() === mark) {
       this.myMarkState.set(previous);
     }
   }

@@ -430,7 +430,8 @@ public class RoomService(
         var seconds = snapshot.Configuration.CountdownSeconds;
         var found = rooms.Update(snapshot.Id, room =>
         {
-            if (room.Revision != snapshot.Revision || !room.VotingEnabled)
+            // A countdown already running at this revision means a concurrent change made the same decision first.
+            if (room.Revision != snapshot.Revision || !room.VotingEnabled || room.CountdownRevision == room.Revision)
             {
                 return false;
             }

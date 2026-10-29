@@ -32,6 +32,10 @@
   &.disabled {
     background: var(--card-disabled-bg);
     cursor: not-allowed;
+
+    &.selected {
+      background: var(--card-selected-bg);
+    }
   }
 
   // The radio stays in the layout for keyboard and screen reader use; the label is the visible control.

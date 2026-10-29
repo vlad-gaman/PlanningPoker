@@ -239,6 +239,34 @@ public class RoomServiceVotingTests
     }
 
     [Fact]
+    public void Vote_TwoLastVotesAtOnce_StartExactlyOneCountdown()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        var interleaving = new InterleavingRoomRepository(_rooms);
+        var service = RoomServiceFactory.Create(interleaving, _people);
+        VoteResult? other = null;
+        // The second voter stores their vote, snapshots and decides while the first is between storing and snapshotting.
+        interleaving.AfterNextUpdate = () => other = _service.Vote(people[1], "c2", "8").Data;
+
+        var first = service.Vote(people[0], "c1", "5").Data!;
+
+        Assert.Equal(1, new[] { first.FollowUp.Countdown, other!.FollowUp.Countdown }.Count(start => start is not null));
+        Assert.True(_rooms.Get(roomId)!.CountdownRunning);
+    }
+
+    [Fact]
+    public void ForceShowVotes_TwiceInARow_AnnouncesTheRevealOnce()
+    {
+        var (_, people) = RoomWith(5, TwoDevs);
+
+        var first = _service.ForceShowVotes(people[0], "c1").Data!;
+        var second = _service.ForceShowVotes(people[1], "c2").Data!;
+
+        Assert.NotNull(first.VoteStatus);
+        Assert.Null(second.VoteStatus);
+    }
+
+    [Fact]
     public void ClearVotes_DropsTheVotesReopensVotingAndCancelsTheCountdown()
     {
         var (roomId, people) = RoomWith(5, TwoDevs);
