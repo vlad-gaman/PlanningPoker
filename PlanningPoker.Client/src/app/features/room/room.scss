@@ -1,5 +1,23 @@
 .room {
+  max-width: 64rem;
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.main {
+  flex: 1 1 24rem;
   max-width: 40rem;
+  min-width: 0;
+}
+
+app-results {
+  flex: 1 1 18rem;
+  min-width: 0;
 }
 
 .name-entry {

@@ -20,12 +20,49 @@ export const BOB = { guid: 'g-bob', name: 'Bob', personType: 'test' } as const;
 
 export const JOIN_RESPONSE = {
   people: [ANN],
-  voteStatus: { votes: {}, hasEveryoneVoted: false, votingFinished: false, countdown: null },
+  voteStatus: {
+    votes: {},
+    hasEveryoneVoted: false,
+    votingFinished: false,
+    countdown: null,
+    statistics: null,
+  },
   cards: [
     { value: '1', display: null },
     { value: '5', display: null },
     { value: 'coffee', display: '☕' },
   ],
   ownerGuid: ANN.guid,
-  configuration: { cardSet: 'linear', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
+  configuration: {
+    cardSet: 'linear',
+    countdownSeconds: 5,
+    showFireworks: true,
+    maxParticipants: 50,
+  },
 };
+
+/** Statistics of two votes, 3 and 5, both developers. */
+export const STATISTICS = {
+  all: {
+    marks: [
+      { mark: '1', percentage: 50 },
+      { mark: '5', percentage: 50 },
+    ],
+    highestMark: null,
+    averageMark: 3,
+  },
+  developers: { marks: [{ mark: '1', percentage: 100 }], highestMark: '1', averageMark: 1 },
+  testers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
+  consensus: false,
+};
+
+export const CONSENSUS_STATISTICS = {
+  all: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
+  developers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
+  testers: { marks: [], highestMark: null, averageMark: null },
+  consensus: true,
+};
+
+export function revealed(statistics: unknown) {
+  return { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null, statistics };
+}

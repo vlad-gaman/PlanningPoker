@@ -1,0 +1,9 @@
+<figure class="chart">
+  <figcaption>{{ title() }}</figcaption>
+  <div class="canvas-box">
+    <canvas #canvas role="img" [attr.aria-label]="summary()"></canvas>
+  </div>
+  <p class="average">
+    Average: <span class="value">{{ average() }}</span>
+  </p>
+</figure>

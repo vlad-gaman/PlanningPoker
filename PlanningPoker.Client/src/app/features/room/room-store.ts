@@ -16,6 +16,7 @@ import {
   RoomConfiguration,
   RoomDisposedEvent,
   VoteCastEvent,
+  VoteStatistics,
   VoteStatus,
 } from '../../models/room';
 
@@ -28,8 +29,7 @@ export const ROOM_DISPOSED_MESSAGE = 'The room was closed because everyone left.
 export function isRoomGone(error: unknown): boolean {
   return (
     error instanceof ApiRequestError &&
-    (error.hasCode(ERROR_CODES.roomNotFound) ||
-      error.hasError(ERROR_CODES.validationFailed, { field: ROOM_ID_FIELD }))
+    (error.hasCode(ERROR_CODES.roomNotFound) || error.hasError(ERROR_CODES.validationFailed, { field: ROOM_ID_FIELD }))
   );
 }
 
@@ -49,6 +49,8 @@ export class RoomStore {
   private readonly countdownState = signal<number | null>(null);
   private readonly everyoneVotedState = signal(false);
   private readonly myMarkState = signal<string | null>(null);
+  private readonly statisticsState = signal<VoteStatistics | null>(null);
+  private readonly revealCountState = signal(0);
 
   private roomId = '';
   private bound = false;
@@ -75,6 +77,13 @@ export class RoomStore {
   readonly hasEveryoneVoted = this.everyoneVotedState.asReadonly();
   /** The card this client picked, shown as selected; null before a pick and after the votes are cleared. */
   readonly myMark = this.myMarkState.asReadonly();
+  /** The statistics of the revealed votes; null while voting is open. */
+  readonly statistics = this.statisticsState.asReadonly();
+  /**
+   * Counts the reveals that arrived as a live VotesShown event. A join snapshot of an already revealed room does not
+   * count, so the fireworks only follow a reveal the user watched happen.
+   */
+  readonly revealCount = this.revealCountState.asReadonly();
 
   async join(roomId: string): Promise<void> {
     const gen = ++this.generation;
@@ -123,7 +132,14 @@ export class RoomStore {
     this.configurationState.set(null);
     this.cardsState.set([]);
     this.myMarkState.set(null);
-    this.applyVoteStatus({ votes: {}, hasEveryoneVoted: false, votingFinished: false, countdown: null });
+    this.revealCountState.set(0);
+    this.applyVoteStatus({
+      votes: {},
+      hasEveryoneVoted: false,
+      votingFinished: false,
+      countdown: null,
+      statistics: null,
+    });
   }
 
   private bind(): void {
@@ -139,7 +155,7 @@ export class RoomStore {
     this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => this.apply(() => void this.roomDisposed(event)));
     this.hub.on(HUB_EVENTS.VoteCast, (event: VoteCastEvent) => this.apply(() => this.voteCast(event)));
     this.hub.on(HUB_EVENTS.VoteStatusUpdate, (status: VoteStatus) => this.apply(() => this.applyVoteStatus(status)));
-    this.hub.on(HUB_EVENTS.VotesShown, (status: VoteStatus) => this.apply(() => this.applyVoteStatus(status)));
+    this.hub.on(HUB_EVENTS.VotesShown, (status: VoteStatus) => this.apply(() => this.votesShown(status)));
     this.hub.on(HUB_EVENTS.CountdownUpdate, (event: CountdownEvent) => this.apply(() => this.countdownUpdate(event)));
     this.hub.on(HUB_EVENTS.CountdownReset, () => this.apply(() => this.countdownState.set(null)));
     this.hub.on(HUB_EVENTS.VotesCleared, () => this.apply(() => this.votesCleared()));
@@ -227,6 +243,12 @@ export class RoomStore {
     this.everyoneVotedState.set(status.hasEveryoneVoted);
     this.votingFinishedState.set(status.votingFinished);
     this.countdownState.set(status.countdown);
+    this.statisticsState.set(status.statistics);
+  }
+
+  private votesShown(status: VoteStatus): void {
+    this.applyVoteStatus(status);
+    this.revealCountState.update((count) => count + 1);
   }
 
   private voteCast(event: VoteCastEvent): void {
@@ -243,7 +265,13 @@ export class RoomStore {
 
   private votesCleared(): void {
     this.myMarkState.set(null);
-    this.applyVoteStatus({ votes: {}, hasEveryoneVoted: false, votingFinished: false, countdown: null });
+    this.applyVoteStatus({
+      votes: {},
+      hasEveryoneVoted: false,
+      votingFinished: false,
+      countdown: null,
+      statistics: null,
+    });
   }
 
   private personJoined(event: PersonJoinedEvent): void {
