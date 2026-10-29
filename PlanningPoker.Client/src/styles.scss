@@ -1,0 +1,73 @@
+@use '@angular/material' as mat;
+
+:root {
+  --bg-color: #ffffff;
+  --text-color: #212529;
+  --border-color: #e5e5e5;
+  --card-bg: #ffffff;
+  --card-hover-bg: rgba(0, 0, 0, 0.075);
+  --card-selected-bg: rgba(0, 0, 0, 0.3);
+  --card-disabled-bg: rgba(0, 0, 0, 0.1);
+  --card-border: #a8a8a8;
+  --primary-color: #1b6ec2;
+  --primary-hover: #1861ac;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --navbar-bg: #fff;
+  --footer-bg: #fff;
+  --chart-color-primary: #007bff;
+  --chart-color-success: #28a745;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg-color: #1a1a1a;
+  --text-color: #e9ecef;
+  --border-color: #404040;
+  --card-bg: #2d2d2d;
+  --card-hover-bg: rgba(255, 255, 255, 0.1);
+  --card-selected-bg: rgba(255, 255, 255, 0.3);
+  --card-disabled-bg: rgba(255, 255, 255, 0.1);
+  --card-border: #565656;
+  --primary-color: #4dabf7;
+  --primary-hover: #339af0;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --navbar-bg: #1a1a1a;
+  --footer-bg: #1a1a1a;
+  --chart-color-primary: #4dabf7;
+  --chart-color-success: #51cf66;
+  color-scheme: dark;
+}
+
+html {
+  @include mat.theme(
+    (
+      color: mat.$azure-palette,
+      typography: Roboto,
+      density: 0,
+    )
+  );
+
+  // Material reads these system tokens; point them at the site's variables so both stay in sync.
+  --mat-sys-primary: var(--primary-color);
+  --mat-sys-background: var(--bg-color);
+  --mat-sys-surface: var(--bg-color);
+  --mat-sys-on-background: var(--text-color);
+  --mat-sys-on-surface: var(--text-color);
+  --mat-sys-outline: var(--card-border);
+  --mat-sys-outline-variant: var(--border-color);
+}
+
+body {
+  margin: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+a {
+  color: var(--primary-color);
+
+  &:hover {
+    color: var(--primary-hover);
+  }
+}

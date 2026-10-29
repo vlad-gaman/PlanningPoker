@@ -1,0 +1,60 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using PlanningPoker.Common.Constants;
+using PlanningPoker.Common.Models;
+using PlanningPoker.Controller.Constants;
+using PlanningPoker.Controller.Controllers;
+using PlanningPoker.Controller.Hubs;
+using PlanningPoker.Controller.Mappers;
+using PlanningPoker.Controller.Middleware;
+using PlanningPoker.Controller.Services;
+using PlanningPoker.Controller.Validations;
+
+namespace PlanningPoker.Controller.Extensions;
+
+public static class ControllerLayerExtensions
+{
+    public static IServiceCollection AddControllerLayer(this IServiceCollection services)
+    {
+        services.AddControllers().AddApplicationPart(typeof(MeController).Assembly);
+        services.AddSignalR();
+
+        services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
+        services.AddSingleton<IApiResponseMapper, ApiResponseMapper>();
+        services.AddSingleton<IPersonResponseMapper, PersonResponseMapper>();
+        services.AddSingleton<IApiResponseWriter, ApiResponseWriter>();
+        services.AddSingleton<ISessionCookieService, SessionCookieService>();
+        services.AddSingleton<UpdateMeRequestValidation>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<ApiBehaviorOptions>, ApiBehaviorOptionsSetup>());
+        return services;
+    }
+
+    public static IApplicationBuilder UseControllerLayer(this IApplicationBuilder app)
+    {
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
+        app.UseMiddleware<JsonOnlyMiddleware>();
+        app.UseMiddleware<SessionPersonMiddleware>();
+        return app;
+    }
+
+    public static IEndpointRouteBuilder MapControllerLayer(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapControllers();
+        endpoints.MapHub<RoomHub>(RoutePrefixes.RoomHub);
+        endpoints.MapFallback($"{RoutePrefixes.Api}/{{**rest}}", WriteNotFound);
+        endpoints.MapFallback($"{RoutePrefixes.Hubs}/{{**rest}}", WriteNotFound);
+        return endpoints;
+    }
+
+    private static Task WriteNotFound(HttpContext context)
+    {
+        var writer = context.RequestServices.GetRequiredService<IApiResponseWriter>();
+        return writer.WriteAsync(context, ServiceResponse.Failure(
+            ServiceError.Create(ErrorCodes.NotFound, "The requested resource does not exist.")));
+    }
+}

@@ -1,0 +1,40 @@
+name: Deploy to staging
+
+# Manual only. Needs the "staging" environment with secret AZURE_WEBAPP_PUBLISH_PROFILE
+# (the staging slot's publish profile) and variable AZURE_WEBAPP_NAME.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+      - name: Unzip the site
+        run: unzip -q site.zip -d site
+      - uses: azure/webapps-deploy@5cfb776471c748b351e1ebf5770e208a54ace016 # v2.2.19
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          slot-name: staging
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: site
+      - name: Tag and keep the deployed zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="staging-${{ github.run_number }}"
+          gh release create "$tag" site.zip --target "${{ github.sha }}" --prerelease \
+            --title "Staging build $tag" --notes "Deployed to the staging slot from ${{ github.sha }}."

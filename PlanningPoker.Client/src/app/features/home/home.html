@@ -1,0 +1,24 @@
+<section class="home">
+  <h1>Planning Poker</h1>
+  <form (submit)="save($event)">
+    <mat-form-field appearance="outline">
+      <mat-label>Your name</mat-label>
+      <input matInput name="name" [value]="name()" (input)="setName($event)" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Role</mat-label>
+      <mat-select [value]="personType()" (valueChange)="personType.set($event)">
+        <mat-option value="dev">Developer</mat-option>
+        <mat-option value="test">Tester</mat-option>
+        <mat-option value="obs">Observer</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button type="submit">Save</button>
+  </form>
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+  @if (person(); as me) {
+    <p class="welcome">Welcome, {{ me.name }}.</p>
+  }
+</section>

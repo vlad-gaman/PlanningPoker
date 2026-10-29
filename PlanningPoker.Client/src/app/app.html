@@ -1,0 +1,12 @@
+<header class="navbar">
+  <a routerLink="/" class="brand">Planning Poker</a>
+  <button mat-button type="button" (click)="cycleTheme()" aria-label="Change theme">
+    Theme: {{ theme.preference() }}
+  </button>
+</header>
+<main>
+  <router-outlet />
+</main>
+<footer class="footer">
+  <a routerLink="/credits">Credits</a>
+</footer>
