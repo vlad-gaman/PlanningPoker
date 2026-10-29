@@ -46,14 +46,22 @@ describe('buildChartConfig', () => {
   });
 
   it('leaves the text label empty for an image card and reserves room for the image', () => {
-    const config = buildChartConfig(group({ marks: [{ mark: 'two', percentage: 100 }] }), CARDS, COLORS);
+    const config = buildChartConfig(
+      group({ marks: [{ mark: 'two', percentage: 100 }] }),
+      CARDS,
+      COLORS,
+    );
 
     expect(config.data.labels).toEqual(['']);
     expect(config.options?.layout?.padding).toEqual({ bottom: 28 });
   });
 
   it('reserves no room when there is no image card', () => {
-    const config = buildChartConfig(group({ marks: [{ mark: '1', percentage: 100 }] }), CARDS, COLORS);
+    const config = buildChartConfig(
+      group({ marks: [{ mark: '1', percentage: 100 }] }),
+      CARDS,
+      COLORS,
+    );
 
     expect(config.options?.layout?.padding).toEqual({ bottom: 0 });
   });
@@ -90,7 +98,11 @@ describe('buildChartConfig', () => {
   });
 
   it('hides the y axis on a fixed 0 to 100 scale, shows no legend and formats the tooltip as a percentage', () => {
-    const config = buildChartConfig(group({ marks: [{ mark: '1', percentage: 12.5 }] }), CARDS, COLORS);
+    const config = buildChartConfig(
+      group({ marks: [{ mark: '1', percentage: 12.5 }] }),
+      CARDS,
+      COLORS,
+    );
 
     const y = config.options?.scales?.['y'] as { min: number; max: number; display: boolean };
     expect([y.min, y.max, y.display]).toEqual([0, 100, false]);

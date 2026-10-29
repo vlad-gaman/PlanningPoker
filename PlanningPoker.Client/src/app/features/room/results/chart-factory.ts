@@ -1,5 +1,13 @@
 import { Injectable } from '@angular/core';
-import { BarController, BarElement, CategoryScale, Chart, ChartConfiguration, LinearScale, Tooltip } from 'chart.js';
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  ChartConfiguration,
+  LinearScale,
+  Tooltip,
+} from 'chart.js';
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
 

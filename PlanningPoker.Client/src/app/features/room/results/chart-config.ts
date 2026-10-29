@@ -52,7 +52,13 @@ function imageLabels(sources: (string | null)[], redraw: () => void): Plugin<'ba
         }
         if (image.complete && image.naturalWidth > 0) {
           const x = scale.getPixelForTick(index) - IMAGE_LABEL_SIZE / 2;
-          chart.ctx.drawImage(image, x, scale.top + IMAGE_LABEL_GAP, IMAGE_LABEL_SIZE, IMAGE_LABEL_SIZE);
+          chart.ctx.drawImage(
+            image,
+            x,
+            scale.top + IMAGE_LABEL_GAP,
+            IMAGE_LABEL_SIZE,
+            IMAGE_LABEL_SIZE,
+          );
         }
       });
     },
@@ -69,16 +75,11 @@ export function buildChartConfig(
   colors: ChartColors,
   redraw: () => void = () => undefined,
 ): ChartConfiguration<'bar'> {
-  const sources = group.marks.map((share) => {
-    const card = cards.find((option) => option.value === share.mark);
-    return card ? cardImage(card) : null;
-  });
-  const labels = group.marks.map((share, index) => {
-    if (sources[index]) {
-      return '';
-    }
-    return cards.find((option) => option.value === share.mark)?.display ?? share.mark;
-  });
+  const options = group.marks.map((share) => cards.find((option) => option.value === share.mark));
+  const sources = options.map((card) => (card ? cardImage(card) : null));
+  const labels = group.marks.map((share, index) =>
+    sources[index] ? '' : (options[index]?.display ?? share.mark),
+  );
   const hasImages = sources.some((source) => source !== null);
 
   return {

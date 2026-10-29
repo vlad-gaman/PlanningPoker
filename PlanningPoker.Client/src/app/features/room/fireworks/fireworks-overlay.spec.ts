@@ -1,5 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { FIREWORK_ROUNDS, FIREWORK_ROUND_MS, FIREWORKS_PER_ROUND, FireworksOverlay } from './fireworks-overlay';
+import {
+  FIREWORK_LINGER_MS,
+  FIREWORK_ROUNDS,
+  FIREWORK_ROUND_MS,
+  FIREWORKS_PER_ROUND,
+  FireworksOverlay,
+} from './fireworks-overlay';
 import { FireworksLauncher } from './fireworks-launcher';
 
 describe('FireworksOverlay', () => {
@@ -74,12 +80,25 @@ describe('FireworksOverlay', () => {
     expect(dispose).not.toHaveBeenCalled();
   });
 
-  it('does not start in a hidden tab', () => {
-    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+  it('launches nothing when started in a hidden tab, but fires once it is shown again', () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    overlay().start();
+    expect(launch).not.toHaveBeenCalled();
 
+    hidden.mockReturnValue(false);
+    vi.advanceTimersByTime(FIREWORK_ROUND_MS);
+
+    expect(launch).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes the display a few seconds after the last round', () => {
     overlay().start();
 
-    expect(create).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(FIREWORK_ROUND_MS * FIREWORK_ROUNDS);
+    expect(dispose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(FIREWORK_LINGER_MS);
+
+    expect(dispose).toHaveBeenCalledTimes(1);
   });
 
   it('skips the rounds that fall while the tab is hidden', () => {

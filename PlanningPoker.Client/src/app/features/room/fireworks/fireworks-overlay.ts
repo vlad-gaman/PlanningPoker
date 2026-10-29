@@ -1,9 +1,18 @@
-import { ChangeDetectionStrategy, Component, DOCUMENT, ElementRef, OnDestroy, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DOCUMENT,
+  ElementRef,
+  OnDestroy,
+  inject,
+} from '@angular/core';
 import { FireworksDisplay, FireworksLauncher } from './fireworks-launcher';
 
 export const FIREWORK_ROUNDS = 10;
 export const FIREWORK_ROUND_MS = 1000;
 export const FIREWORKS_PER_ROUND = 10;
+/** How long the last rockets get to burn out before the display is removed. */
+export const FIREWORK_LINGER_MS = 5000;
 
 /** A full-page layer the fireworks are drawn on; it never takes clicks, so the room stays usable underneath. */
 @Component({
@@ -19,13 +28,11 @@ export class FireworksOverlay implements OnDestroy {
 
   private display: FireworksDisplay | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private linger: ReturnType<typeof setTimeout> | null = null;
 
   /** Fires a round now and one more each second, for ten rounds; a display already running is restarted. */
   start(): void {
     this.stop();
-    if (this.document.hidden) {
-      return;
-    }
     try {
       this.display = this.launcher.create(this.host.nativeElement);
     } catch {
@@ -39,6 +46,7 @@ export class FireworksOverlay implements OnDestroy {
       }
       if (++rounds >= FIREWORK_ROUNDS) {
         this.clearTimer();
+        this.linger = setTimeout(() => this.stop(), FIREWORK_LINGER_MS);
       }
     };
     round();
@@ -49,12 +57,20 @@ export class FireworksOverlay implements OnDestroy {
 
   stop(): void {
     this.clearTimer();
+    this.clearLinger();
     this.display?.dispose();
     this.display = null;
   }
 
   ngOnDestroy(): void {
     this.stop();
+  }
+
+  private clearLinger(): void {
+    if (this.linger !== null) {
+      clearTimeout(this.linger);
+      this.linger = null;
+    }
   }
 
   private clearTimer(): void {
