@@ -218,6 +218,34 @@ describe('RoomStore', () => {
     expect(navigate).toHaveBeenCalledWith('/');
   });
 
+  it('does not run a join that was superseded while it was connecting', async () => {
+    let finishConnect!: () => void;
+    hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
+    hub.invoke.mockClear();
+
+    const superseded = store.join('room-2');
+    await store.join('room-3');
+    finishConnect();
+    await superseded;
+
+    expect(hub.invoke).toHaveBeenCalledOnce();
+    expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-3');
+  });
+
+  it('does not apply the snapshot of a join that was superseded while its JoinRoom was in flight', async () => {
+    let respond!: (response: unknown) => void;
+    hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = resolve)));
+
+    const superseded = store.join('room-2');
+    await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
+    await store.join('room-3');
+    respond({ ...JOIN_RESPONSE, people: [ANN, BOB], ownerGuid: BOB.guid });
+    await superseded;
+
+    expect(store.people()).toEqual([ANN]);
+    expect(store.ownerGuid()).toBe(ANN.guid);
+  });
+
   it('ignores a reconnect after the store was closed', async () => {
     await store.close();
     hub.invoke.mockClear();

@@ -16,6 +16,16 @@ public class ServiceErrorTests
     }
 
     [Fact]
+    public void NotInRoom_IsTheSingleNotInRoomError()
+    {
+        var error = ServiceError.NotInRoom();
+
+        Assert.Equal(ErrorCodes.NotInRoom, error.Code);
+        Assert.Equal("The connection is not in a room.", error.Message);
+        Assert.Empty(error.Metadata);
+    }
+
+    [Fact]
     public void RoomNotFound_CarriesTheRoomId()
     {
         var error = ServiceError.RoomNotFound("r1");

@@ -9,7 +9,8 @@ public static class RoomResults
         Person person,
         IReadOnlyList<Person>? people = null,
         bool resetCountdown = true,
-        int countdownSeconds = 5)
+        int countdownSeconds = 5,
+        bool personAdded = true)
     {
         return new JoinRoomResult
         {
@@ -23,6 +24,7 @@ public static class RoomResults
             Person = person,
             People = people ?? [person],
             VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = false },
+            PersonAdded = personAdded,
             ResetCountdown = resetCountdown
         };
     }

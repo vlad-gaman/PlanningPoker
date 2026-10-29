@@ -83,15 +83,17 @@ public class RoomService(
             return ServiceResponse<JoinRoomResult>.Failure(ServiceError.ValidationFailed("connectionId", "already_in_room"));
         }
 
-        // The room lock decides admission. The connection joins the member's connection set in the same step.
-        var admitted = rooms.Update(roomId, room =>
+        // The room lock decides admission. The connection joins the member's connection set in the same step, and the
+        // person is only new to the room when no connection of theirs was already in it.
+        var admission = rooms.Update(roomId, room =>
         {
             if (room.IsDisposed)
             {
-                return false;
+                return (Admitted: false, PersonAdded: false);
             }
 
-            if (!room.MemberGuids.Contains(personGuid))
+            var personAdded = !room.MemberGuids.Contains(personGuid);
+            if (personAdded)
             {
                 room.MemberGuids.Add(personGuid);
             }
@@ -99,26 +101,21 @@ public class RoomService(
             var connections = room.MemberConnections.GetValueOrDefault(personGuid) ?? new HashSet<string>();
             connections.Add(connectionId);
             room.MemberConnections[personGuid] = connections;
-            return true;
-        }, out var added) && added;
+            return (Admitted: true, PersonAdded: personAdded);
+        }, out var outcome) ? outcome : default;
 
-        if (!admitted)
+        if (!admission.Admitted)
         {
-            people.Update(personGuid, entity =>
-            {
-                if (entity.Connections.TryGetValue(connectionId, out var indexedRoomId) && indexedRoomId == roomId)
-                {
-                    entity.Connections.Remove(connectionId);
-                }
-
-                return true;
-            }, out _);
+            ReleaseConnection(personGuid, connectionId, roomId);
             return ServiceResponse<JoinRoomResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
+        // The room can be removed between admission and this read when its last member leaves. Nothing was announced yet,
+        // so the connection is released and the join reports the room as gone.
         var snapshot = rooms.Get(roomId);
         if (snapshot is null)
         {
+            ReleaseConnection(personGuid, connectionId, roomId);
             return ServiceResponse<JoinRoomResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
@@ -127,7 +124,22 @@ public class RoomService(
             roomMapper.Map(snapshot),
             join.Person,
             members,
-            voteStatusMapper.Map(snapshot, members)));
+            voteStatusMapper.Map(snapshot, members),
+            admission.PersonAdded));
+    }
+
+    /// <summary>Drops the connection's index entry for the room, if it still points there (person lock only).</summary>
+    private void ReleaseConnection(Guid personGuid, string connectionId, string roomId)
+    {
+        people.Update(personGuid, entity =>
+        {
+            if (entity.Connections.TryGetValue(connectionId, out var indexedRoomId) && indexedRoomId == roomId)
+            {
+                entity.Connections.Remove(connectionId);
+            }
+
+            return true;
+        }, out _);
     }
 
     public ServiceResponse<ExitRoomResult> Exit(Guid personGuid, string connectionId)
@@ -150,7 +162,7 @@ public class RoomService(
 
         if (!index.Found)
         {
-            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.NotInRoom, "The connection is not in a room."));
+            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.NotInRoom());
         }
 
         // Step 2 (room lock): remove this connection from the member's set. The member leaves only when no connection
@@ -192,7 +204,7 @@ public class RoomService(
 
         if (!outcome.Member)
         {
-            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.NotInRoom, "The connection is not in a room."));
+            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.NotInRoom());
         }
 
         if (outcome.Disposed)

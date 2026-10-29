@@ -8,6 +8,7 @@ using PlanningPoker.Controller.Models;
 using PlanningPoker.Controller.Services;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
+using PlanningPoker.Service.Validations;
 
 namespace PlanningPoker.Controller.Hubs;
 
@@ -19,6 +20,7 @@ namespace PlanningPoker.Controller.Hubs;
 public class RoomHub(
     IRoomService rooms,
     IRoomEventPublisher roomEvents,
+    RoomIdentifierValidation identifierValidation,
     IJoinRoomResponseMapper joinRoomResponseMapper,
     IApiResponseMapper apiResponseMapper,
     ILogger<RoomHub> logger) : Hub
@@ -32,22 +34,22 @@ public class RoomHub(
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(ServiceError.NoSession()));
         }
 
-        // Subscribe to the group before the membership is visible, so no broadcast can fall between the snapshot and
-        // the subscription. An empty id has no group to join; the service rejects it.
-        var grouped = !string.IsNullOrEmpty(roomId);
-        if (grouped)
+        // An id that is not a valid group name is refused before any group is touched.
+        var identifier = identifierValidation.Validate(roomId);
+        if (!identifier.IsSuccess)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+            return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(identifier));
         }
+
+        // Subscribe to the group before the membership is visible, so no broadcast can fall between the snapshot and
+        // the subscription. A client already in room A that calls JoinRoom("B") is briefly in group B; the client does
+        // not check room ids on PersonJoined or PersonExited, and the group is dropped again if the join is refused.
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
 
         var joined = rooms.Join(person.Guid, Context.ConnectionId, roomId);
         if (!joined.IsSuccess)
         {
-            if (grouped)
-            {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-            }
-
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(joined));
         }
 

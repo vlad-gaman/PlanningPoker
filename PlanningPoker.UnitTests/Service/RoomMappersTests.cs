@@ -90,13 +90,25 @@ public class RoomMappersTests
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
         var status = new VoteStatus { Votes = new Dictionary<Guid, string>() };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], status);
+        var result = new JoinRoomResultMapper().Map(room, person, [person], status, personAdded: true);
 
         Assert.Same(room, result.Room);
         Assert.Same(person, result.Person);
         Assert.Same(status, result.VoteStatus);
         Assert.Equal([person], result.People);
+        Assert.True(result.PersonAdded);
         Assert.True(result.ResetCountdown);
+    }
+
+    [Fact]
+    public void JoinRoomResultMapper_CarriesPersonAddedFalseForAnotherConnection()
+    {
+        var room = new Room { Id = "r", VotingEnabled = true, Configuration = Configuration };
+        var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
+
+        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, personAdded: false);
+
+        Assert.False(result.PersonAdded);
     }
 
     [Fact]

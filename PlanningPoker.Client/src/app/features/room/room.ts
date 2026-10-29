@@ -58,6 +58,12 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   protected readonly form = createPersonForm(inject(FormBuilder));
 
+  /**
+   * Advances whenever an enter, a join, a switch or a leave starts. Each async step checks it after its await and
+   * stops if a newer step has started, so a stale step never joins a room or changes the phase.
+   */
+  private generation = 0;
+
   async ngOnInit(): Promise<void> {
     await this.enter();
   }
@@ -70,6 +76,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.generation++;
     void this.store.close();
   }
 
@@ -78,17 +85,23 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       this.form.markAllAsTouched();
       return;
     }
+    const gen = this.generation;
     this.error.set(null);
     try {
       await firstValueFrom(this.meService.update(this.form.getRawValue()));
     } catch (error) {
-      this.error.set(errorMessage(error));
+      if (gen === this.generation) {
+        this.error.set(errorMessage(error));
+      }
       return;
     }
-    await this.join();
+    if (gen === this.generation) {
+      await this.join(gen);
+    }
   }
 
   protected leave(): void {
+    this.generation++;
     void this.store.leave();
   }
 
@@ -97,7 +110,12 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   }
 
   private async switchRoom(): Promise<void> {
+    // Supersede the enter or join of the old room before waiting on the store, so they stop when they resume.
+    const gen = ++this.generation;
     await this.store.close();
+    if (gen !== this.generation) {
+      return;
+    }
     this.error.set(null);
     this.phase.set('loading');
     await this.enter();
@@ -105,13 +123,20 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   /** Joins straight away when the visitor has a name, otherwise asks for one. */
   private async enter(): Promise<void> {
+    const gen = ++this.generation;
     try {
       const me = await firstValueFrom(this.meService.get());
+      if (gen !== this.generation) {
+        return;
+      }
       if (me.name) {
-        await this.join();
+        await this.join(gen);
         return;
       }
     } catch (error) {
+      if (gen !== this.generation) {
+        return;
+      }
       if (!(error instanceof ApiRequestError && error.hasCode(ERROR_CODES.noSession))) {
         this.error.set(errorMessage(error));
       }
@@ -119,12 +144,20 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     this.phase.set('name');
   }
 
-  private async join(): Promise<void> {
+  private async join(gen: number): Promise<void> {
     try {
       await this.store.join(this.id());
-      this.phase.set('joined');
+      if (gen === this.generation) {
+        this.phase.set('joined');
+      }
     } catch (error) {
+      if (gen !== this.generation) {
+        return;
+      }
       await this.store.close();
+      if (gen !== this.generation) {
+        return;
+      }
       if (isRoomGone(error)) {
         this.flash.show(ROOM_NOT_FOUND_MESSAGE);
         await this.router.navigateByUrl('/');

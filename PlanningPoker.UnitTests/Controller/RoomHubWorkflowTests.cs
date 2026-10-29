@@ -8,6 +8,7 @@ using PlanningPoker.Controller.Hubs;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Service.Models;
+using PlanningPoker.Service.Validations;
 using PlanningPoker.UnitTests.Builders;
 using PlanningPoker.UnitTests.Fakes;
 
@@ -33,6 +34,7 @@ public class RoomHubWorkflowTests
         return new RoomHub(
             _rooms,
             _publisher,
+            new RoomIdentifierValidation(),
             new JoinRoomResponseMapper(new PersonResponseMapper(), new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
             NullLogger<RoomHub>.Instance)
@@ -89,16 +91,20 @@ public class RoomHubWorkflowTests
         Assert.Empty(_publisher.Joined);
     }
 
-    [Fact]
-    public async Task JoinRoom_EmptyIdentifier_IsRejectedWithoutAGroup()
+    [Theory]
+    [InlineData("", "required")]
+    [InlineData("has space", "invalid_characters")]
+    public async Task JoinRoom_InvalidIdentifier_IsRejectedBeforeAnyGroupOrJoin(string roomId, string reason)
     {
-        _rooms.JoinResult = ServiceResponse<JoinRoomResult>.Failure(ServiceError.ValidationFailed("roomId", "required"));
+        var response = await NewHub(Ann).JoinRoom(roomId);
 
-        var response = await NewHub(Ann).JoinRoom(string.Empty);
-
-        Assert.Equal(ErrorCodes.ValidationFailed, ErrorCode(response));
+        var error = Assert.Single(response.Errors!);
+        Assert.Equal(ErrorCodes.ValidationFailed, error.Code);
+        Assert.Equal(reason, error.Metadata["reason"]);
         Assert.Empty(_groups.Added);
         Assert.Empty(_groups.Removed);
+        Assert.Empty(_rooms.JoinCalls);
+        Assert.Empty(_publisher.Joined);
     }
 
     [Fact]
@@ -152,9 +158,19 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
+    public async Task JoinRoom_SecondTab_PassesThePersonAddedFalseResultToThePublisher()
+    {
+        _rooms.JoinResult = ServiceResponse<JoinRoomResult>.Success(RoomResults.Join(Ann, personAdded: false));
+
+        await NewHub(Ann).JoinRoom("room");
+
+        Assert.False(Assert.Single(_publisher.Joined).Result.PersonAdded);
+    }
+
+    [Fact]
     public async Task OnDisconnected_UnknownConnection_PublishesNothing()
     {
-        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.NotInRoom, "The connection is not in a room."));
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Failure(ServiceError.NotInRoom());
 
         await NewHub(Ann).OnDisconnectedAsync(null);
 

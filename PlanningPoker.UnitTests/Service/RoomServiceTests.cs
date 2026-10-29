@@ -25,10 +25,10 @@ public class RoomServiceTests
         };
     }
 
-    private RoomService CreateService(IRoomNameGenerator? generator = null, IPersonRepository? people = null)
+    private RoomService CreateService(IRoomNameGenerator? generator = null, IPersonRepository? people = null, IRoomRepository? rooms = null)
     {
         return new RoomService(
-            _rooms,
+            rooms ?? _rooms,
             people ?? _people,
             generator ?? new StubRoomNameGenerator("unused"),
             new RoomEntityMapper(new RoomConfigurationEntityMapper()),
@@ -38,7 +38,7 @@ public class RoomServiceTests
             new JoinRoomResultMapper(),
             new ExitRoomResultMapper(),
             new RoomIdentifierValidation(),
-            new RoomExistsValidation(_rooms));
+            new RoomExistsValidation(rooms ?? _rooms));
     }
 
     private Guid AddPerson(string name = "Ann", string type = PersonTypes.Developer)
@@ -194,8 +194,49 @@ public class RoomServiceTests
         var again = CreateService().Join(owner, "c1", room.Id);
 
         Assert.True(again.IsSuccess);
+        Assert.False(again.Data!.PersonAdded);
         Assert.Single(_rooms.Get(room.Id)!.MemberGuids);
         Assert.Equal(["c1"], _rooms.Get(room.Id)!.MemberConnections[owner]);
+    }
+
+    [Fact]
+    public void Join_NewPerson_ReportsPersonAdded()
+    {
+        var room = NewRoom(AddPerson("Owner"));
+
+        var response = CreateService().Join(AddPerson("Guest"), "c-guest", room);
+
+        Assert.True(response.Data!.PersonAdded);
+    }
+
+    [Fact]
+    public void Join_SecondTabOfMember_ReportsPersonNotAddedButRegistersTheConnection()
+    {
+        var owner = AddPerson("Owner");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(owner);
+        CreateService().Join(guest, "tab-1", roomId);
+
+        var secondTab = CreateService().Join(guest, "tab-2", roomId);
+
+        Assert.True(secondTab.IsSuccess);
+        Assert.False(secondTab.Data!.PersonAdded);
+        Assert.Equal(["tab-1", "tab-2"], _rooms.Get(roomId)!.MemberConnections[guest].Order());
+    }
+
+    [Fact]
+    public void Join_PersonWhoLeftAndReturns_ReportsPersonAddedAgain()
+    {
+        var owner = AddPerson("Owner");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(owner);
+        CreateService().Join(owner, "owner-conn", roomId);
+        CreateService().Join(guest, "tab-1", roomId);
+        CreateService().Exit(guest, "tab-1");
+
+        var back = CreateService().Join(guest, "tab-2", roomId);
+
+        Assert.True(back.Data!.PersonAdded);
     }
 
     [Fact]
@@ -448,5 +489,41 @@ public class RoomServiceTests
         Assert.Equal([owner], stored.MemberGuids);
         Assert.Equal(["tab-2"], stored.MemberConnections[owner]);
         Assert.Equal(["tab-2"], ConnectionsOf(owner).Keys);
+    }
+
+    [Fact]
+    public void Join_LastMemberExitsBetweenIndexAndAdmission_RollsBackTheConnectionAndFailsWithRoomNotFound()
+    {
+        var owner = AddPerson("Owner");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(owner);
+        CreateService().Join(owner, "owner-conn", roomId);
+        var interleaving = new InterleavingPersonRepository(_people);
+        ServiceResponse<ExitRoomResult>? ownerExit = null;
+        // Runs after Join's index step and before its room step: the owner, the only member, leaves and the room is disposed.
+        interleaving.AfterNextUpdate = () => ownerExit = CreateService().Exit(owner, "owner-conn");
+
+        var joined = CreateService(people: interleaving).Join(guest, "guest-conn", roomId);
+
+        Assert.True(ownerExit!.Data!.RoomDisposed);
+        Assert.Equal(ErrorCodes.RoomNotFound, Assert.Single(joined.Errors).Code);
+        Assert.Empty(ConnectionsOf(guest));
+        Assert.Null(_rooms.Get(roomId));
+    }
+
+    [Fact]
+    public void Join_RoomRemovedAfterAdmission_RollsBackTheConnectionAndFailsWithRoomNotFound()
+    {
+        var owner = AddPerson("Owner");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(owner);
+        var interleaving = new InterleavingRoomRepository(_rooms);
+        // Runs right after the admission step: the room is removed before Join reads it back.
+        interleaving.AfterNextUpdate = () => _rooms.Remove(roomId);
+
+        var joined = CreateService(rooms: interleaving).Join(guest, "guest-conn", roomId);
+
+        Assert.Equal(ErrorCodes.RoomNotFound, Assert.Single(joined.Errors).Code);
+        Assert.Empty(ConnectionsOf(guest));
     }
 }

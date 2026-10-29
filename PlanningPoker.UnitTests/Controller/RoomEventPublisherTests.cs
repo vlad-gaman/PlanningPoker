@@ -55,6 +55,15 @@ public class RoomEventPublisherTests
     }
 
     [Fact]
+    public async Task PublishPersonJoined_PersonAlreadyInRoom_SendsNothing()
+    {
+        // A second tab or a reconnect: the person was already a member, so neither PersonJoined nor CountdownReset is sent.
+        await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: true, personAdded: false), JoinerConnection);
+
+        Assert.Empty(_hub.Clients.Sent);
+    }
+
+    [Fact]
     public async Task PublishPersonExited_LastMember_SendsRoomDisposedToRoom()
     {
         await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, roomDisposed: true));

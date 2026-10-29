@@ -41,8 +41,13 @@ export class RoomStore {
 
   private roomId = '';
   private bound = false;
-  /** Set by close(); any in-flight join or rejoin checks it after each await and stops quietly. */
-  private closed = false;
+  /** False after close(); a reconnect only rejoins while the store is open. */
+  private open = false;
+  /**
+   * Advances on every join() and close(). A join or rejoin that resumes after an await and finds a different value was
+   * superseded by a newer join or by close(), so it stops quietly instead of touching the state.
+   */
+  private generation = 0;
   /** While a JoinRoom call is in flight, hub events are queued here and replayed after its snapshot is applied. */
   private buffered: (() => void)[] | null = null;
 
@@ -53,14 +58,15 @@ export class RoomStore {
   readonly configuration = this.configurationState.asReadonly();
 
   async join(roomId: string): Promise<void> {
+    const gen = ++this.generation;
     this.roomId = roomId;
-    this.closed = false;
+    this.open = true;
     await this.hub.connect();
-    if (this.closed) {
+    if (gen !== this.generation) {
       return;
     }
     this.bind();
-    await this.joinRoom();
+    await this.joinRoom(gen);
   }
 
   async leave(): Promise<void> {
@@ -70,8 +76,10 @@ export class RoomStore {
 
   /** Drops the hub connection and clears the room state; leaving the page triggers this too. */
   async close(): Promise<void> {
-    this.closed = true;
+    this.generation++;
+    this.open = false;
     this.bound = false;
+    this.buffered = null;
     await this.hub.disconnect();
     this.peopleState.set([]);
     this.ownerState.set(null);
@@ -102,18 +110,23 @@ export class RoomStore {
     change();
   }
 
-  private async joinRoom(): Promise<void> {
+  private async joinRoom(gen: number): Promise<void> {
     const queued: (() => void)[] = [];
     this.buffered = queued;
     let response: JoinRoomResponse;
     try {
       response = await this.hub.invoke<JoinRoomResponse>('JoinRoom', this.roomId);
     } catch (error) {
-      this.buffered = null;
+      // Only clear the queue this call owns; a newer join may have replaced it while this one was in flight.
+      if (this.buffered === queued) {
+        this.buffered = null;
+      }
       throw error;
     }
-    this.buffered = null;
-    if (this.closed) {
+    if (this.buffered === queued) {
+      this.buffered = null;
+    }
+    if (gen !== this.generation) {
       return;
     }
     this.peopleState.set(response.people);
@@ -121,7 +134,7 @@ export class RoomStore {
     this.votesState.set(response.voteStatus.votes);
     this.configurationState.set(response.configuration);
     for (const change of queued) {
-      if (this.closed) {
+      if (gen !== this.generation) {
         return;
       }
       change();
@@ -130,19 +143,20 @@ export class RoomStore {
 
   /** Runs after the hub reconnected: the server has forgotten this connection, so join again. */
   private async rejoin(): Promise<void> {
-    if (this.closed) {
+    if (!this.open) {
       return;
     }
+    const gen = this.generation;
     try {
-      await this.joinRoom();
+      await this.joinRoom(gen);
     } catch (error) {
-      await this.abandon(error);
+      await this.abandon(error, gen);
     }
   }
 
   /** Explains why the room cannot be used any more and leaves it. */
-  private async abandon(error: unknown): Promise<void> {
-    if (this.closed) {
+  private async abandon(error: unknown, gen: number): Promise<void> {
+    if (gen !== this.generation) {
       return;
     }
     this.flash.show(isRoomGone(error) ? ROOM_NOT_FOUND_MESSAGE : errorMessage(error));

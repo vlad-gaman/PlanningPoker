@@ -16,6 +16,12 @@ public class RoomEventPublisher(
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
+        // The person already had a connection in the room (another tab or a reconnect): from everyone else's view nothing changed.
+        if (!result.PersonAdded)
+        {
+            return;
+        }
+
         var others = hub.Clients.GroupExcept(result.Room.Id, [joinerConnectionId]);
         await others.SendAsync(HubEvents.PersonJoined, personJoinedEventMapper.Map(result));
         if (result.ResetCountdown)

@@ -10,5 +10,8 @@ public class JoinRoomResult
 
     public VoteStatus VoteStatus { get; init; } = default!;
 
+    /// <summary>False when the person already had a connection to the room (another tab or a reconnect), so nobody else needs to hear about it.</summary>
+    public bool PersonAdded { get; init; }
+
     public bool ResetCountdown { get; init; }
 }

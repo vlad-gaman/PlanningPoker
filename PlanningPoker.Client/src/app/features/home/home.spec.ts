@@ -124,7 +124,7 @@ describe('Home', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(element.querySelector('.error')?.textContent).toContain('Try again.');
+    expect(element.querySelector('.form-error')?.textContent).toContain('Try again.');
     expect(navigate).not.toHaveBeenCalled();
   });
 

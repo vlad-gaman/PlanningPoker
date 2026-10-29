@@ -2,7 +2,7 @@
   <h1>Room {{ id() }}</h1>
 
   @if (error(); as message) {
-    <p class="error" role="alert">{{ message }}</p>
+    <p class="form-error" role="alert">{{ message }}</p>
   }
 
   @switch (phase()) {

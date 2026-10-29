@@ -32,6 +32,12 @@ public class ServiceError
         return Create(ErrorCodes.RoomNotFound, "The room does not exist.", ("room_id", roomId));
     }
 
+    /// <summary>The single definition of the error returned when a connection is not a member of any room.</summary>
+    public static ServiceError NotInRoom()
+    {
+        return Create(ErrorCodes.NotInRoom, "The connection is not in a room.");
+    }
+
     /// <summary>The single definition of a field-level validation failure.</summary>
     public static ServiceError ValidationFailed(string field, string reason)
     {
