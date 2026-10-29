@@ -9,4 +9,11 @@ public class CardSetService : ICardSetService
     {
         return ServiceResponse<IReadOnlyList<CardSetOption>>.Success(CardSets.All);
     }
+
+    public ServiceResponse<IReadOnlyList<CardOption>> GetCards(string cardSet)
+    {
+        return CardSets.Cards.TryGetValue(cardSet, out var cards)
+            ? ServiceResponse<IReadOnlyList<CardOption>>.Success(cards)
+            : ServiceResponse<IReadOnlyList<CardOption>>.Failure(ServiceError.ValidationFailed("cardSet", "unknown_card_set"));
+    }
 }

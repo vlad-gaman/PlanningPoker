@@ -1,3 +1,4 @@
+using PlanningPoker.Common.Models;
 using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.UnitTests.Builders;
@@ -23,14 +24,15 @@ public static class RoomResults
             },
             Person = person,
             People = people ?? [person],
+            Cards = [new CardOption { Value = "1" }],
             VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = false },
             PersonAdded = personAdded,
             ResetCountdown = resetCountdown
         };
     }
 
-    public static ExitRoomResult Exit(Person person, bool personLeft = true, bool roomDisposed = false, Person? newOwner = null)
+    public static ExitRoomResult Exit(Person person, bool personLeft = true, bool roomDisposed = false, Person? newOwner = null, VotingFollowUp? followUp = null)
     {
-        return new ExitRoomResult { RoomId = "room", Person = person, PersonLeft = personLeft, RoomDisposed = roomDisposed, NewOwner = newOwner };
+        return new ExitRoomResult { RoomId = "room", Person = person, PersonLeft = personLeft, RoomDisposed = roomDisposed, NewOwner = newOwner, FollowUp = followUp ?? VotingFollowUp.None };
     }
 }

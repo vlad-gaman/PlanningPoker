@@ -3,16 +3,19 @@ using PlanningPoker.Controller.Constants;
 using PlanningPoker.Controller.Hubs;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Service.Models;
+using PlanningPoker.Service.Services;
 
 namespace PlanningPoker.Controller.Services;
 
 public class RoomEventPublisher(
     IHubContext<RoomHub> hub,
     IPersonJoinedEventMapper personJoinedEventMapper,
-    ICountdownResetEventMapper countdownResetEventMapper,
+    IRoomCountdownEventMapper roomCountdownEventMapper,
     IPersonExitedEventMapper personExitedEventMapper,
     IOwnershipTransferredEventMapper ownershipTransferredEventMapper,
-    IRoomDisposedEventMapper roomDisposedEventMapper) : IRoomEventPublisher
+    IRoomDisposedEventMapper roomDisposedEventMapper,
+    IVoteCastEventMapper voteCastEventMapper,
+    IVoteStatusResponseMapper voteStatusResponseMapper) : IRoomEventPublisher, IRoomCountdownNotifier
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
@@ -26,7 +29,7 @@ public class RoomEventPublisher(
         await others.SendAsync(HubEvents.PersonJoined, personJoinedEventMapper.Map(result));
         if (result.ResetCountdown)
         {
-            await others.SendAsync(HubEvents.CountdownReset, countdownResetEventMapper.Map(result.Room));
+            await others.SendAsync(HubEvents.CountdownReset, roomCountdownEventMapper.Map(result.Room.Configuration.CountdownSeconds, reset: true));
         }
     }
 
@@ -50,5 +53,37 @@ public class RoomEventPublisher(
         {
             await group.SendAsync(HubEvents.RoomDisposed, roomDisposedEventMapper.Map(result.RoomId));
         }
+    }
+
+    public async Task PublishVoteCastAsync(VoteResult result)
+    {
+        var group = hub.Clients.Group(result.RoomId);
+        await group.SendAsync(HubEvents.VoteCast, voteCastEventMapper.Map(result.PersonGuid));
+        await group.SendAsync(HubEvents.VoteStatusUpdate, voteStatusResponseMapper.Map(result.VoteStatus));
+    }
+
+    public Task PublishVotesClearedAsync(string roomId)
+    {
+        return hub.Clients.Group(roomId).SendAsync(HubEvents.VotesCleared);
+    }
+
+    public Task PublishVotesShownAsync(string roomId, VoteStatus status)
+    {
+        return hub.Clients.Group(roomId).SendAsync(HubEvents.VotesShown, voteStatusResponseMapper.Map(status));
+    }
+
+    public Task PublishCountdownUpdateAsync(string roomId, int countdown)
+    {
+        return hub.Clients.Group(roomId).SendAsync(HubEvents.CountdownUpdate, roomCountdownEventMapper.Map(countdown, reset: false));
+    }
+
+    Task IRoomCountdownNotifier.CountdownTickedAsync(string roomId, int remaining)
+    {
+        return PublishCountdownUpdateAsync(roomId, remaining);
+    }
+
+    Task IRoomCountdownNotifier.VotesRevealedAsync(string roomId, VoteStatus status)
+    {
+        return PublishVotesShownAsync(roomId, status);
     }
 }

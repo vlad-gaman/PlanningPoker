@@ -27,18 +27,7 @@ public class RoomServiceTests
 
     private RoomService CreateService(IRoomNameGenerator? generator = null, IPersonRepository? people = null, IRoomRepository? rooms = null)
     {
-        return new RoomService(
-            rooms ?? _rooms,
-            people ?? _people,
-            generator ?? new StubRoomNameGenerator("unused"),
-            new RoomEntityMapper(new RoomConfigurationEntityMapper()),
-            new RoomMapper(new RoomConfigurationMapper()),
-            new PersonMapper(),
-            new VoteStatusMapper(),
-            new JoinRoomResultMapper(),
-            new ExitRoomResultMapper(),
-            new RoomIdentifierValidation(),
-            new RoomExistsValidation(rooms ?? _rooms));
+        return RoomServiceFactory.Create(rooms ?? _rooms, people ?? _people, generator);
     }
 
     private Guid AddPerson(string name = "Ann", string type = PersonTypes.Developer)

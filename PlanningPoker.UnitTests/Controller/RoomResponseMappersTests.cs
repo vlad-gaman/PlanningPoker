@@ -20,6 +20,7 @@ public class RoomResponseMappersTests
             Room = Room,
             Person = Bob,
             People = [Ann, Bob],
+            Cards = [new CardOption { Value = "1" }, new CardOption { Value = "coffee", Display = "Coffee" }],
             VoteStatus = new VoteStatus { Votes = votes ?? [], HasEveryoneVoted = true }
         };
     }
@@ -88,7 +89,7 @@ public class RoomResponseMappersTests
     [Fact]
     public void JoinRoomResponseMapper_MapsPeopleOwnerStatusAndConfiguration()
     {
-        var mapper = new JoinRoomResponseMapper(PersonMapper, new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper());
+        var mapper = new JoinRoomResponseMapper(PersonMapper, new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper(), new CardResponseMapper());
 
         var response = mapper.Map(JoinResult());
 
@@ -96,6 +97,7 @@ public class RoomResponseMappersTests
         Assert.Equal(Ann.Guid, response.OwnerGuid);
         Assert.True(response.VoteStatus.HasEveryoneVoted);
         Assert.Equal("linear", response.Configuration.CardSet);
+        Assert.Equal(["1", "coffee"], response.Cards.Select(card => card.Value));
     }
 
     [Fact]
@@ -133,11 +135,38 @@ public class RoomResponseMappersTests
     }
 
     [Fact]
-    public void CountdownResetEventMapper_ReturnsConfiguredCountdownAndResetFlag()
+    public void RoomCountdownEventMapper_CarriesCountdownAndResetFlag()
     {
-        var response = new CountdownResetEventMapper().Map(Room);
+        var reset = new RoomCountdownEventMapper().Map(9, reset: true);
+        var tick = new RoomCountdownEventMapper().Map(3, reset: false);
 
-        Assert.Equal(9, response.Countdown);
-        Assert.True(response.Reset);
+        Assert.Equal(9, reset.Countdown);
+        Assert.True(reset.Reset);
+        Assert.Equal(3, tick.Countdown);
+        Assert.False(tick.Reset);
+    }
+
+    [Fact]
+    public void CardResponseMapper_CopiesValueAndDisplay()
+    {
+        var response = new CardResponseMapper().Map(new CardOption { Value = "coffee", Display = "Coffee" });
+
+        Assert.Equal("coffee", response.Value);
+        Assert.Equal("Coffee", response.Display);
+    }
+
+    [Fact]
+    public void VoteCastEventMapper_CarriesPersonGuid()
+    {
+        Assert.Equal(Ann.Guid, new VoteCastEventMapper().Map(Ann.Guid).PersonGuid);
+    }
+
+    [Fact]
+    public void VoteStatusResponseMapper_CarriesFinishedAndCountdown()
+    {
+        var response = new VoteStatusResponseMapper().Map(new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true, Countdown = 4 });
+
+        Assert.True(response.VotingFinished);
+        Assert.Equal(4, response.Countdown);
     }
 }

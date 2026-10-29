@@ -10,6 +10,38 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
 
     public List<ExitRoomResult> Exited { get; } = [];
 
+    public List<VoteResult> VoteCasts { get; } = [];
+
+    public List<string> Cleared { get; } = [];
+
+    public List<(string RoomId, VoteStatus Status)> Shown { get; } = [];
+
+    public List<(string RoomId, int Countdown)> CountdownUpdates { get; } = [];
+
+    public Task PublishVoteCastAsync(VoteResult result)
+    {
+        VoteCasts.Add(result);
+        return Task.CompletedTask;
+    }
+
+    public Task PublishVotesClearedAsync(string roomId)
+    {
+        Cleared.Add(roomId);
+        return Task.CompletedTask;
+    }
+
+    public Task PublishVotesShownAsync(string roomId, VoteStatus status)
+    {
+        Shown.Add((roomId, status));
+        return Task.CompletedTask;
+    }
+
+    public Task PublishCountdownUpdateAsync(string roomId, int countdown)
+    {
+        CountdownUpdates.Add((roomId, countdown));
+        return Task.CompletedTask;
+    }
+
     public Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
         Joined.Add((result, joinerConnectionId));

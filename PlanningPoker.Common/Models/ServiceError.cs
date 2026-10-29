@@ -38,6 +38,18 @@ public class ServiceError
         return Create(ErrorCodes.NotInRoom, "The connection is not in a room.");
     }
 
+    /// <summary>The single definition of the error returned when an observer tries to vote.</summary>
+    public static ServiceError ObserverCannotVote()
+    {
+        return Create(ErrorCodes.ObserverCannotVote, "Observers cannot vote.");
+    }
+
+    /// <summary>The single definition of the error returned when a vote arrives after the votes were revealed.</summary>
+    public static ServiceError VotingClosed()
+    {
+        return Create(ErrorCodes.VotingClosed, "Voting is closed until the votes are cleared.");
+    }
+
     /// <summary>The single definition of a field-level validation failure.</summary>
     public static ServiceError ValidationFailed(string field, string reason)
     {

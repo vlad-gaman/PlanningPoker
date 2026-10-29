@@ -7,6 +7,12 @@ public class VoteStatusResponseMapper : IVoteStatusResponseMapper
 {
     public VoteStatusResponse Map(VoteStatus voteStatus)
     {
-        return new VoteStatusResponse { Votes = voteStatus.Votes, HasEveryoneVoted = voteStatus.HasEveryoneVoted };
+        return new VoteStatusResponse
+        {
+            Votes = voteStatus.Votes,
+            HasEveryoneVoted = voteStatus.HasEveryoneVoted,
+            VotingFinished = voteStatus.VotingFinished,
+            Countdown = voteStatus.Countdown
+        };
     }
 }

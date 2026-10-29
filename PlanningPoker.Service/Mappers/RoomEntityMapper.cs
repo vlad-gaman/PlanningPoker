@@ -13,6 +13,7 @@ public class RoomEntityMapper(IRoomConfigurationEntityMapper configurationMapper
             Id = id,
             OwnerGuid = ownerGuid,
             MemberGuids = [ownerGuid],
+            VotingEnabled = true,
             Configuration = configurationMapper.Map(configuration)
         };
     }

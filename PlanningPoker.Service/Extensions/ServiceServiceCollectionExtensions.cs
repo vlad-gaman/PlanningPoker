@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Services;
 using PlanningPoker.Service.Validations;
@@ -21,10 +22,13 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IExitRoomResultMapper, ExitRoomResultMapper>();
         services.AddSingleton<RoomIdentifierValidation>();
         services.AddSingleton<RoomExistsValidation>();
+        services.AddSingleton<VoteMarkValidation>();
         services.AddSingleton<IWordListLoader, WordListLoader>();
         services.AddSingleton<IRoomNameGenerator>(provider => new RoomNameGenerator(provider.GetRequiredService<IWordListLoader>().Load()));
         services.AddSingleton<ICardSetService, CardSetService>();
         services.AddSingleton<IRoomService, RoomService>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IRoomTimerService, RoomTimerService>();
         return services;
     }
 }

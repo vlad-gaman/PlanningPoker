@@ -23,7 +23,7 @@ public class CreateRoomRequestValidationTests
     }
 
     [Theory]
-    [InlineData(1)]
+    [InlineData(0)]
     [InlineData(30)]
     public void Validate_BoundaryCountdowns_Pass(int countdown)
     {
@@ -43,7 +43,7 @@ public class CreateRoomRequestValidationTests
     }
 
     [Theory]
-    [InlineData(0)]
+    [InlineData(-1)]
     [InlineData(31)]
     public void Validate_CountdownOutsideRange_Fails(int countdown)
     {
@@ -59,6 +59,6 @@ public class CreateRoomRequestValidationTests
     [Fact]
     public void Validate_ReportsEveryProblemAtOnce()
     {
-        Assert.Equal(3, Fields(Request(cardSet: "x", countdown: 0, max: 0)).Count);
+        Assert.Equal(3, Fields(Request(cardSet: "x", countdown: -1, max: 0)).Count);
     }
 }

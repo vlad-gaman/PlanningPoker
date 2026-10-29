@@ -1,0 +1,65 @@
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 1.25rem;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover:not(.disabled) {
+    background: var(--card-hover-bg);
+  }
+
+  &.selected {
+    background: var(--card-selected-bg);
+  }
+
+  &.disabled {
+    background: var(--card-disabled-bg);
+    cursor: not-allowed;
+
+    &.selected {
+      background: var(--card-selected-bg);
+    }
+  }
+
+  // The radio stays in the layout for keyboard and screen reader use; the label is the visible control.
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  img {
+    height: 2.25rem;
+    width: 2.25rem;
+  }
+}
+
+// The fist-of-five images are dark line art: give them a light backing so they stay readable in dark mode.
+:host-context([data-theme='dark']) .card img {
+  padding: 2px;
+  border-radius: 4px;
+  background: #e9ecef;
+}

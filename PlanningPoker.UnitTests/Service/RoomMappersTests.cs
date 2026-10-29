@@ -21,7 +21,7 @@ public class RoomMappersTests
         Assert.Equal([owner], entity.MemberGuids);
         Assert.Empty(entity.MemberConnections);
         Assert.Empty(entity.Votes);
-        Assert.False(entity.VotingEnabled);
+        Assert.True(entity.VotingEnabled);
         Assert.False(entity.IsDisposed);
         Assert.Equal(9, entity.Configuration.CountdownSeconds);
     }
@@ -50,11 +50,34 @@ public class RoomMappersTests
     public void VoteStatusMapper_MasksEveryMark()
     {
         var voter = Member();
-        var room = new RoomEntity { Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" } };
+        var room = new RoomEntity { VotingEnabled = true, Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" } };
 
         var status = new VoteStatusMapper().Map(room, [voter]);
 
         Assert.Equal(RoomConstraints.HiddenVote, status.Votes[voter.Guid]);
+        Assert.False(status.VotingFinished);
+        Assert.Null(status.Countdown);
+    }
+
+    [Fact]
+    public void VoteStatusMapper_VotingFinished_ShowsRealMarksOfCurrentVotersOnly()
+    {
+        var voter = Member();
+        var gone = Guid.NewGuid();
+        var room = new RoomEntity { VotingEnabled = false, Votes = new Dictionary<Guid, string> { [voter.Guid] = "8", [gone] = "3" } };
+
+        var status = new VoteStatusMapper().Map(room, [voter]);
+
+        Assert.Equal("8", Assert.Single(status.Votes).Value);
+        Assert.True(status.VotingFinished);
+    }
+
+    [Fact]
+    public void VoteStatusMapper_RunningCountdown_ReportsRemainingSeconds()
+    {
+        var room = new RoomEntity { VotingEnabled = true, Revision = 2, CountdownRevision = 2, CountdownRemaining = 4 };
+
+        Assert.Equal(4, new VoteStatusMapper().Map(room, [Member()]).Countdown);
     }
 
     [Fact]
@@ -90,7 +113,7 @@ public class RoomMappersTests
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
         var status = new VoteStatus { Votes = new Dictionary<Guid, string>() };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], status, personAdded: true);
+        var result = new JoinRoomResultMapper().Map(room, person, [person], status, [], personAdded: true);
 
         Assert.Same(room, result.Room);
         Assert.Same(person, result.Person);
@@ -106,7 +129,7 @@ public class RoomMappersTests
         var room = new Room { Id = "r", VotingEnabled = true, Configuration = Configuration };
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, personAdded: false);
+        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, [], personAdded: false);
 
         Assert.False(result.PersonAdded);
     }
@@ -117,7 +140,7 @@ public class RoomMappersTests
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
         var newOwner = new Person { Guid = Guid.NewGuid(), Name = "Bob", PersonType = PersonTypes.Tester };
 
-        var result = new ExitRoomResultMapper().Map("r", person, personLeft: true, roomDisposed: false, newOwner);
+        var result = new ExitRoomResultMapper().Map("r", person, personLeft: true, roomDisposed: false, newOwner, VotingFollowUp.None);
 
         Assert.Equal("r", result.RoomId);
         Assert.Same(person, result.Person);

@@ -14,4 +14,6 @@ public static class ErrorCodes
     // Hub-only: returned from RoomHub methods, never from REST, so they have no entry in the REST status table.
     public const string NotInRoom = "not_in_room";
     public const string ConnectionClosed = "connection_closed";
+    public const string ObserverCannotVote = "observer_cannot_vote";
+    public const string VotingClosed = "voting_closed";
 }

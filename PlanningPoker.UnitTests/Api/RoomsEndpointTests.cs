@@ -57,7 +57,7 @@ public class RoomsEndpointTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     [Theory]
     [InlineData("tarot", 5, 50, "configuration.cardSet")]
-    [InlineData("linear", 0, 50, "configuration.countdownSeconds")]
+    [InlineData("linear", -1, 50, "configuration.countdownSeconds")]
     [InlineData("linear", 31, 50, "configuration.countdownSeconds")]
     [InlineData("linear", 5, 0, "configuration.maxParticipants")]
     public async Task Post_InvalidConfiguration_Returns400WithField(string cardSet, int countdown, int max, string field)

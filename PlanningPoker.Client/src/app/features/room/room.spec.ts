@@ -7,6 +7,7 @@ import { MeService } from '../../core/me.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
 import { ANN, BOB, JOIN_RESPONSE, fakeHub } from '../../testing/fake-hub.testing';
+import { HUB_EVENTS } from '../../models/hub-events';
 import { ROOM_NOT_FOUND_MESSAGE, RoomStore } from './room-store';
 import { Room } from './room';
 
@@ -212,6 +213,115 @@ describe('Room', () => {
     expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([ANN]);
     expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Bob');
+  });
+
+  describe('voting', () => {
+    const OBS = { guid: 'g-obs', name: 'Olga', personType: 'obs' } as const;
+
+    function buttonLabelled(element: HTMLElement, text: string): HTMLButtonElement {
+      return Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes(text)) as HTMLButtonElement;
+    }
+
+    function markOf(element: HTMLElement, name: string): string {
+      const row = Array.from(element.querySelectorAll('tr.mat-mdc-row')).find((r) => r.textContent?.includes(name));
+      return row?.querySelector('.mark')?.textContent?.trim() ?? '';
+    }
+
+    beforeEach(() => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB, OBS] });
+    });
+
+    it('shows a hidden marker for a voter, nothing for a non-voter and nothing for an observer', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
+      await settle(fixture);
+
+      expect(markOf(element, 'Bob')).toBe('▮');
+      expect(markOf(element, 'Ann')).toBe('');
+      expect(markOf(element, 'Olga')).toBe('');
+    });
+
+    it('shows the revealed marks using the card display', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: { [ANN.guid]: 'coffee', [BOB.guid]: '5' },
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+      });
+      await settle(fixture);
+
+      expect(markOf(element, 'Ann')).toBe('☕');
+      expect(markOf(element, 'Bob')).toBe('5');
+    });
+
+    it('shows the countdown line only while a countdown runs', async () => {
+      const { fixture, element } = await render();
+      expect(element.querySelector('.countdown')).toBeNull();
+
+      hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 3, reset: false });
+      await settle(fixture);
+      expect(element.querySelector('.countdown')?.textContent).toContain('Showing results in 3!');
+
+      hub.emit(HUB_EVENTS.CountdownReset, { countdown: 5, reset: true });
+      await settle(fixture);
+      expect(element.querySelector('.countdown')).toBeNull();
+    });
+
+    it('votes with the picked card', async () => {
+      const { fixture, element } = await render();
+
+      (element.querySelector('input[type="radio"][value="5"]') as HTMLInputElement).click();
+      await settle(fixture);
+
+      expect(hub.invoke).toHaveBeenCalledWith('Vote', '5');
+      expect((element.querySelector('input[type="radio"][value="5"]') as HTMLInputElement).checked).toBe(true);
+    });
+
+    it('disables the cards once the votes are revealed', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      await settle(fixture);
+
+      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      expect(radios.length).toBeGreaterThan(0);
+      expect(radios.every((radio) => radio.disabled)).toBe(true);
+    });
+
+    it('disables the cards for an observer', async () => {
+      me.get.mockReturnValue(of(OBS));
+
+      const { element } = await render();
+
+      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      expect(radios.every((radio) => radio.disabled)).toBe(true);
+    });
+
+    it('Clear votes and Show votes call the hub', async () => {
+      const { fixture, element } = await render();
+
+      buttonLabelled(element, 'Clear votes').click();
+      await settle(fixture);
+      expect(hub.invoke).toHaveBeenLastCalledWith('ClearVotes');
+
+      buttonLabelled(element, 'Show votes').click();
+      await settle(fixture);
+      expect(hub.invoke).toHaveBeenLastCalledWith('ForceShowVotes');
+    });
+
+    it('disables Show votes once the votes are revealed', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      await settle(fixture);
+
+      expect(buttonLabelled(element, 'Show votes').disabled).toBe(true);
+      expect(buttonLabelled(element, 'Clear votes').disabled).toBe(false);
+    });
   });
 
   it('leave returns to the home page', async () => {
