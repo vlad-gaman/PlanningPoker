@@ -52,3 +52,10 @@
     width: 2.25rem;
   }
 }
+
+// The fist-of-five images are dark line art: give them a light backing so they stay readable in dark mode.
+:host-context([data-theme='dark']) .card img {
+  padding: 2px;
+  border-radius: 4px;
+  background: #e9ecef;
+}
