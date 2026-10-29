@@ -8,7 +8,8 @@ public static class RepositoryServiceCollectionExtensions
 {
     public static IServiceCollection AddRepositoryLayer(this IServiceCollection services)
     {
-        services.AddSingleton<IRoomEntityMapper, RoomEntityMapper>();
+        services.AddSingleton<IRoomConfigurationEntityCopyMapper, RoomConfigurationEntityCopyMapper>();
+        services.AddSingleton<IRoomEntityCopyMapper, RoomEntityCopyMapper>();
         services.AddSingleton<IPersonRepository, PersonRepository>();
         services.AddSingleton<IRoomRepository, RoomRepository>();
         return services;

@@ -18,7 +18,7 @@ public class PersonMappersTests
     }
 
     [Fact]
-    public void PersonEntityMapper_CreatesEntityWithGivenValues()
+    public void PersonEntityMapper_CreatesEntityWithGivenValuesAndNoConnections()
     {
         var guid = Guid.NewGuid();
 
@@ -27,7 +27,6 @@ public class PersonMappersTests
         Assert.Equal(guid, entity.Guid);
         Assert.Equal("Ann", entity.Name);
         Assert.Equal("obs", entity.PersonType);
-        Assert.False(entity.IsConnected);
-        Assert.Null(entity.ConnectionId);
+        Assert.Empty(entity.Connections);
     }
 }

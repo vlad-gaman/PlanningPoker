@@ -13,27 +13,22 @@ public class UpdateMeRequestValidation
         var name = request.Name?.Trim() ?? string.Empty;
         if (name.Length == 0)
         {
-            errors.Add(Invalid("name", "required"));
+            errors.Add(ServiceError.ValidationFailed("name", "required"));
         }
         else if (name.Length < PersonConstraints.NameMinLength)
         {
-            errors.Add(Invalid("name", "too_short"));
+            errors.Add(ServiceError.ValidationFailed("name", "too_short"));
         }
         else if (name.Length > PersonConstraints.NameMaxLength)
         {
-            errors.Add(Invalid("name", "too_long"));
+            errors.Add(ServiceError.ValidationFailed("name", "too_long"));
         }
 
         if (!PersonTypes.IsValid(request.PersonType))
         {
-            errors.Add(Invalid("personType", "invalid_person_type"));
+            errors.Add(ServiceError.ValidationFailed("personType", "invalid_person_type"));
         }
 
         return errors.Count == 0 ? ServiceResponse.Success() : ServiceResponse.Failure([.. errors]);
-    }
-
-    private static ServiceError Invalid(string field, string reason)
-    {
-        return ServiceError.Create(ErrorCodes.ValidationFailed, $"The field '{field}' is invalid.", ("field", field), ("reason", reason));
     }
 }

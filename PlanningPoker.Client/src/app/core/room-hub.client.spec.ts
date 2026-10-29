@@ -8,6 +8,7 @@ function fakeConnection(invokeResult?: unknown) {
     start: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn().mockResolvedValue(undefined),
     on: vi.fn(),
+    onreconnected: vi.fn(),
     invoke: vi.fn().mockResolvedValue(invokeResult),
   };
 }
@@ -48,6 +49,18 @@ describe('RoomHubClient', () => {
     expect(connection.on).toHaveBeenCalledWith('RoomChanged', handler);
   });
 
+  it('calls the handler when the connection reconnects', async () => {
+    const connection = fakeConnection();
+    const client = clientWith(connection);
+    await client.connect();
+    const handler = vi.fn();
+
+    client.onReconnected(handler);
+    connection.onreconnected.mock.calls[0][0]('new-id');
+
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
   it('unwraps data from a successful invocation', async () => {
     const connection = fakeConnection({ data: { ok: true }, errors: null });
     const client = clientWith(connection);
@@ -82,5 +95,27 @@ describe('RoomHubClient', () => {
     await client.disconnect();
 
     expect(connection.stop).toHaveBeenCalledOnce();
+  });
+
+  it('lets a quick reconnect get a fresh connection while the old one is still stopping', async () => {
+    const first = fakeConnection();
+    const second = fakeConnection();
+    let finishStop!: () => void;
+    first.stop.mockReturnValue(new Promise<void>((resolve) => (finishStop = resolve)));
+    let current = first;
+    const client = new RoomHubClient();
+    client.factory = () => current as unknown as HubConnection;
+    await client.connect();
+
+    const stopping = client.disconnect();
+    current = second;
+    await client.connect();
+    finishStop();
+    await stopping;
+
+    expect(second.start).toHaveBeenCalledOnce();
+    expect(second.stop).not.toHaveBeenCalled();
+    await client.disconnect();
+    expect(second.stop).toHaveBeenCalledOnce();
   });
 });

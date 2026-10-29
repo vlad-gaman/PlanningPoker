@@ -7,9 +7,8 @@ test('app loads at the root', async ({ page }) => {
 
 test('saving a name issues an HttpOnly, Secure, SameSite=Lax pp_session cookie', async ({ page, context }) => {
   await page.goto('/');
-  await page.getByLabel('Your name').fill('Ann');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Welcome, Ann.')).toBeVisible();
+  const response = await page.request.put('/api/me', { data: { name: 'Ann', personType: 'dev' } });
+  expect(response.status()).toBe(200);
 
   const cookie = (await context.cookies()).find((c) => c.name === 'pp_session');
   expect(cookie).toBeDefined();
@@ -43,5 +42,7 @@ test('swagger UI is served', async ({ request }) => {
   const response = await request.get('/swagger/v1/swagger.json');
 
   expect(response.status()).toBe(200);
-  expect(Object.keys((await response.json()).paths)).toContain('/api/me');
+  expect(Object.keys((await response.json()).paths)).toEqual(
+    expect.arrayContaining(['/api/me', '/api/card-sets', '/api/rooms', '/api/rooms/{id}']),
+  );
 });

@@ -18,7 +18,7 @@ public class MeController(
     ISessionCookieService cookies,
     UpdateMeRequestValidation validation,
     IPersonResponseMapper personResponseMapper,
-    IApiResponseMapper apiResponseMapper) : ControllerBase
+    IApiResponseMapper apiResponseMapper) : ApiControllerBase(apiResponseMapper)
 {
     /// <summary>Returns the person tied to the session cookie.</summary>
     [HttpGet]
@@ -26,7 +26,7 @@ public class MeController(
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status401Unauthorized)]
     public IActionResult Get()
     {
-        return ToResult(persons.Get(cookies.Read(Request)));
+        return ToResult(persons.Get(cookies.Read(Request)), personResponseMapper.Map);
     }
 
     /// <summary>Sets the name and person type; mints the session cookie when no valid person exists.</summary>
@@ -39,7 +39,7 @@ public class MeController(
         var validated = validation.Validate(request);
         if (!validated.IsSuccess)
         {
-            return ToResult(ServiceResponse<Person>.Failure(validated));
+            return ToResult(ServiceResponse<Person>.Failure(validated), personResponseMapper.Map);
         }
 
         var existingGuid = cookies.Read(Request);
@@ -49,16 +49,6 @@ public class MeController(
             cookies.Write(Response, result.Data.Guid);
         }
 
-        return ToResult(result);
-    }
-
-    private ObjectResult ToResult(ServiceResponse<Person> result)
-    {
-        var body = apiResponseMapper.Map(new ServiceResponse<PersonResponse>
-        {
-            Data = result.IsSuccess ? personResponseMapper.Map(result.Data!) : null,
-            Errors = result.Errors
-        });
-        return StatusCode(apiResponseMapper.GetStatusCode(result), body);
+        return ToResult(result, personResponseMapper.Map);
     }
 }

@@ -13,7 +13,7 @@ public class PersonService(IPersonRepository repository, IPersonMapper personMap
         var entity = guid is null ? null : repository.Get(guid.Value);
         if (entity is null)
         {
-            return ServiceResponse<Person>.Failure(ServiceError.Create(ErrorCodes.NoSession, "There is no valid session."));
+            return ServiceResponse<Person>.Failure(ServiceError.NoSession());
         }
 
         return ServiceResponse<Person>.Success(personMapper.Map(entity));
@@ -22,12 +22,14 @@ public class PersonService(IPersonRepository repository, IPersonMapper personMap
     public ServiceResponse<Person> Upsert(Guid? existingGuid, string name, string personType)
     {
         var trimmedName = name.Trim();
-        var existing = existingGuid is null ? null : repository.Get(existingGuid.Value);
-        if (existing is not null)
+        if (existingGuid is not null && repository.Update(existingGuid.Value, existing =>
+            {
+                existing.Name = trimmedName;
+                existing.PersonType = personType;
+                return personMapper.Map(existing);
+            }, out var updated))
         {
-            existing.Name = trimmedName;
-            existing.PersonType = personType;
-            return ServiceResponse<Person>.Success(personMapper.Map(existing));
+            return ServiceResponse<Person>.Success(updated!);
         }
 
         var created = entityMapper.Map(Guid.NewGuid(), trimmedName, personType);

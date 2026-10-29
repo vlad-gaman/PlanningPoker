@@ -71,3 +71,13 @@ a {
     color: var(--primary-hover);
   }
 }
+
+// Shared page container; each page sets its own max-width.
+.page {
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-error {
+  color: var(--mat-sys-error);
+}

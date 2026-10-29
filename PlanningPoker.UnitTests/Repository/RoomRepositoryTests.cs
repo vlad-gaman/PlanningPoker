@@ -6,7 +6,7 @@ namespace PlanningPoker.UnitTests.Repository;
 
 public class RoomRepositoryTests
 {
-    private static RoomRepository NewRepository() => new(new RoomEntityMapper());
+    private static RoomRepository NewRepository() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()));
 
     private static RoomEntity NewRoom(string id = "room", Guid? owner = null)
     {
@@ -61,18 +61,6 @@ public class RoomRepositoryTests
 
         Assert.True(repository.Remove("room"));
         Assert.False(repository.Remove("room"));
-    }
-
-    [Fact]
-    public void FindByPerson_ReturnsRoomContainingMember()
-    {
-        var repository = NewRepository();
-        var owner = Guid.NewGuid();
-        repository.TryAdd(NewRoom("a"));
-        repository.TryAdd(NewRoom("b", owner));
-
-        Assert.Equal("b", repository.FindByPerson(owner)!.Id);
-        Assert.Null(repository.FindByPerson(Guid.NewGuid()));
     }
 
     [Fact]

@@ -44,4 +44,47 @@ public class PersonRepositoryTests
         Assert.False(repository.Remove(person.Guid));
         Assert.Null(repository.Get(person.Guid));
     }
+
+    [Fact]
+    public void Update_Unknown_ReturnsFalse()
+    {
+        var found = new PersonRepository().Update(Guid.NewGuid(), _ => 1, out var result);
+
+        Assert.False(found);
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public void Update_MutatesStoredPersonAndReturnsResult()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        var found = repository.Update(person.Guid, entity =>
+        {
+            entity.Name = "Bob";
+            return entity.Name;
+        }, out var name);
+
+        Assert.True(found);
+        Assert.Equal("Bob", name);
+        Assert.Equal("Bob", repository.Get(person.Guid)!.Name);
+    }
+
+    [Fact]
+    public void Update_ConcurrentCallers_AreAtomic()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Parallel.For(0, 500, _ => repository.Update(person.Guid, entity =>
+        {
+            entity.Connections[Guid.NewGuid().ToString()] = "room";
+            return 0;
+        }, out _));
+
+        Assert.Equal(500, repository.Get(person.Guid)!.Connections.Count);
+    }
 }
