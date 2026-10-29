@@ -20,6 +20,7 @@ namespace PlanningPoker.Controller.Hubs;
 public class RoomHub(
     IRoomService rooms,
     IRoomEventPublisher roomEvents,
+    IRoomTimerService timer,
     RoomIdentifierValidation identifierValidation,
     IJoinRoomResponseMapper joinRoomResponseMapper,
     IApiResponseMapper apiResponseMapper,
@@ -66,6 +67,65 @@ public class RoomHub(
         return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Success(joinRoomResponseMapper.Map(result)));
     }
 
+    /// <summary>Casts or changes the caller's vote.</summary>
+    public async Task<ApiResponse<object>> Vote(string mark)
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var voted = rooms.Vote(person.Guid, Context.ConnectionId, mark);
+        if (!voted.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(voted.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishVoteCastAsync(voted.Data!);
+        await ApplyFollowUpAsync(voted.Data!.RoomId, voted.Data.FollowUp);
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Drops every vote in the caller's room and reopens voting.</summary>
+    public async Task<ApiResponse<object>> ClearVotes()
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var cleared = rooms.ClearVotes(person.Guid, Context.ConnectionId);
+        if (!cleared.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(cleared.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishVotesClearedAsync(cleared.Data!);
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Reveals the votes of the caller's room at once. Revealing twice announces nothing the second time.</summary>
+    public async Task<ApiResponse<object>> ForceShowVotes()
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var revealed = rooms.ForceShowVotes(person.Guid, Context.ConnectionId);
+        if (!revealed.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(revealed.Errors.ToArray()));
+        }
+
+        if (revealed.Data!.VoteStatus is { } status)
+        {
+            await roomEvents.PublishVotesShownAsync(revealed.Data.RoomId, status);
+        }
+
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var person = Context.GetHttpContext()?.GetSessionPerson();
@@ -84,6 +144,21 @@ public class RoomHub(
         if (exited.IsSuccess)
         {
             await roomEvents.PublishPersonExitedAsync(exited.Data!);
+            await ApplyFollowUpAsync(exited.Data!.RoomId, exited.Data.FollowUp);
+        }
+    }
+
+    /// <summary>Starts the countdown ticker and sends its first second, or announces an immediate reveal.</summary>
+    private async Task ApplyFollowUpAsync(string roomId, VotingFollowUp followUp)
+    {
+        if (followUp.Revealed is { } revealed)
+        {
+            await roomEvents.PublishVotesShownAsync(roomId, revealed);
+        }
+        else if (followUp.Countdown is { } countdown)
+        {
+            timer.Start(roomId, countdown.Revision);
+            await roomEvents.PublishCountdownUpdateAsync(roomId, countdown.Seconds);
         }
     }
 }

@@ -63,6 +63,6 @@ export const DEFAULT_ROOM_CONFIGURATION: RoomConfiguration = {
   maxParticipants: 50,
 };
 
-export const COUNTDOWN_MIN_SECONDS = 1;
+export const COUNTDOWN_MIN_SECONDS = 0;
 export const COUNTDOWN_MAX_SECONDS = 30;
 export const MAX_PARTICIPANTS_MIN = 1;

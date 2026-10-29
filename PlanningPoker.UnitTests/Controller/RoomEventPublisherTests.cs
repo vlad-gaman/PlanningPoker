@@ -3,6 +3,7 @@ using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Controller.Services;
 using PlanningPoker.Service.Models;
+using PlanningPoker.Service.Services;
 using PlanningPoker.UnitTests.Builders;
 using PlanningPoker.UnitTests.Fakes;
 
@@ -25,10 +26,12 @@ public class RoomEventPublisherTests
         _publisher = new RoomEventPublisher(
             _hub,
             new PersonJoinedEventMapper(PersonMapper),
-            new CountdownResetEventMapper(),
+            new RoomCountdownEventMapper(),
             new PersonExitedEventMapper(PersonMapper),
             new OwnershipTransferredEventMapper(PersonMapper),
-            new RoomDisposedEventMapper());
+            new RoomDisposedEventMapper(),
+            new VoteCastEventMapper(),
+            new VoteStatusResponseMapper());
     }
 
     [Fact]
@@ -39,7 +42,7 @@ public class RoomEventPublisherTests
         var reset = _hub.Clients.Sent.Single(message => message.Method == HubEvents.CountdownReset);
         Assert.Equal(RoomGroup, reset.Target);
         Assert.Equal([JoinerConnection], reset.Excluded);
-        Assert.Equal(7, Assert.IsType<CountdownResetEvent>(reset.Payload).Countdown);
+        Assert.Equal(7, Assert.IsType<RoomCountdownEvent>(reset.Payload).Countdown);
     }
 
     [Fact]
@@ -107,5 +110,71 @@ public class RoomEventPublisherTests
         await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, personLeft: false));
 
         Assert.Empty(_hub.Clients.Sent);
+    }
+
+    [Fact]
+    public async Task PublishVoteCast_SendsVoteCastThenMaskedStatusToTheWholeRoom()
+    {
+        var result = new VoteResult
+        {
+            RoomId = "room",
+            PersonGuid = Ann.Guid,
+            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string> { [Ann.Guid] = "hide" }, HasEveryoneVoted = true }
+        };
+
+        await _publisher.PublishVoteCastAsync(result);
+
+        Assert.Equal([HubEvents.VoteCast, HubEvents.VoteStatusUpdate], _hub.Clients.Sent.Select(message => message.Method));
+        Assert.All(_hub.Clients.Sent, message => Assert.Equal(RoomGroup, message.Target));
+        Assert.Empty(_hub.Clients.Sent[0].Excluded);
+        Assert.Equal(Ann.Guid, Assert.IsType<VoteCastEvent>(_hub.Clients.Sent[0].Payload).PersonGuid);
+        Assert.True(Assert.IsType<VoteStatusResponse>(_hub.Clients.Sent[1].Payload).HasEveryoneVoted);
+    }
+
+    [Fact]
+    public async Task PublishVotesCleared_SendsToTheWholeRoom()
+    {
+        await _publisher.PublishVotesClearedAsync("room");
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.VotesCleared, sent.Method);
+        Assert.Equal(RoomGroup, sent.Target);
+    }
+
+    [Fact]
+    public async Task PublishVotesShown_SendsTheRevealedStatus()
+    {
+        var status = new VoteStatus { Votes = new Dictionary<Guid, string> { [Ann.Guid] = "8" }, VotingFinished = true };
+
+        await _publisher.PublishVotesShownAsync("room", status);
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.VotesShown, sent.Method);
+        var payload = Assert.IsType<VoteStatusResponse>(sent.Payload);
+        Assert.Equal("8", payload.Votes[Ann.Guid]);
+        Assert.True(payload.VotingFinished);
+    }
+
+    [Fact]
+    public async Task PublishCountdownUpdate_SendsTheRemainingSecondsWithoutResetFlag()
+    {
+        await _publisher.PublishCountdownUpdateAsync("room", 3);
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.CountdownUpdate, sent.Method);
+        var payload = Assert.IsType<RoomCountdownEvent>(sent.Payload);
+        Assert.Equal(3, payload.Countdown);
+        Assert.False(payload.Reset);
+    }
+
+    [Fact]
+    public async Task CountdownNotifier_ForwardsTicksAndReveals()
+    {
+        IRoomCountdownNotifier notifier = _publisher;
+
+        await notifier.CountdownTickedAsync("room", 2);
+        await notifier.VotesRevealedAsync("room", new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true });
+
+        Assert.Equal([HubEvents.CountdownUpdate, HubEvents.VotesShown], _hub.Clients.Sent.Select(message => message.Method));
     }
 }

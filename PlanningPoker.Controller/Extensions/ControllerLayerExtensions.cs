@@ -14,6 +14,7 @@ using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Middleware;
 using PlanningPoker.Controller.Services;
 using PlanningPoker.Controller.Validations;
+using PlanningPoker.Service.Services;
 
 namespace PlanningPoker.Controller.Extensions;
 
@@ -41,8 +42,12 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IPersonExitedEventMapper, PersonExitedEventMapper>();
         services.AddSingleton<IOwnershipTransferredEventMapper, OwnershipTransferredEventMapper>();
         services.AddSingleton<IRoomDisposedEventMapper, RoomDisposedEventMapper>();
-        services.AddSingleton<ICountdownResetEventMapper, CountdownResetEventMapper>();
-        services.AddSingleton<IRoomEventPublisher, RoomEventPublisher>();
+        services.AddSingleton<IRoomCountdownEventMapper, RoomCountdownEventMapper>();
+        services.AddSingleton<IVoteCastEventMapper, VoteCastEventMapper>();
+        services.AddSingleton<ICardResponseMapper, CardResponseMapper>();
+        services.AddSingleton<RoomEventPublisher>();
+        services.AddSingleton<IRoomEventPublisher>(provider => provider.GetRequiredService<RoomEventPublisher>());
+        services.AddSingleton<IRoomCountdownNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<UpdateMeRequestValidation>();
         services.AddSingleton<CreateRoomRequestValidation>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<ApiBehaviorOptions>, ApiBehaviorOptionsSetup>());

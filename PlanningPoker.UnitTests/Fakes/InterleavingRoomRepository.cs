@@ -11,7 +11,17 @@ public sealed class InterleavingRoomRepository(IRoomRepository inner) : IRoomRep
 {
     public Action? AfterNextUpdate { get; set; }
 
-    public RoomEntity? Get(string roomId) => inner.Get(roomId);
+    /// <summary>Runs once, right after the next Get returns, so a test can change the room between a snapshot and the step that uses it.</summary>
+    public Action? AfterNextGet { get; set; }
+
+    public RoomEntity? Get(string roomId)
+    {
+        var snapshot = inner.Get(roomId);
+        var hook = AfterNextGet;
+        AfterNextGet = null;
+        hook?.Invoke();
+        return snapshot;
+    }
 
     public bool TryAdd(RoomEntity room) => inner.TryAdd(room);
 

@@ -31,6 +31,50 @@ public sealed class FakeRoomService : IRoomService
         return ExitResult;
     }
 
+    public ServiceResponse<VoteResult> VoteResult { get; set; } = ServiceResponse<VoteResult>.Failure();
+
+    public ServiceResponse<string> ClearResult { get; set; } = ServiceResponse<string>.Failure();
+
+    public ServiceResponse<RevealResult> RevealResult { get; set; } = ServiceResponse<RevealResult>.Failure();
+
+    public List<(Guid PersonGuid, string ConnectionId, string Mark)> VoteCalls { get; } = [];
+
+    public List<(Guid PersonGuid, string ConnectionId)> ClearCalls { get; } = [];
+
+    public List<(Guid PersonGuid, string ConnectionId)> RevealCalls { get; } = [];
+
+    public ServiceResponse<VoteResult> Vote(Guid personGuid, string connectionId, string mark)
+    {
+        VoteCalls.Add((personGuid, connectionId, mark));
+        return VoteResult;
+    }
+
+    public ServiceResponse<string> ClearVotes(Guid personGuid, string connectionId)
+    {
+        ClearCalls.Add((personGuid, connectionId));
+        return ClearResult;
+    }
+
+    public ServiceResponse<RevealResult> ForceShowVotes(Guid personGuid, string connectionId)
+    {
+        RevealCalls.Add((personGuid, connectionId));
+        return RevealResult;
+    }
+
+    /// <summary>Answers each Tick call; a test scripts the countdown by queueing its results.</summary>
+    public Queue<TickResult> TickResults { get; } = new();
+
+    public List<(string RoomId, long Revision)> TickCalls { get; } = [];
+
+    public TickResult Tick(string roomId, long revision)
+    {
+        lock (TickCalls)
+        {
+            TickCalls.Add((roomId, revision));
+            return TickResults.Count > 0 ? TickResults.Dequeue() : new TickResult { Outcome = TickOutcome.Stale };
+        }
+    }
+
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings) => throw new NotSupportedException();
 
     public ServiceResponse<string> Exists(string roomId) => throw new NotSupportedException();

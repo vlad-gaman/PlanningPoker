@@ -12,4 +12,7 @@ public class ExitRoomResult
     public bool RoomDisposed { get; init; }
 
     public Person? NewOwner { get; init; }
+
+    /// <summary>A countdown or reveal that the leaver's exit caused: the people left had all voted.</summary>
+    public VotingFollowUp FollowUp { get; init; } = VotingFollowUp.None;
 }

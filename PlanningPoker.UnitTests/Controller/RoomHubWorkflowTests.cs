@@ -21,6 +21,7 @@ public class RoomHubWorkflowTests
 
     private readonly FakeRoomService _rooms = new();
     private readonly FakeRoomEventPublisher _publisher = new();
+    private readonly FakeRoomTimerService _timer = new();
     private readonly FakeGroupManager _groups = new();
 
     private RoomHub NewHub(Person? person, CancellationToken connectionAborted = default)
@@ -34,8 +35,9 @@ public class RoomHubWorkflowTests
         return new RoomHub(
             _rooms,
             _publisher,
+            _timer,
             new RoomIdentifierValidation(),
-            new JoinRoomResponseMapper(new PersonResponseMapper(), new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper()),
+            new JoinRoomResponseMapper(new PersonResponseMapper(), new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper(), new CardResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
             NullLogger<RoomHub>.Instance)
         {
@@ -184,5 +186,160 @@ public class RoomHubWorkflowTests
 
         Assert.Empty(_rooms.ExitCalls);
         Assert.Empty(_publisher.Exited);
+    }
+
+    private static VoteResult VoteOutcome(VotingFollowUp? followUp = null)
+    {
+        return new VoteResult
+        {
+            RoomId = "room",
+            PersonGuid = Ann.Guid,
+            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string> { [Ann.Guid] = "hide" } },
+            FollowUp = followUp ?? VotingFollowUp.None
+        };
+    }
+
+    [Fact]
+    public async Task Vote_NoSession_FailsWithoutCallingTheService()
+    {
+        var response = await NewHub(null).Vote("5");
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.VoteCalls);
+    }
+
+    [Fact]
+    public async Task Vote_ServiceFailure_ReturnsItsErrorAndPublishesNothing()
+    {
+        _rooms.VoteResult = ServiceResponse<VoteResult>.Failure(ServiceError.ObserverCannotVote());
+
+        var response = await NewHub(Ann).Vote("5");
+
+        Assert.Equal(ErrorCodes.ObserverCannotVote, ErrorCode(response));
+        Assert.Empty(_publisher.VoteCasts);
+        Assert.Empty(_timer.Started);
+    }
+
+    [Fact]
+    public async Task Vote_Success_PublishesTheVoteAndStartsNothingWithoutAFollowUp()
+    {
+        _rooms.VoteResult = ServiceResponse<VoteResult>.Success(VoteOutcome());
+
+        var response = await NewHub(Ann).Vote("5");
+
+        Assert.Null(response.Errors);
+        Assert.Equal((Ann.Guid, ConnectionId, "5"), Assert.Single(_rooms.VoteCalls));
+        Assert.Single(_publisher.VoteCasts);
+        Assert.Empty(_timer.Started);
+        Assert.Empty(_publisher.CountdownUpdates);
+    }
+
+    [Fact]
+    public async Task Vote_CountdownFollowUp_StartsTheTickerAndSendsTheFirstSecond()
+    {
+        var followUp = new VotingFollowUp { Countdown = new CountdownStart { Revision = 4, Seconds = 5 } };
+        _rooms.VoteResult = ServiceResponse<VoteResult>.Success(VoteOutcome(followUp));
+
+        await NewHub(Ann).Vote("5");
+
+        Assert.Equal(("room", 4L), Assert.Single(_timer.Started));
+        Assert.Equal(("room", 5), Assert.Single(_publisher.CountdownUpdates));
+    }
+
+    [Fact]
+    public async Task Vote_ImmediateRevealFollowUp_AnnouncesTheVotesAndStartsNoTicker()
+    {
+        var status = new VoteStatus { Votes = new Dictionary<Guid, string> { [Ann.Guid] = "5" }, VotingFinished = true };
+        _rooms.VoteResult = ServiceResponse<VoteResult>.Success(VoteOutcome(new VotingFollowUp { Revealed = status }));
+
+        await NewHub(Ann).Vote("5");
+
+        Assert.Same(status, Assert.Single(_publisher.Shown).Status);
+        Assert.Empty(_timer.Started);
+    }
+
+    [Fact]
+    public async Task ClearVotes_Success_PublishesClearedForTheRoom()
+    {
+        _rooms.ClearResult = ServiceResponse<string>.Success("room");
+
+        var response = await NewHub(Ann).ClearVotes();
+
+        Assert.Null(response.Errors);
+        Assert.Equal("room", Assert.Single(_publisher.Cleared));
+    }
+
+    [Fact]
+    public async Task ClearVotes_NoSession_Fails()
+    {
+        var response = await NewHub(null).ClearVotes();
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.ClearCalls);
+    }
+
+    [Fact]
+    public async Task ClearVotes_ServiceFailure_PublishesNothing()
+    {
+        _rooms.ClearResult = ServiceResponse<string>.Failure(ServiceError.NotInRoom());
+
+        var response = await NewHub(Ann).ClearVotes();
+
+        Assert.Equal(ErrorCodes.NotInRoom, ErrorCode(response));
+        Assert.Empty(_publisher.Cleared);
+    }
+
+    [Fact]
+    public async Task ForceShowVotes_Revealed_PublishesTheVotes()
+    {
+        var status = new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true };
+        _rooms.RevealResult = ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = "room", VoteStatus = status });
+
+        var response = await NewHub(Ann).ForceShowVotes();
+
+        Assert.Null(response.Errors);
+        Assert.Equal("room", Assert.Single(_publisher.Shown).RoomId);
+    }
+
+    [Fact]
+    public async Task ForceShowVotes_AlreadyRevealed_AnnouncesNothing()
+    {
+        _rooms.RevealResult = ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = "room", VoteStatus = null });
+
+        var response = await NewHub(Ann).ForceShowVotes();
+
+        Assert.Null(response.Errors);
+        Assert.Empty(_publisher.Shown);
+    }
+
+    [Fact]
+    public async Task ForceShowVotes_NoSession_Fails()
+    {
+        var response = await NewHub(null).ForceShowVotes();
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.RevealCalls);
+    }
+
+    [Fact]
+    public async Task ForceShowVotes_ServiceFailure_PublishesNothing()
+    {
+        _rooms.RevealResult = ServiceResponse<RevealResult>.Failure(ServiceError.NotInRoom());
+
+        await NewHub(Ann).ForceShowVotes();
+
+        Assert.Empty(_publisher.Shown);
+    }
+
+    [Fact]
+    public async Task OnDisconnected_ExitWithCountdownFollowUp_RestartsTheTicker()
+    {
+        var exit = RoomResults.Exit(Ann, followUp: new VotingFollowUp { Countdown = new CountdownStart { Revision = 9, Seconds = 3 } });
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(exit);
+
+        await NewHub(Ann).OnDisconnectedAsync(null);
+
+        Assert.Equal(("room", 9L), Assert.Single(_timer.Started));
+        Assert.Equal(("room", 3), Assert.Single(_publisher.CountdownUpdates));
     }
 }
