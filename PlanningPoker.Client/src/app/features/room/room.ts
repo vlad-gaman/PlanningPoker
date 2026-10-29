@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  SimpleChanges,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +20,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES } from '../../models/person';
 import { createPersonForm } from '../shared/person-form';
@@ -27,12 +38,12 @@ type Phase = 'loading' | 'name' | 'joined';
     MatSelectModule,
     MatTableModule,
   ],
-  providers: [RoomStore],
+  providers: [RoomStore, RoomHubClient],
   templateUrl: './room.html',
   styleUrl: './room.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Room implements OnInit, OnDestroy {
+export class Room implements OnInit, OnChanges, OnDestroy {
   readonly id = input.required<string>();
 
   protected readonly store = inject(RoomStore);
@@ -48,18 +59,14 @@ export class Room implements OnInit, OnDestroy {
   protected readonly form = createPersonForm(inject(FormBuilder));
 
   async ngOnInit(): Promise<void> {
-    try {
-      const me = await firstValueFrom(this.meService.get());
-      if (me.name) {
-        await this.join();
-        return;
-      }
-    } catch (error) {
-      if (!(error instanceof ApiRequestError && error.hasCode(ERROR_CODES.noSession))) {
-        this.error.set(errorMessage(error));
-      }
+    await this.enter();
+  }
+
+  /** The router reuses this component when only the room id changes, so leave the old room and enter the new one. */
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['id'] && !changes['id'].firstChange) {
+      void this.switchRoom();
     }
-    this.phase.set('name');
   }
 
   ngOnDestroy(): void {
@@ -87,6 +94,29 @@ export class Room implements OnInit, OnDestroy {
 
   protected roleLabel(type: string): string {
     return this.personTypes.find((option) => option.value === type)?.label ?? type;
+  }
+
+  private async switchRoom(): Promise<void> {
+    await this.store.close();
+    this.error.set(null);
+    this.phase.set('loading');
+    await this.enter();
+  }
+
+  /** Joins straight away when the visitor has a name, otherwise asks for one. */
+  private async enter(): Promise<void> {
+    try {
+      const me = await firstValueFrom(this.meService.get());
+      if (me.name) {
+        await this.join();
+        return;
+      }
+    } catch (error) {
+      if (!(error instanceof ApiRequestError && error.hasCode(ERROR_CODES.noSession))) {
+        this.error.set(errorMessage(error));
+      }
+    }
+    this.phase.set('name');
   }
 
   private async join(): Promise<void> {

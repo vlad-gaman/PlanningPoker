@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace PlanningPoker.UnitTests.Api;
 
-public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
+public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private static JsonElement Data(JsonElement response)
     {
@@ -13,6 +13,11 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private static string ErrorCode(JsonElement response)
     {
         return response.GetProperty("errors")[0].GetProperty("code").GetString()!;
+    }
+
+    private static string? PersonName(JsonElement payload)
+    {
+        return payload.GetProperty("person").GetProperty("name").GetString();
     }
 
     [Fact]
@@ -40,14 +45,14 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await using var room = await factory.CreateTestRoomAsync();
         var laterCookie = await factory.MintCookie("Cara", "obs");
         await using var later = factory.Connect(laterCookie);
-        var joined = room.Owner.NextEvent("PersonJoined");
+        var joined = room.Owner.NextEvent("PersonJoined", payload => PersonName(payload) == "Cara");
         await later.StartAsync();
 
         var response = await later.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
 
         Assert.Equal(["Ann", "Bob", "Cara"], Data(response).GetProperty("people").EnumerateArray().Select(p => p.GetProperty("name").GetString()));
         var payload = await joined;
-        Assert.Equal("Cara", payload.GetProperty("person").GetProperty("name").GetString());
+        Assert.Equal("Cara", PersonName(payload));
         Assert.Equal("obs", payload.GetProperty("personType").GetString());
     }
 
@@ -80,11 +85,11 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Disconnect_Member_BroadcastsPersonExited()
     {
         await using var room = await factory.CreateTestRoomAsync();
-        var exited = room.Owner.NextEvent("PersonExited");
+        var exited = room.Owner.NextEvent("PersonExited", payload => PersonName(payload) == "Bob");
 
         await room.Guest.StopAsync();
 
-        Assert.Equal("Bob", (await exited).GetProperty("person").GetProperty("name").GetString());
+        Assert.Equal("Bob", PersonName(await exited));
     }
 
     [Fact]

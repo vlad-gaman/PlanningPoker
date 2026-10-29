@@ -27,6 +27,6 @@ public class RoomIdentifierValidation
 
     private static ServiceResponse Invalid(string reason)
     {
-        return ServiceResponse.Failure(ServiceError.Create(ErrorCodes.ValidationFailed, "The field 'roomId' is invalid.", ("field", "roomId"), ("reason", reason)));
+        return ServiceResponse.Failure(ServiceError.ValidationFailed("roomId", reason));
     }
 }

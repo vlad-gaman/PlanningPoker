@@ -42,7 +42,7 @@ public class RoomResponseMappersTests
             Configuration = new RoomConfigurationRequest { CardSet = "fibonacci", CountdownSeconds = 12, ShowFireworks = true, MaxParticipants = 3 }
         };
 
-        var settings = new RoomSettingsMapper(new RoomConfigurationMapper()).Map(request);
+        var settings = new RoomSettingsMapper(new RoomConfigurationRequestMapper()).Map(request);
 
         Assert.True(settings.UseFunRoomName);
         Assert.Equal(12, settings.Configuration.CountdownSeconds);

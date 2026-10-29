@@ -1,7 +1,5 @@
 .room {
   max-width: 40rem;
-  margin: 2rem auto;
-  padding: 0 1rem;
 }
 
 .name-entry {
@@ -21,8 +19,4 @@
 .owner {
   color: var(--primary-color);
   font-size: 0.85em;
-}
-
-.error {
-  color: var(--mat-sys-error);
 }

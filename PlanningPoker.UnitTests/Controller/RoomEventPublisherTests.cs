@@ -3,6 +3,7 @@ using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Controller.Services;
 using PlanningPoker.Service.Models;
+using PlanningPoker.UnitTests.Builders;
 using PlanningPoker.UnitTests.Fakes;
 
 namespace PlanningPoker.UnitTests.Controller;
@@ -30,27 +31,10 @@ public class RoomEventPublisherTests
             new RoomDisposedEventMapper());
     }
 
-    private static JoinRoomResult JoinResult(bool resetCountdown)
-    {
-        return new JoinRoomResult
-        {
-            Room = new Room { Id = "room", Configuration = new RoomConfiguration { CountdownSeconds = 7 } },
-            Person = Bob,
-            People = [Ann, Bob],
-            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = false },
-            ResetCountdown = resetCountdown
-        };
-    }
-
-    private static ExitRoomResult ExitResult(bool disposed, Person? newOwner = null)
-    {
-        return new ExitRoomResult { RoomId = "room", Person = Ann, RoomDisposed = disposed, NewOwner = newOwner };
-    }
-
     [Fact]
     public async Task PublishPersonJoined_CountdownReset_GoesToRoomExceptTheJoiner()
     {
-        await _publisher.PublishPersonJoinedAsync(JoinResult(resetCountdown: true), JoinerConnection);
+        await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: true, countdownSeconds: 7), JoinerConnection);
 
         var reset = _hub.Clients.Sent.Single(message => message.Method == HubEvents.CountdownReset);
         Assert.Equal(RoomGroup, reset.Target);
@@ -61,7 +45,7 @@ public class RoomEventPublisherTests
     [Fact]
     public async Task PublishPersonJoined_AlwaysAnnouncesThePersonToOthers()
     {
-        await _publisher.PublishPersonJoinedAsync(JoinResult(resetCountdown: false), JoinerConnection);
+        await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: false), JoinerConnection);
 
         var joined = Assert.Single(_hub.Clients.Sent);
         Assert.Equal(HubEvents.PersonJoined, joined.Method);
@@ -73,7 +57,7 @@ public class RoomEventPublisherTests
     [Fact]
     public async Task PublishPersonExited_LastMember_SendsRoomDisposedToRoom()
     {
-        await _publisher.PublishPersonExitedAsync(ExitResult(disposed: true));
+        await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, roomDisposed: true));
 
         var disposed = Assert.Single(_hub.Clients.Sent, message => message.Method == HubEvents.RoomDisposed);
         Assert.Equal(RoomGroup, disposed.Target);
@@ -84,7 +68,7 @@ public class RoomEventPublisherTests
     [Fact]
     public async Task PublishPersonExited_RoomStillHasMembers_SendsNoRoomDisposed()
     {
-        await _publisher.PublishPersonExitedAsync(ExitResult(disposed: false));
+        await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, roomDisposed: false));
 
         Assert.DoesNotContain(_hub.Clients.Sent, message => message.Method == HubEvents.RoomDisposed);
         Assert.Equal(HubEvents.PersonExited, Assert.Single(_hub.Clients.Sent).Method);
@@ -93,7 +77,7 @@ public class RoomEventPublisherTests
     [Fact]
     public async Task PublishPersonExited_WithNewOwner_SendsOwnershipTransferredToRoom()
     {
-        await _publisher.PublishPersonExitedAsync(ExitResult(disposed: false, newOwner: Bob));
+        await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, newOwner: Bob));
 
         var transferred = Assert.Single(_hub.Clients.Sent, message => message.Method == HubEvents.OwnershipTransferred);
         Assert.Equal(RoomGroup, transferred.Target);
@@ -103,8 +87,16 @@ public class RoomEventPublisherTests
     [Fact]
     public async Task PublishPersonExited_WithoutNewOwner_SendsNoOwnershipTransferred()
     {
-        await _publisher.PublishPersonExitedAsync(ExitResult(disposed: false, newOwner: null));
+        await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, newOwner: null));
 
         Assert.DoesNotContain(_hub.Clients.Sent, message => message.Method == HubEvents.OwnershipTransferred);
+    }
+
+    [Fact]
+    public async Task PublishPersonExited_PersonStillConnectedElsewhereInRoom_SendsNothing()
+    {
+        await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, personLeft: false));
+
+        Assert.Empty(_hub.Clients.Sent);
     }
 }

@@ -11,6 +11,11 @@ using PlanningPoker.Service.Services;
 
 namespace PlanningPoker.Controller.Hubs;
 
+/// <summary>
+/// Hub workflow only: the service decides, the publisher broadcasts. Errors come back as ApiResponse failures; the
+/// hub-only codes are <c>not_in_room</c> (exit of an unknown connection, never sent to clients by JoinRoom) and
+/// <c>connection_closed</c> (the client disconnected during JoinRoom; the join was rolled back and nothing was announced).
+/// </summary>
 public class RoomHub(
     IRoomService rooms,
     IRoomEventPublisher roomEvents,
@@ -22,25 +27,35 @@ public class RoomHub(
     public async Task<ApiResponse<JoinRoomResponse>> JoinRoom(string roomId)
     {
         var person = Context.GetHttpContext()?.GetSessionPerson();
-        var joined = person is null
-            ? ServiceResponse<JoinRoomResult>.Failure(ServiceError.NoSession())
-            : rooms.Join(person.Guid, Context.ConnectionId, roomId);
+        if (person is null)
+        {
+            return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(ServiceError.NoSession()));
+        }
+
+        // Subscribe to the group before the membership is visible, so no broadcast can fall between the snapshot and
+        // the subscription. An empty id has no group to join; the service rejects it.
+        var grouped = !string.IsNullOrEmpty(roomId);
+        if (grouped)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        }
+
+        var joined = rooms.Join(person.Guid, Context.ConnectionId, roomId);
         if (!joined.IsSuccess)
         {
+            if (grouped)
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+            }
+
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(joined));
         }
 
         var result = joined.Data!;
-        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         if (Context.ConnectionAborted.IsCancellationRequested)
         {
             // The client left while joining: undo the membership instead of announcing a person who is already gone.
-            var exited = rooms.Exit(result.Person.Guid, Context.ConnectionId);
-            if (exited.IsSuccess)
-            {
-                await roomEvents.PublishPersonExitedAsync(exited.Data!);
-            }
-
+            await ExitAndPublishAsync(person.Guid);
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(
                 ServiceError.Create(ErrorCodes.ConnectionClosed, "The connection closed before the join completed.")));
         }
@@ -55,13 +70,18 @@ public class RoomHub(
         logger.LogInformation(exception, "Hub disconnected: person {PersonGuid}", person?.Guid);
         if (person is not null)
         {
-            var exited = rooms.Exit(person.Guid, Context.ConnectionId);
-            if (exited.IsSuccess)
-            {
-                await roomEvents.PublishPersonExitedAsync(exited.Data!);
-            }
+            await ExitAndPublishAsync(person.Guid);
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task ExitAndPublishAsync(Guid personGuid)
+    {
+        var exited = rooms.Exit(personGuid, Context.ConnectionId);
+        if (exited.IsSuccess)
+        {
+            await roomEvents.PublishPersonExitedAsync(exited.Data!);
+        }
     }
 }

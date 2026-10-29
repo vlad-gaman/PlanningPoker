@@ -96,4 +96,26 @@ describe('RoomHubClient', () => {
 
     expect(connection.stop).toHaveBeenCalledOnce();
   });
+
+  it('lets a quick reconnect get a fresh connection while the old one is still stopping', async () => {
+    const first = fakeConnection();
+    const second = fakeConnection();
+    let finishStop!: () => void;
+    first.stop.mockReturnValue(new Promise<void>((resolve) => (finishStop = resolve)));
+    let current = first;
+    const client = new RoomHubClient();
+    client.factory = () => current as unknown as HubConnection;
+    await client.connect();
+
+    const stopping = client.disconnect();
+    current = second;
+    await client.connect();
+    finishStop();
+    await stopping;
+
+    expect(second.start).toHaveBeenCalledOnce();
+    expect(second.stop).not.toHaveBeenCalled();
+    await client.disconnect();
+    expect(second.stop).toHaveBeenCalledOnce();
+  });
 });

@@ -5,5 +5,5 @@ namespace PlanningPoker.Service.Mappers;
 
 public interface IVoteStatusMapper
 {
-    VoteStatus Map(RoomEntity room, IReadOnlyCollection<PersonEntity> members);
+    VoteStatus Map(RoomEntity room, IReadOnlyCollection<Person> members);
 }

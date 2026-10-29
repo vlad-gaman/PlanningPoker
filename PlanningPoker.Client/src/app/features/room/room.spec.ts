@@ -7,7 +7,7 @@ import { MeService } from '../../core/me.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
 import { ANN, JOIN_RESPONSE, fakeHub } from '../../testing/fake-hub.testing';
-import { ROOM_NOT_FOUND_MESSAGE } from './room-store';
+import { ROOM_NOT_FOUND_MESSAGE, RoomStore } from './room-store';
 import { Room } from './room';
 
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
@@ -26,11 +26,11 @@ describe('Room', () => {
     me.update.mockReset();
     hub = fakeHub(JOIN_RESPONSE);
     TestBed.configureTestingModule({
-      providers: [
-        provideRouter([]),
-        { provide: MeService, useValue: me },
-        { provide: RoomHubClient, useValue: hub },
-      ],
+      providers: [provideRouter([]), { provide: MeService, useValue: me }],
+    });
+    // The room provides its own hub client at component level, so the fake replaces it there.
+    TestBed.overrideComponent(Room, {
+      set: { providers: [RoomStore, { provide: RoomHubClient, useValue: hub }] },
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
@@ -145,6 +145,18 @@ describe('Room', () => {
 
     expect(element.querySelector('.error')?.textContent).toContain('Something went wrong.');
     expect(hub.disconnect).toHaveBeenCalled();
+  });
+
+  it('leaves the old room and joins the new one when the route id changes', async () => {
+    me.get.mockReturnValue(of(ANN));
+    const { fixture } = await render();
+
+    fixture.componentRef.setInput('id', 'room-2');
+    fixture.detectChanges();
+    await settle(fixture);
+
+    expect(hub.disconnect).toHaveBeenCalled();
+    expect(hub.invoke).toHaveBeenLastCalledWith('JoinRoom', 'room-2');
   });
 
   it('leave returns to the home page', async () => {

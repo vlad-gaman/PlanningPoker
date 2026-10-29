@@ -55,10 +55,10 @@ Target framework .NET 10 (see section 0). Each layer registers its own classes i
 
 Entities hold GUID references only; no shared object graph.
 
-- `PersonEntity`: `Guid`, `Name`, `PersonType` (`dev` | `test` | `obs`), `ConnectionId`, `IsConnected`.
-- `RoomEntity`: `Id` (string), `OwnerGuid`, `MemberGuids`, `Votes` (person GUID -> mark), `Configuration` (card set, countdown seconds, show fireworks, max participants), stored result.
-- `IPersonRepository` (sync): `Get`, `TryAdd`, `Remove`.
-- `IRoomRepository` (sync): `Get` (snapshot copy), `TryAdd`, `Remove`, `FindByPerson` (plain scan), `Update<T>(roomId, Func<RoomEntity, T>)`. `Update` is the only way to mutate a room and runs under a per-room lock so compound operations are atomic.
+- `PersonEntity`: `Guid`, `Name`, `PersonType` (`dev` | `test` | `obs`), `Connections` (connection id -> room id). This is an index that tells an exit which room to ask; it does not decide membership.
+- `RoomEntity`: `Id` (string), `OwnerGuid`, `MemberGuids`, `MemberConnections` (member GUID -> open connection ids in this room), `Votes` (person GUID -> mark), `VotingEnabled`, `IsDisposed` (set when the last member leaves; a disposed room takes no members), `Configuration` (card set, countdown seconds, show fireworks, max participants).
+- `IPersonRepository` (sync): `Get` (returns the live entity, so only `Update` may mutate it), `TryAdd`, `Remove`, `Update<T>(personGuid, Func<PersonEntity, T>)` under a per-person lock.
+- `IRoomRepository` (sync): `Get` (snapshot copy), `TryAdd`, `Remove`, `Update<T>(roomId, Func<RoomEntity, T>)`. `Update` is the only way to mutate a room and runs under a per-room lock so compound operations are atomic. Every membership decision (admission, leaving, disposal, ownership transfer) is made inside a room `Update`. The person and room locks are never nested.
 - Both are singletons registered against their interfaces. No eviction, TTL or sweeper (tracked separately in [#12](https://github.com/vlad-gaman/PlanningPoker/issues/12)).
 - Voting countdown timers are *not* in the repository: a Service-layer singleton `IRoomTimerService` (used from slice 2 onward). There is no health-check timer.
 
@@ -122,10 +122,11 @@ Status table additions: `room_not_found` -> 404, `room_id_generation_failed` -> 
 
 ### 2.3 Hub: `JoinRoom(roomId)` at `/hubs/room`
 
-- Returns the `ApiResponse` shape. Success data: `{ people: [ { guid, name, personType } ], voteStatus }` where `voteStatus` is the same shape used later for votes (each person's mark masked as `"hide"` until revealed; `hasEveryoneVoted`). **No `RoomJoined` event.**
-- Errors: `room_not_found`; `validation_failed` (invalid room identifier: reject empty, over-long or characters outside letters, digits, `-`, `_`); `no_session` is handled at connect (401).
-- Side effects: set the person's `ConnectionId` and `IsConnected`; add to the SignalR group for the room; broadcast `PersonJoined` `{ person, vote, personType }` to the group *except* the caller; if voting is enabled and the person is not `obs`, broadcast `CountdownReset` `{ countdown, reset: true }` to the others.
-- Disconnect (`OnDisconnectedAsync`): remove the person from the room; broadcast `PersonExited`; if the owner left, transfer ownership to a random member and broadcast `OwnershipTransferred`; if nobody is left, remove the room and broadcast `RoomDisposed`. (Voting reveal on exit and timer handling arrive in slices 2 and 4; slice 1 handles exit, ownership transfer and room disposal with the same atomic `Update`.)
+- Returns the `ApiResponse` shape. Success data: `{ people: [ { guid, name, personType } ], voteStatus, ownerGuid, configuration: { cardSet, countdownSeconds, showFireworks, maxParticipants } }`. `voteStatus` is the same shape used later for votes (each person's mark masked as `"hide"` until revealed; `hasEveryoneVoted`). **No `RoomJoined` event.**
+- Errors: `room_not_found`; `validation_failed` (invalid room identifier: reject empty, over-long or characters outside letters, digits, `-`, `_`; or `connectionId` with reason `already_in_room` when this connection already joined a different room; joining the same room again on the same connection is a no-op); `no_session` is handled at connect (401).
+- `connection_closed` (hub-only): the client disconnected while `JoinRoom` was running. The join is rolled back with an exit and nothing is announced. The group subscription is taken before the join and removed again if the join fails.
+- Side effects: subscribe the connection to the SignalR group for the room (before the join, so no broadcast is lost between snapshot and subscription); index the connection in the person's `Connections` and add it to the room's `MemberConnections`; broadcast `PersonJoined` `{ person, vote, personType }` to the group *except* the caller; if voting is enabled and the person is not `obs`, broadcast `CountdownReset` `{ countdown, reset: true }` to the others.
+- Disconnect (`OnDisconnectedAsync`): remove this connection from its room. If the person has another connection to that room (another tab), nothing is broadcast. Otherwise broadcast `PersonExited`; if the owner left, transfer ownership to a random member and broadcast `OwnershipTransferred`; if nobody is left, mark the room disposed, remove it and broadcast `RoomDisposed`. An unknown connection gets `not_in_room` (hub-only) and nothing is broadcast. (Voting reveal on exit and timer handling arrive in slices 2 and 4; slice 1 handles exit, ownership transfer and room disposal inside the room's `Update`.)
 - Events defined in this slice, names unchanged from the old hub: `PersonJoined`, `PersonExited`, `OwnershipTransferred`, `RoomDisposed`, `CountdownReset`. Payloads are typed DTOs in the Controller project mirrored as TypeScript interfaces in `models/`.
 
 ### 2.4 Service layer

@@ -1,4 +1,5 @@
 using PlanningPoker.Common.Constants;
+using PlanningPoker.Common.Models;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
@@ -6,6 +7,7 @@ using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.Service.Validations;
+using PlanningPoker.UnitTests.Fakes;
 
 namespace PlanningPoker.UnitTests.Service;
 
@@ -23,11 +25,11 @@ public class RoomServiceTests
         };
     }
 
-    private RoomService CreateService(IRoomNameGenerator? generator = null)
+    private RoomService CreateService(IRoomNameGenerator? generator = null, IPersonRepository? people = null)
     {
         return new RoomService(
             _rooms,
-            _people,
+            people ?? _people,
             generator ?? new StubRoomNameGenerator("unused"),
             new RoomEntityMapper(new RoomConfigurationEntityMapper()),
             new RoomMapper(new RoomConfigurationMapper()),
@@ -165,6 +167,7 @@ public class RoomServiceTests
         Assert.False(response.Data.VoteStatus.HasEveryoneVoted);
         Assert.Empty(response.Data.VoteStatus.Votes);
         Assert.Equal(room.Id, Assert.Single(ConnectionsOf(guest), pair => pair.Key == "conn-guest").Value);
+        Assert.Equal(["conn-guest"], _rooms.Get(room.Id)!.MemberConnections[guest]);
     }
 
     [Fact]
@@ -178,6 +181,38 @@ public class RoomServiceTests
 
         Assert.Single(response.Data!.People);
         Assert.Equal(["c1", "c2"], ConnectionsOf(owner).Keys.Order());
+        Assert.Equal(["c1", "c2"], _rooms.Get(room.Id)!.MemberConnections[owner].Order());
+    }
+
+    [Fact]
+    public void Join_SameConnectionSameRoomAgain_IsIdempotent()
+    {
+        var owner = AddPerson();
+        var room = CreateService().Create(owner, Settings()).Data!;
+        CreateService().Join(owner, "c1", room.Id);
+
+        var again = CreateService().Join(owner, "c1", room.Id);
+
+        Assert.True(again.IsSuccess);
+        Assert.Single(_rooms.Get(room.Id)!.MemberGuids);
+        Assert.Equal(["c1"], _rooms.Get(room.Id)!.MemberConnections[owner]);
+    }
+
+    [Fact]
+    public void Join_SameConnectionAnotherRoom_IsRejectedAndLeavesTheOtherRoomAlone()
+    {
+        var owner = AddPerson("Owner");
+        var first = NewRoom(owner);
+        var second = NewRoom(AddPerson("Other"));
+        CreateService().Join(owner, "c1", first);
+
+        var response = CreateService().Join(owner, "c1", second);
+
+        var error = Assert.Single(response.Errors);
+        Assert.Equal(ErrorCodes.ValidationFailed, error.Code);
+        Assert.Equal("already_in_room", error.Metadata["reason"]);
+        Assert.DoesNotContain(owner, _rooms.Get(second)!.MemberGuids);
+        Assert.Equal(first, Assert.Single(ConnectionsOf(owner)).Value);
     }
 
     [Theory]
@@ -210,37 +245,7 @@ public class RoomServiceTests
     }
 
     [Fact]
-    public void Join_RacingLastMemberExit_NeverLeavesJoinedPersonInRemovedRoom()
-    {
-        for (var iteration = 0; iteration < 200; iteration++)
-        {
-            var owner = AddPerson("Owner");
-            var guest = AddPerson("Guest");
-            var roomId = NewRoom(owner);
-            CreateService().Join(owner, "owner-conn", roomId);
-
-            var exit = Task.Run(() => CreateService().Exit(owner, "owner-conn"));
-            var join = Task.Run(() => CreateService().Join(guest, "guest-conn", roomId));
-            Task.WaitAll(exit, join);
-
-            Assert.True(exit.Result.IsSuccess);
-            var room = _rooms.Get(roomId);
-            if (join.Result.IsSuccess)
-            {
-                Assert.NotNull(room);
-                Assert.Contains(guest, room.MemberGuids);
-                Assert.Equal(guest, room.OwnerGuid);
-            }
-            else
-            {
-                Assert.Null(room);
-                Assert.Empty(ConnectionsOf(guest));
-            }
-        }
-    }
-
-    [Fact]
-    public void Exit_ConnectionIsNotTheCurrentOne_IsIgnored()
+    public void Exit_UnknownConnection_ReturnsNotInRoomAndKeepsTheMember()
     {
         var owner = AddPerson();
         var room = CreateService().Create(owner, Settings()).Data!;
@@ -248,14 +253,24 @@ public class RoomServiceTests
 
         var response = CreateService().Exit(owner, "old-connection");
 
-        Assert.False(response.IsSuccess);
+        Assert.Equal(ErrorCodes.NotInRoom, Assert.Single(response.Errors).Code);
         Assert.Contains(owner, _rooms.Get(room.Id)!.MemberGuids);
     }
 
     [Fact]
-    public void Exit_PersonNotInARoom_Fails()
+    public void Exit_PersonWithNoConnections_ReturnsNotInRoom()
     {
-        Assert.False(CreateService().Exit(AddPerson(), "c1").IsSuccess);
+        var response = CreateService().Exit(AddPerson(), "c1");
+
+        Assert.Equal(ErrorCodes.NotInRoom, Assert.Single(response.Errors).Code);
+    }
+
+    [Fact]
+    public void Exit_UnknownPerson_ReturnsNoSession()
+    {
+        var response = CreateService().Exit(Guid.NewGuid(), "c1");
+
+        Assert.Equal(ErrorCodes.NoSession, Assert.Single(response.Errors).Code);
     }
 
     [Fact]
@@ -270,7 +285,8 @@ public class RoomServiceTests
         var response = CreateService().Exit(guest, "c-guest");
 
         Assert.True(response.IsSuccess);
-        Assert.False(response.Data!.RoomDisposed);
+        Assert.True(response.Data!.PersonLeft);
+        Assert.False(response.Data.RoomDisposed);
         Assert.Null(response.Data.NewOwner);
         Assert.Equal("Guest", response.Data.Person.Name);
         Assert.Equal([owner], _rooms.Get(room.Id)!.MemberGuids);
@@ -320,13 +336,16 @@ public class RoomServiceTests
 
         var firstTab = CreateService().Exit(guest, "tab-1");
 
-        Assert.Equal(ErrorCodes.PersonStillInRoom, Assert.Single(firstTab.Errors).Code);
+        Assert.True(firstTab.IsSuccess);
+        Assert.False(firstTab.Data!.PersonLeft);
+        Assert.False(firstTab.Data.RoomDisposed);
+        Assert.Null(firstTab.Data.NewOwner);
         Assert.Contains(guest, _rooms.Get(roomId)!.MemberGuids);
         Assert.Equal(["tab-2"], ConnectionsOf(guest).Keys);
 
         var secondTab = CreateService().Exit(guest, "tab-2");
 
-        Assert.True(secondTab.IsSuccess);
+        Assert.True(secondTab.Data!.PersonLeft);
         Assert.DoesNotContain(guest, _rooms.Get(roomId)!.MemberGuids);
         Assert.Empty(ConnectionsOf(guest));
     }
@@ -342,8 +361,8 @@ public class RoomServiceTests
 
         var response = CreateService().Exit(guest, "tab-1");
 
-        Assert.True(response.IsSuccess);
-        Assert.Equal(firstRoom, response.Data!.RoomId);
+        Assert.True(response.Data!.PersonLeft);
+        Assert.Equal(firstRoom, response.Data.RoomId);
         Assert.DoesNotContain(guest, _rooms.Get(firstRoom)!.MemberGuids);
         Assert.Contains(guest, _rooms.Get(secondRoom)!.MemberGuids);
         Assert.Equal(secondRoom, Assert.Single(ConnectionsOf(guest)).Value);
@@ -361,8 +380,73 @@ public class RoomServiceTests
 
         var stale = CreateService().Exit(guest, "old-conn");
 
-        Assert.False(stale.IsSuccess);
+        Assert.True(stale.IsSuccess);
+        Assert.False(stale.Data!.PersonLeft);
         Assert.Contains(guest, _rooms.Get(roomId)!.MemberGuids);
         Assert.Equal(["new-conn"], ConnectionsOf(guest).Keys);
+        Assert.Equal(["new-conn"], _rooms.Get(roomId)!.MemberConnections[guest]);
+    }
+
+    [Fact]
+    public void Exit_OtherPersonJoinsDuringLastMemberExit_RoomSurvivesWithBothMembers()
+    {
+        var owner = AddPerson("Owner");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(owner);
+        CreateService().Join(owner, "owner-conn", roomId);
+        var interleaving = new InterleavingPersonRepository(_people);
+        ServiceResponse<JoinRoomResult>? joined = null;
+        // Runs between Exit's person step and its room step: the guest is admitted while the owner is still a member.
+        interleaving.AfterNextUpdate = () => joined = CreateService().Join(guest, "guest-conn", roomId);
+
+        var exit = CreateService(people: interleaving).Exit(owner, "owner-conn");
+
+        Assert.True(joined!.IsSuccess);
+        Assert.True(exit.IsSuccess);
+        Assert.False(exit.Data!.RoomDisposed);
+        Assert.Equal(guest, exit.Data.NewOwner!.Guid);
+        var stored = _rooms.Get(roomId)!;
+        Assert.Equal([guest], stored.MemberGuids);
+        Assert.Equal(guest, stored.OwnerGuid);
+    }
+
+    [Fact]
+    public void Join_AfterLastMemberExit_FailsAndRoomIsGone()
+    {
+        var owner = AddPerson("Owner");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(owner);
+        CreateService().Join(owner, "owner-conn", roomId);
+        CreateService().Exit(owner, "owner-conn");
+
+        var joined = CreateService().Join(guest, "guest-conn", roomId);
+
+        Assert.Equal(ErrorCodes.RoomNotFound, Assert.Single(joined.Errors).Code);
+        Assert.Null(_rooms.Get(roomId));
+        Assert.Empty(ConnectionsOf(guest));
+    }
+
+    [Fact]
+    public void Exit_RacingSecondTabJoin_PersonStaysAndRoomSurvives()
+    {
+        // Regression for the same-person race: tab 1 leaves while tab 2 joins. Membership is decided under the room lock,
+        // so tab 2's admission must win over tab 1's removal and the sole member must not be dropped.
+        var owner = AddPerson("Owner");
+        var roomId = NewRoom(owner);
+        CreateService().Join(owner, "tab-1", roomId);
+        var interleaving = new InterleavingPersonRepository(_people);
+        ServiceResponse<JoinRoomResult>? secondTab = null;
+        interleaving.AfterNextUpdate = () => secondTab = CreateService().Join(owner, "tab-2", roomId);
+
+        var firstTab = CreateService(people: interleaving).Exit(owner, "tab-1");
+
+        Assert.True(secondTab!.IsSuccess);
+        Assert.True(firstTab.IsSuccess);
+        Assert.False(firstTab.Data!.PersonLeft);
+        Assert.False(firstTab.Data.RoomDisposed);
+        var stored = _rooms.Get(roomId)!;
+        Assert.Equal([owner], stored.MemberGuids);
+        Assert.Equal(["tab-2"], stored.MemberConnections[owner]);
+        Assert.Equal(["tab-2"], ConnectionsOf(owner).Keys);
     }
 }

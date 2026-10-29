@@ -8,6 +8,9 @@ public class PersonEntity
 
     public string PersonType { get; set; } = default!;
 
-    /// <summary>Open hub connections as connectionId to roomId. The person is in a room while any entry points at it.</summary>
+    /// <summary>
+    /// Index from open hub connection to the room it joined: connectionId to roomId. It only tells an Exit which room to
+    /// ask; whether the person is still in that room is decided by the room's <see cref="RoomEntity.MemberConnections"/>.
+    /// </summary>
     public Dictionary<string, string> Connections { get; set; } = [];
 }

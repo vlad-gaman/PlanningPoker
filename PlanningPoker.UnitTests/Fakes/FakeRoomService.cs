@@ -11,12 +11,16 @@ public sealed class FakeRoomService : IRoomService
 
     public ServiceResponse<ExitRoomResult> ExitResult { get; set; } = ServiceResponse<ExitRoomResult>.Failure();
 
+    /// <summary>Runs at the start of Join, so a test can observe what the hub did before it.</summary>
+    public Action? BeforeJoin { get; set; }
+
     public List<(Guid PersonGuid, string ConnectionId, string RoomId)> JoinCalls { get; } = [];
 
     public List<(Guid PersonGuid, string ConnectionId)> ExitCalls { get; } = [];
 
     public ServiceResponse<JoinRoomResult> Join(Guid personGuid, string connectionId, string roomId)
     {
+        BeforeJoin?.Invoke();
         JoinCalls.Add((personGuid, connectionId, roomId));
         return JoinResult;
     }

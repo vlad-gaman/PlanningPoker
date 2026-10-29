@@ -3,7 +3,7 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Controller.Mappers;
 
-public class RoomConfigurationMapper : IRoomConfigurationMapper
+public class RoomConfigurationRequestMapper : IRoomConfigurationRequestMapper
 {
     public RoomConfiguration Map(RoomConfigurationRequest request)
     {

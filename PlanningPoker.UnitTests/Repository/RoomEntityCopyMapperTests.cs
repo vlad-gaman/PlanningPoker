@@ -16,6 +16,7 @@ public class RoomEntityCopyMapperTests
             VotingEnabled = true,
             IsDisposed = true,
             MemberGuids = [owner],
+            MemberConnections = new Dictionary<Guid, HashSet<string>> { [owner] = ["c1"] },
             Votes = new Dictionary<Guid, string> { [owner] = "5" },
             Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7 }
         };
@@ -27,9 +28,12 @@ public class RoomEntityCopyMapperTests
         Assert.True(copy.VotingEnabled);
         Assert.True(copy.IsDisposed);
         Assert.Equal(source.MemberGuids, copy.MemberGuids);
+        Assert.Equal(["c1"], copy.MemberConnections[owner]);
         Assert.Equal("5", copy.Votes[owner]);
         Assert.Equal(9, copy.Configuration.CountdownSeconds);
         Assert.NotSame(source.MemberGuids, copy.MemberGuids);
+        Assert.NotSame(source.MemberConnections, copy.MemberConnections);
+        Assert.NotSame(source.MemberConnections[owner], copy.MemberConnections[owner]);
         Assert.NotSame(source.Votes, copy.Votes);
         Assert.NotSame(source.Configuration, copy.Configuration);
     }

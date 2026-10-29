@@ -6,6 +6,8 @@ public sealed class FakeGroupManager : IGroupManager
 {
     public List<(string ConnectionId, string GroupName)> Added { get; } = [];
 
+    public List<(string ConnectionId, string GroupName)> Removed { get; } = [];
+
     public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
     {
         Added.Add((connectionId, groupName));
@@ -14,6 +16,7 @@ public sealed class FakeGroupManager : IGroupManager
 
     public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
     {
+        Removed.Add((connectionId, groupName));
         return Task.CompletedTask;
     }
 }

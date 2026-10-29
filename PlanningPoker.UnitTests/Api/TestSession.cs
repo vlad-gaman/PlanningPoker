@@ -41,7 +41,10 @@ public static class TestSession
             .Build();
     }
 
-    /// <summary>Creates a room owned by "Ann" with "Bob" as a second member. Both are connected and joined before this returns.</summary>
+    /// <summary>
+    /// Creates a room owned by "Ann" with "Bob" as a second member. Both are connected and joined before this returns:
+    /// it waits until the owner has received Bob's PersonJoined, so later steps never race the join.
+    /// </summary>
     public static async Task<TestRoom> CreateTestRoomAsync(this ApiFactory factory)
     {
         var ownerCookie = await factory.MintCookie("Ann");
@@ -52,15 +55,23 @@ public static class TestSession
         await owner.StartAsync();
         await guest.StartAsync();
         await JoinSuccessfully(owner, roomId);
+        var guestJoined = owner.NextEvent("PersonJoined", payload => PersonName(payload) == "Bob");
         await JoinSuccessfully(guest, roomId);
+        await guestJoined;
         return new TestRoom(roomId, owner, guest);
     }
 
-    /// <summary>Resolves with the first payload of <paramref name="eventName"/> received on the connection.</summary>
-    public static Task<JsonElement> NextEvent(this HubConnection connection, string eventName)
+    /// <summary>Resolves with the first payload of <paramref name="eventName"/> that satisfies <paramref name="predicate"/> (any payload when omitted).</summary>
+    public static Task<JsonElement> NextEvent(this HubConnection connection, string eventName, Func<JsonElement, bool>? predicate = null)
     {
         var received = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
-        connection.On<JsonElement>(eventName, payload => received.TrySetResult(payload));
+        connection.On<JsonElement>(eventName, payload =>
+        {
+            if (predicate is null || predicate(payload))
+            {
+                received.TrySetResult(payload);
+            }
+        });
         return received.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
@@ -77,6 +88,11 @@ public static class TestSession
 
             await Task.Delay(50);
         }
+    }
+
+    private static string? PersonName(JsonElement payload)
+    {
+        return payload.GetProperty("person").GetProperty("name").GetString();
     }
 
     private static async Task JoinSuccessfully(HubConnection connection, string roomId)

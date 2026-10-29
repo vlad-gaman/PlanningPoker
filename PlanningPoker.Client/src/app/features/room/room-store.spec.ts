@@ -155,6 +155,69 @@ describe('RoomStore', () => {
     expect(hub.on).toHaveBeenCalledTimes(8);
   });
 
+  /** Starts a join whose JoinRoom response is held until respond() is called. */
+  async function joinWithHeldResponse(snapshot: unknown) {
+    let respond!: () => void;
+    hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(snapshot))));
+    const joining = store.join('room-2');
+    await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
+    return { joining, respond };
+  }
+
+  it('keeps a person who joined while the join was still in flight', async () => {
+    const { joining, respond } = await joinWithHeldResponse(JOIN_RESPONSE);
+
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+    respond();
+    await joining;
+
+    expect(store.people()).toEqual([ANN, BOB]);
+  });
+
+  it('replays events received during the join in arrival order', async () => {
+    const { joining, respond } = await joinWithHeldResponse({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+
+    hub.emit(HUB_EVENTS.PersonExited, { person: BOB });
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: 'hide', personType: 'test' });
+    respond();
+    await joining;
+
+    expect(store.people()).toEqual([ANN, BOB]);
+    expect(store.votes()).toEqual({ [BOB.guid]: 'hide' });
+  });
+
+  it('does not duplicate a person who is in the snapshot and also joined during the join', async () => {
+    const { joining, respond } = await joinWithHeldResponse({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+    respond();
+    await joining;
+
+    expect(store.people()).toEqual([ANN, BOB]);
+  });
+
+  it('applies an ownership transfer received during the join', async () => {
+    const { joining, respond } = await joinWithHeldResponse({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+
+    hub.emit(HUB_EVENTS.OwnershipTransferred, { newOwner: BOB });
+    respond();
+    await joining;
+
+    expect(store.ownerGuid()).toBe(BOB.guid);
+  });
+
+  it('applies nothing after a disposal received during the join', async () => {
+    const { joining, respond } = await joinWithHeldResponse(JOIN_RESPONSE);
+
+    hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'room-2' });
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+    respond();
+    await joining;
+
+    expect(store.people()).toEqual([]);
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
   it('ignores a reconnect after the store was closed', async () => {
     await store.close();
     hub.invoke.mockClear();

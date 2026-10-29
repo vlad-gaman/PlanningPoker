@@ -19,6 +19,7 @@ public class RoomMappersTests
         Assert.Equal("room", entity.Id);
         Assert.Equal(owner, entity.OwnerGuid);
         Assert.Equal([owner], entity.MemberGuids);
+        Assert.Empty(entity.MemberConnections);
         Assert.Empty(entity.Votes);
         Assert.False(entity.VotingEnabled);
         Assert.False(entity.IsDisposed);
@@ -40,9 +41,9 @@ public class RoomMappersTests
         Assert.Equal(9, room.Configuration.CountdownSeconds);
     }
 
-    private static PersonEntity Member(string type = PersonTypes.Developer)
+    private static Person Member(string type = PersonTypes.Developer)
     {
-        return new PersonEntity { Guid = Guid.NewGuid(), Name = "n", PersonType = type };
+        return new Person { Guid = Guid.NewGuid(), Name = "n", PersonType = type };
     }
 
     [Fact]
@@ -104,10 +105,11 @@ public class RoomMappersTests
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
         var newOwner = new Person { Guid = Guid.NewGuid(), Name = "Bob", PersonType = PersonTypes.Tester };
 
-        var result = new ExitRoomResultMapper().Map("r", person, false, newOwner);
+        var result = new ExitRoomResultMapper().Map("r", person, personLeft: true, roomDisposed: false, newOwner);
 
         Assert.Equal("r", result.RoomId);
         Assert.Same(person, result.Person);
+        Assert.True(result.PersonLeft);
         Assert.False(result.RoomDisposed);
         Assert.Same(newOwner, result.NewOwner);
     }

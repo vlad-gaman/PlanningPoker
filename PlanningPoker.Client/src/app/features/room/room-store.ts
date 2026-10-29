@@ -43,6 +43,8 @@ export class RoomStore {
   private bound = false;
   /** Set by close(); any in-flight join or rejoin checks it after each await and stops quietly. */
   private closed = false;
+  /** While a JoinRoom call is in flight, hub events are queued here and replayed after its snapshot is applied. */
+  private buffered: (() => void)[] | null = null;
 
   readonly people = this.peopleState.asReadonly();
   readonly ownerGuid = this.ownerState.asReadonly();
@@ -82,17 +84,35 @@ export class RoomStore {
       return;
     }
     this.bound = true;
-    this.hub.on(HUB_EVENTS.PersonJoined, (event: PersonJoinedEvent) => this.personJoined(event));
-    this.hub.on(HUB_EVENTS.PersonExited, (event: PersonExitedEvent) => this.personExited(event));
+    this.hub.on(HUB_EVENTS.PersonJoined, (event: PersonJoinedEvent) => this.apply(() => this.personJoined(event)));
+    this.hub.on(HUB_EVENTS.PersonExited, (event: PersonExitedEvent) => this.apply(() => this.personExited(event)));
     this.hub.on(HUB_EVENTS.OwnershipTransferred, (event: OwnershipTransferredEvent) =>
-      this.ownerState.set(event.newOwner.guid),
+      this.apply(() => this.ownerState.set(event.newOwner.guid)),
     );
-    this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => void this.roomDisposed(event));
+    this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => this.apply(() => void this.roomDisposed(event)));
     this.hub.onReconnected(() => void this.rejoin());
   }
 
+  /** Runs a hub event now, or queues it when the join snapshot has not been applied yet. */
+  private apply(change: () => void): void {
+    if (this.buffered) {
+      this.buffered.push(change);
+      return;
+    }
+    change();
+  }
+
   private async joinRoom(): Promise<void> {
-    const response = await this.hub.invoke<JoinRoomResponse>('JoinRoom', this.roomId);
+    const queued: (() => void)[] = [];
+    this.buffered = queued;
+    let response: JoinRoomResponse;
+    try {
+      response = await this.hub.invoke<JoinRoomResponse>('JoinRoom', this.roomId);
+    } catch (error) {
+      this.buffered = null;
+      throw error;
+    }
+    this.buffered = null;
     if (this.closed) {
       return;
     }
@@ -100,6 +120,12 @@ export class RoomStore {
     this.ownerState.set(response.ownerGuid);
     this.votesState.set(response.voteStatus.votes);
     this.configurationState.set(response.configuration);
+    for (const change of queued) {
+      if (this.closed) {
+        return;
+      }
+      change();
+    }
   }
 
   /** Runs after the hub reconnected: the server has forgotten this connection, so join again. */

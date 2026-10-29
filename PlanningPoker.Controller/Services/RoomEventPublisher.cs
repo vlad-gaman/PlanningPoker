@@ -26,6 +26,12 @@ public class RoomEventPublisher(
 
     public async Task PublishPersonExitedAsync(ExitRoomResult result)
     {
+        // The person still has another connection to the room: from everyone else's view nothing changed.
+        if (!result.PersonLeft)
+        {
+            return;
+        }
+
         var group = hub.Clients.Group(result.RoomId);
         await group.SendAsync(HubEvents.PersonExited, personExitedEventMapper.Map(result));
         if (result.NewOwner is not null)

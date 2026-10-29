@@ -30,7 +30,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IApiResponseWriter, ApiResponseWriter>();
         services.AddSingleton<ISessionCookieService, SessionCookieService>();
         services.AddSingleton<ICardSetResponseMapper, CardSetResponseMapper>();
-        services.AddSingleton<IRoomConfigurationMapper, RoomConfigurationMapper>();
+        services.AddSingleton<IRoomConfigurationRequestMapper, RoomConfigurationRequestMapper>();
         services.AddSingleton<IRoomSettingsMapper, RoomSettingsMapper>();
         services.AddSingleton<IRoomCreatedResponseMapper, RoomCreatedResponseMapper>();
         services.AddSingleton<IRoomExistsResponseMapper, RoomExistsResponseMapper>();

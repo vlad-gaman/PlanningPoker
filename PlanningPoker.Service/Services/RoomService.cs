@@ -8,6 +8,11 @@ using PlanningPoker.Service.Validations;
 
 namespace PlanningPoker.Service.Services;
 
+/// <summary>
+/// Locking: every membership decision (who is in a room, whether it is disposed, who owns it) is made inside
+/// <see cref="IRoomRepository.Update{T}"/>. The person lock only edits the connection index and is never held while the
+/// room lock is taken, and the room lock never reads a person under its lock, so the two locks are never nested.
+/// </summary>
 public class RoomService(
     IRoomRepository rooms,
     IPersonRepository people,
@@ -56,18 +61,29 @@ public class RoomService(
             return ServiceResponse<JoinRoomResult>.Failure(exists);
         }
 
-        // The connection is registered before the membership is added, so an Exit of an older connection
-        // running at the same time sees this one and keeps the person in the room.
-        var registered = people.Update(personGuid, entity =>
+        // Index the connection first. A connection that is already indexed to another room is refused here.
+        var indexed = people.Update(personGuid, entity =>
         {
+            var person = personMapper.Map(entity);
+            if (entity.Connections.TryGetValue(connectionId, out var indexedRoomId) && indexedRoomId != roomId)
+            {
+                return (Conflict: true, Person: person);
+            }
+
             entity.Connections[connectionId] = roomId;
-            return personMapper.Map(entity);
-        }, out var joiner);
-        if (!registered)
+            return (Conflict: false, Person: person);
+        }, out var join);
+        if (!indexed)
         {
             return ServiceResponse<JoinRoomResult>.Failure(ServiceError.NoSession());
         }
 
+        if (join.Conflict)
+        {
+            return ServiceResponse<JoinRoomResult>.Failure(ServiceError.ValidationFailed("connectionId", "already_in_room"));
+        }
+
+        // The room lock decides admission. The connection joins the member's connection set in the same step.
         var admitted = rooms.Update(roomId, room =>
         {
             if (room.IsDisposed)
@@ -80,91 +96,128 @@ public class RoomService(
                 room.MemberGuids.Add(personGuid);
             }
 
+            var connections = room.MemberConnections.GetValueOrDefault(personGuid) ?? new HashSet<string>();
+            connections.Add(connectionId);
+            room.MemberConnections[personGuid] = connections;
             return true;
         }, out var added) && added;
 
-        var snapshot = admitted ? rooms.Get(roomId) : null;
+        if (!admitted)
+        {
+            people.Update(personGuid, entity =>
+            {
+                if (entity.Connections.TryGetValue(connectionId, out var indexedRoomId) && indexedRoomId == roomId)
+                {
+                    entity.Connections.Remove(connectionId);
+                }
+
+                return true;
+            }, out _);
+            return ServiceResponse<JoinRoomResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        var snapshot = rooms.Get(roomId);
         if (snapshot is null)
         {
-            people.Update(personGuid, entity => entity.Connections.Remove(connectionId), out _);
-            return ServiceResponse<JoinRoomResult>.Failure(ServiceError.Create(ErrorCodes.RoomNotFound, "The room does not exist.", ("room_id", roomId)));
+            return ServiceResponse<JoinRoomResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
         var members = Members(snapshot);
         return ServiceResponse<JoinRoomResult>.Success(joinRoomResultMapper.Map(
             roomMapper.Map(snapshot),
-            joiner!,
-            members.Select(personMapper.Map).ToList(),
+            join.Person,
+            members,
             voteStatusMapper.Map(snapshot, members)));
     }
 
     public ServiceResponse<ExitRoomResult> Exit(Guid personGuid, string connectionId)
     {
-        // Person lock first: drop this connection and note whether the person still has another one in the same room.
-        // The person lock is released before the room lock is taken, so the two locks are never nested.
-        var released = people.Update(personGuid, entity =>
+        // Step 1 (person lock): find the room this connection was indexed to and drop the index entry.
+        var indexed = people.Update(personGuid, entity =>
         {
             var person = personMapper.Map(entity);
-            if (!entity.Connections.TryGetValue(connectionId, out var roomId))
+            if (!entity.Connections.Remove(connectionId, out var roomId))
             {
-                return (Found: false, RoomId: string.Empty, Person: person, StillInRoom: false);
+                return (Found: false, RoomId: string.Empty, Person: person);
             }
 
-            entity.Connections.Remove(connectionId);
-            return (Found: true, RoomId: roomId, Person: person, StillInRoom: entity.Connections.Values.Contains(roomId));
-        }, out var release);
-        if (!released || !release.Found)
+            return (Found: true, RoomId: roomId, Person: person);
+        }, out var index);
+        if (!indexed)
         {
-            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.RoomNotFound, "The person is not in a room."));
+            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.NoSession());
         }
 
-        if (release.StillInRoom)
+        if (!index.Found)
         {
-            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(
-                ErrorCodes.PersonStillInRoom,
-                "The person still has another connection to this room.",
-                ("room_id", release.RoomId)));
+            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.NotInRoom, "The connection is not in a room."));
         }
 
-        // Room lock: the disposal and the ownership transfer are decided here, from the state this lock sees.
-        var left = rooms.Update(release.RoomId, room =>
+        // Step 2 (room lock): remove this connection from the member's set. The member leaves only when no connection
+        // of theirs remains in this room, and that is decided here, so a Join that ran before this point keeps them in.
+        var left = rooms.Update(index.RoomId, room =>
         {
+            var connections = room.MemberConnections.GetValueOrDefault(personGuid);
+            if (connections is null || !connections.Remove(connectionId))
+            {
+                return (Member: false, PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null);
+            }
+
+            if (connections.Count > 0)
+            {
+                return (Member: true, PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null);
+            }
+
+            room.MemberConnections.Remove(personGuid);
             room.MemberGuids.Remove(personGuid);
             room.Votes.Remove(personGuid);
             if (room.MemberGuids.Count == 0)
             {
                 room.IsDisposed = true;
-                return (Disposed: true, NewOwnerGuid: (Guid?)null);
+                return (Member: true, PersonLeft: true, Disposed: true, NewOwnerGuid: (Guid?)null);
             }
 
             if (room.OwnerGuid != personGuid)
             {
-                return (Disposed: false, NewOwnerGuid: (Guid?)null);
+                return (Member: true, PersonLeft: true, Disposed: false, NewOwnerGuid: (Guid?)null);
             }
 
             room.OwnerGuid = room.MemberGuids[Random.Shared.Next(room.MemberGuids.Count)];
-            return (Disposed: false, NewOwnerGuid: (Guid?)room.OwnerGuid);
+            return (Member: true, PersonLeft: true, Disposed: false, NewOwnerGuid: (Guid?)room.OwnerGuid);
         }, out var outcome);
         if (!left)
         {
-            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.RoomNotFound, "The room does not exist.", ("room_id", release.RoomId)));
+            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.RoomNotFound(index.RoomId));
+        }
+
+        if (!outcome.Member)
+        {
+            return ServiceResponse<ExitRoomResult>.Failure(ServiceError.Create(ErrorCodes.NotInRoom, "The connection is not in a room."));
         }
 
         if (outcome.Disposed)
         {
-            rooms.Remove(release.RoomId);
+            rooms.Remove(index.RoomId);
         }
 
-        var newOwner = outcome.NewOwnerGuid is { } newOwnerGuid ? people.Get(newOwnerGuid) : null;
+        // Read after the room lock is released: the new owner's details are looked up under their own person lock.
+        var newOwner = outcome.NewOwnerGuid is { } newOwnerGuid ? SnapshotPerson(newOwnerGuid) : null;
         return ServiceResponse<ExitRoomResult>.Success(exitRoomResultMapper.Map(
-            release.RoomId,
-            release.Person,
+            index.RoomId,
+            index.Person,
+            outcome.PersonLeft,
             outcome.Disposed,
-            newOwner is null ? null : personMapper.Map(newOwner)));
+            newOwner));
     }
 
-    private List<PersonEntity> Members(RoomEntity room)
+    private List<Person> Members(RoomEntity room)
     {
-        return room.MemberGuids.Select(people.Get).OfType<PersonEntity>().ToList();
+        return room.MemberGuids.Select(SnapshotPerson).OfType<Person>().ToList();
+    }
+
+    /// <summary>Maps a person under their lock, so the copy never reads a half-applied change.</summary>
+    private Person? SnapshotPerson(Guid personGuid)
+    {
+        return people.Update(personGuid, entity => personMapper.Map(entity), out var snapshot) ? snapshot : null;
     }
 }

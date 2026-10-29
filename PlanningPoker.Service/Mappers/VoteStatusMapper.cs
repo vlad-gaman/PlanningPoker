@@ -6,7 +6,7 @@ namespace PlanningPoker.Service.Mappers;
 
 public class VoteStatusMapper : IVoteStatusMapper
 {
-    public VoteStatus Map(RoomEntity room, IReadOnlyCollection<PersonEntity> members)
+    public VoteStatus Map(RoomEntity room, IReadOnlyCollection<Person> members)
     {
         var voters = members.Where(member => member.PersonType != PersonTypes.Observer).ToList();
         return new VoteStatus
