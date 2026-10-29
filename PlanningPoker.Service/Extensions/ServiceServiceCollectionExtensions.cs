@@ -12,6 +12,8 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IPersonMapper, PersonMapper>();
         services.AddSingleton<IPersonEntityMapper, PersonEntityMapper>();
         services.AddSingleton<IPersonService, PersonService>();
+        services.AddSingleton<IRoomConfigurationMapper, RoomConfigurationMapper>();
+        services.AddSingleton<IRoomConfigurationEntityMapper, RoomConfigurationEntityMapper>();
         services.AddSingleton<IRoomEntityMapper, RoomEntityMapper>();
         services.AddSingleton<IRoomMapper, RoomMapper>();
         services.AddSingleton<IVoteStatusMapper, VoteStatusMapper>();

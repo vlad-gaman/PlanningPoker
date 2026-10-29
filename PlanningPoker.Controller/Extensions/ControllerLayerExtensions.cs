@@ -30,6 +30,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IApiResponseWriter, ApiResponseWriter>();
         services.AddSingleton<ISessionCookieService, SessionCookieService>();
         services.AddSingleton<ICardSetResponseMapper, CardSetResponseMapper>();
+        services.AddSingleton<IRoomConfigurationMapper, RoomConfigurationMapper>();
         services.AddSingleton<IRoomSettingsMapper, RoomSettingsMapper>();
         services.AddSingleton<IRoomCreatedResponseMapper, RoomCreatedResponseMapper>();
         services.AddSingleton<IRoomExistsResponseMapper, RoomExistsResponseMapper>();
@@ -41,6 +42,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IOwnershipTransferredEventMapper, OwnershipTransferredEventMapper>();
         services.AddSingleton<IRoomDisposedEventMapper, RoomDisposedEventMapper>();
         services.AddSingleton<ICountdownResetEventMapper, CountdownResetEventMapper>();
+        services.AddSingleton<IRoomEventPublisher, RoomEventPublisher>();
         services.AddSingleton<UpdateMeRequestValidation>();
         services.AddSingleton<CreateRoomRequestValidation>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<ApiBehaviorOptions>, ApiBehaviorOptionsSetup>());

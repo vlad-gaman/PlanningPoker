@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
-using PlanningPoker.Controller.Extensions;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Controller.Validations;
@@ -31,10 +29,10 @@ public class RoomsController(
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status415UnsupportedMediaType)]
     public IActionResult Create([FromBody] CreateRoomRequest request)
     {
-        var person = HttpContext.GetSessionPerson();
-        if (person is null)
+        var session = RequireSessionPerson();
+        if (!session.IsSuccess)
         {
-            return ToResult(ServiceResponse<Room>.Failure(ServiceError.Create(ErrorCodes.NoSession, "There is no valid session.")), roomCreatedResponseMapper.Map);
+            return ToResult(ServiceResponse<Room>.Failure(session), roomCreatedResponseMapper.Map);
         }
 
         var validated = validation.Validate(request);
@@ -43,7 +41,7 @@ public class RoomsController(
             return ToResult(ServiceResponse<Room>.Failure(validated), roomCreatedResponseMapper.Map);
         }
 
-        return ToResult(rooms.Create(person.Guid, roomSettingsMapper.Map(request)), roomCreatedResponseMapper.Map, StatusCodes.Status201Created);
+        return ToResult(rooms.Create(session.Data!.Guid, roomSettingsMapper.Map(request)), roomCreatedResponseMapper.Map, StatusCodes.Status201Created);
     }
 
     /// <summary>Tells whether a room exists.</summary>

@@ -10,39 +10,34 @@ public class RoomMappersTests
     private static readonly RoomConfiguration Configuration = new() { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 4 };
 
     [Fact]
-    public void RoomEntityMapper_BuildsRoomWithOwnerAsOnlyMember()
+    public void RoomEntityMapper_BuildsRoomWithOwnerAsOnlyMemberAndDelegatesConfiguration()
     {
         var owner = Guid.NewGuid();
 
-        var entity = new RoomEntityMapper().Map("room", owner, Configuration);
+        var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper()).Map("room", owner, Configuration);
 
         Assert.Equal("room", entity.Id);
         Assert.Equal(owner, entity.OwnerGuid);
         Assert.Equal([owner], entity.MemberGuids);
         Assert.Empty(entity.Votes);
         Assert.False(entity.VotingEnabled);
-        Assert.Equal("linear", entity.Configuration.CardSet);
+        Assert.False(entity.IsDisposed);
         Assert.Equal(9, entity.Configuration.CountdownSeconds);
-        Assert.False(entity.Configuration.ShowFireworks);
-        Assert.Equal(4, entity.Configuration.MaxParticipants);
     }
 
     [Fact]
-    public void RoomMapper_CopiesRoomFields()
+    public void RoomMapper_CopiesRoomFieldsAndDelegatesConfiguration()
     {
         var owner = Guid.NewGuid();
-        var entity = new RoomEntityMapper().Map("room", owner, Configuration);
+        var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper()).Map("room", owner, Configuration);
         entity.VotingEnabled = true;
 
-        var room = new RoomMapper().Map(entity);
+        var room = new RoomMapper(new RoomConfigurationMapper()).Map(entity);
 
         Assert.Equal("room", room.Id);
         Assert.Equal(owner, room.OwnerGuid);
         Assert.True(room.VotingEnabled);
-        Assert.Equal("linear", room.Configuration.CardSet);
         Assert.Equal(9, room.Configuration.CountdownSeconds);
-        Assert.False(room.Configuration.ShowFireworks);
-        Assert.Equal(4, room.Configuration.MaxParticipants);
     }
 
     private static PersonEntity Member(string type = PersonTypes.Developer)

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlanningPoker.Common.Models;
+using PlanningPoker.Controller.Extensions;
 using PlanningPoker.Controller.Mappers;
+using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Controller.Controllers;
 
@@ -16,5 +18,14 @@ public abstract class ApiControllerBase(IApiResponseMapper apiResponseMapper) : 
             Errors = result.Errors
         });
         return StatusCode(apiResponseMapper.GetStatusCode(result, successStatusCode), body);
+    }
+
+    /// <summary>The session person for this request, or a <c>no_session</c> failure when there is none.</summary>
+    protected ServiceResponse<Person> RequireSessionPerson()
+    {
+        var person = HttpContext.GetSessionPerson();
+        return person is null
+            ? ServiceResponse<Person>.Failure(ServiceError.NoSession())
+            : ServiceResponse<Person>.Success(person);
     }
 }

@@ -21,4 +21,19 @@ public class PersonRepository : IPersonRepository
     {
         return _people.TryRemove(guid, out _);
     }
+
+    public bool Update<T>(Guid guid, Func<PersonEntity, T> mutate, out T? result)
+    {
+        if (!_people.TryGetValue(guid, out var person))
+        {
+            result = default;
+            return false;
+        }
+
+        lock (person)
+        {
+            result = mutate(person);
+            return true;
+        }
+    }
 }

@@ -8,7 +8,6 @@ public class PersonEntity
 
     public string PersonType { get; set; } = default!;
 
-    public string? ConnectionId { get; set; }
-
-    public bool IsConnected { get; set; }
+    /// <summary>Open hub connections as connectionId to roomId. The person is in a room while any entry points at it.</summary>
+    public Dictionary<string, string> Connections { get; set; } = [];
 }

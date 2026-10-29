@@ -41,11 +41,47 @@ public static class TestSession
             .Build();
     }
 
+    /// <summary>Creates a room owned by "Ann" with "Bob" as a second member. Both are connected and joined before this returns.</summary>
+    public static async Task<TestRoom> CreateTestRoomAsync(this ApiFactory factory)
+    {
+        var ownerCookie = await factory.MintCookie("Ann");
+        var guestCookie = await factory.MintCookie("Bob", "test");
+        var roomId = await factory.CreateRoom(ownerCookie);
+        var owner = factory.Connect(ownerCookie);
+        var guest = factory.Connect(guestCookie);
+        await owner.StartAsync();
+        await guest.StartAsync();
+        await JoinSuccessfully(owner, roomId);
+        await JoinSuccessfully(guest, roomId);
+        return new TestRoom(roomId, owner, guest);
+    }
+
     /// <summary>Resolves with the first payload of <paramref name="eventName"/> received on the connection.</summary>
     public static Task<JsonElement> NextEvent(this HubConnection connection, string eventName)
     {
         var received = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         connection.On<JsonElement>(eventName, payload => received.TrySetResult(payload));
         return received.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>Polls <paramref name="condition"/> every 50 ms until it holds, failing with a timeout after <paramref name="timeout"/>.</summary>
+    public static async Task WaitUntilAsync(Func<Task<bool>> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (!await condition())
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException("The condition was not met before the timeout.");
+            }
+
+            await Task.Delay(50);
+        }
+    }
+
+    private static async Task JoinSuccessfully(HubConnection connection, string roomId)
+    {
+        var response = await connection.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        Assert.Equal(JsonValueKind.Null, response.GetProperty("errors").ValueKind);
     }
 }

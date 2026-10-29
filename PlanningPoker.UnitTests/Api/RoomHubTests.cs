@@ -35,24 +35,20 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task JoinRoom_SecondPerson_ReceivesBothAndOthersGetPersonJoined()
+    public async Task JoinRoom_LaterPerson_GetsEveryoneAndOthersGetPersonJoined()
     {
-        var ownerCookie = await factory.MintCookie("Ann");
-        var guestCookie = await factory.MintCookie("Bob", "test");
-        var roomId = await factory.CreateRoom(ownerCookie);
-        await using var owner = factory.Connect(ownerCookie);
-        await using var guest = factory.Connect(guestCookie);
-        var joined = owner.NextEvent("PersonJoined");
-        await owner.StartAsync();
-        await guest.StartAsync();
-        await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        await using var room = await factory.CreateTestRoomAsync();
+        var laterCookie = await factory.MintCookie("Cara", "obs");
+        await using var later = factory.Connect(laterCookie);
+        var joined = room.Owner.NextEvent("PersonJoined");
+        await later.StartAsync();
 
-        var response = await guest.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        var response = await later.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
 
-        Assert.Equal(["Ann", "Bob"], Data(response).GetProperty("people").EnumerateArray().Select(p => p.GetProperty("name").GetString()));
+        Assert.Equal(["Ann", "Bob", "Cara"], Data(response).GetProperty("people").EnumerateArray().Select(p => p.GetProperty("name").GetString()));
         var payload = await joined;
-        Assert.Equal("Bob", payload.GetProperty("person").GetProperty("name").GetString());
-        Assert.Equal("test", payload.GetProperty("personType").GetString());
+        Assert.Equal("Cara", payload.GetProperty("person").GetProperty("name").GetString());
+        Assert.Equal("obs", payload.GetProperty("personType").GetString());
     }
 
     [Fact]
@@ -83,18 +79,10 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
     [Fact]
     public async Task Disconnect_Member_BroadcastsPersonExited()
     {
-        var ownerCookie = await factory.MintCookie("Ann");
-        var guestCookie = await factory.MintCookie("Bob");
-        var roomId = await factory.CreateRoom(ownerCookie);
-        await using var owner = factory.Connect(ownerCookie);
-        await using var guest = factory.Connect(guestCookie);
-        var exited = owner.NextEvent("PersonExited");
-        await owner.StartAsync();
-        await guest.StartAsync();
-        await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
-        await guest.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        await using var room = await factory.CreateTestRoomAsync();
+        var exited = room.Owner.NextEvent("PersonExited");
 
-        await guest.StopAsync();
+        await room.Guest.StopAsync();
 
         Assert.Equal("Bob", (await exited).GetProperty("person").GetProperty("name").GetString());
     }
@@ -102,18 +90,10 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
     [Fact]
     public async Task Disconnect_Owner_TransfersOwnershipToRemainingMember()
     {
-        var ownerCookie = await factory.MintCookie("Ann");
-        var guestCookie = await factory.MintCookie("Bob");
-        var roomId = await factory.CreateRoom(ownerCookie);
-        await using var owner = factory.Connect(ownerCookie);
-        await using var guest = factory.Connect(guestCookie);
-        var transferred = guest.NextEvent("OwnershipTransferred");
-        await owner.StartAsync();
-        await guest.StartAsync();
-        await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
-        await guest.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        await using var room = await factory.CreateTestRoomAsync();
+        var transferred = room.Guest.NextEvent("OwnershipTransferred");
 
-        await owner.StopAsync();
+        await room.Owner.StopAsync();
 
         Assert.Equal("Bob", (await transferred).GetProperty("newOwner").GetProperty("name").GetString());
     }
@@ -130,14 +110,8 @@ public class RoomHubTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await connection.StopAsync();
 
         var client = factory.CreateClient();
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        var status = (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode;
-        while (status != System.Net.HttpStatusCode.NotFound && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(50);
-            status = (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode;
-        }
-
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, status);
+        await TestSession.WaitUntilAsync(async () =>
+            (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode == System.Net.HttpStatusCode.NotFound,
+            TimeSpan.FromSeconds(5));
     }
 }

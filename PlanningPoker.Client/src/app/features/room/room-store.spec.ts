@@ -2,8 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
-import { ANN, BOB, JOIN_RESPONSE, fakeHub } from './fake-hub.testing';
-import { ROOM_DISPOSED_MESSAGE, RoomStore } from './room-store';
+import { ApiRequestError } from '../../core/api-request-error';
+import { HUB_EVENTS } from '../../models/hub-events';
+import { ANN, BOB, JOIN_RESPONSE, fakeHub } from '../../testing/fake-hub.testing';
+import { ROOM_DISPOSED_MESSAGE, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 describe('RoomStore', () => {
   let hub: ReturnType<typeof fakeHub>;
@@ -29,31 +31,31 @@ describe('RoomStore', () => {
   });
 
   it('adds a person who joined, together with a masked vote', () => {
-    hub.emit('PersonJoined', { person: BOB, vote: 'hide', personType: 'test' });
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: 'hide', personType: 'test' });
 
     expect(store.people()).toEqual([ANN, BOB]);
     expect(store.votes()).toEqual({ [BOB.guid]: 'hide' });
   });
 
   it('does not duplicate a person who joins twice', () => {
-    hub.emit('PersonJoined', { person: BOB, vote: null, personType: 'test' });
-    hub.emit('PersonJoined', { person: BOB, vote: null, personType: 'test' });
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
 
     expect(store.people()).toEqual([ANN, BOB]);
     expect(store.votes()).toEqual({});
   });
 
   it('removes a person who exited together with their vote', () => {
-    hub.emit('PersonJoined', { person: BOB, vote: 'hide', personType: 'test' });
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: 'hide', personType: 'test' });
 
-    hub.emit('PersonExited', { person: BOB });
+    hub.emit(HUB_EVENTS.PersonExited, { person: BOB });
 
     expect(store.people()).toEqual([ANN]);
     expect(store.votes()).toEqual({});
   });
 
   it('follows ownership transfers', () => {
-    hub.emit('OwnershipTransferred', { newOwner: BOB });
+    hub.emit(HUB_EVENTS.OwnershipTransferred, { newOwner: BOB });
 
     expect(store.ownerGuid()).toBe(BOB.guid);
   });
@@ -67,8 +69,37 @@ describe('RoomStore', () => {
     expect(hub.invoke).toHaveBeenCalledTimes(2);
   });
 
+  it('leaves with a message when rejoining after a reconnect says the room is gone', async () => {
+    hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: 'room_not_found', message: 'Gone.' }]));
+
+    hub.reconnect();
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
+    expect(hub.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('leaves with the server message when rejoining after a reconnect fails otherwise', async () => {
+    hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: 'internal_error', message: 'Server down.' }]));
+
+    hub.reconnect();
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe('Server down.');
+    expect(hub.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('shows a generic message when rejoining after a reconnect fails unexpectedly', async () => {
+    hub.invoke.mockRejectedValue(new Error('socket reset'));
+
+    hub.reconnect();
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe('Something went wrong.');
+  });
+
   it('goes home with a message when the room is disposed', async () => {
-    hub.emit('RoomDisposed', { roomId: 'room-1' });
+    hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'room-1' });
 
     await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
     expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_DISPOSED_MESSAGE);
@@ -77,7 +108,7 @@ describe('RoomStore', () => {
   });
 
   it('ignores a disposal of another room', () => {
-    hub.emit('RoomDisposed', { roomId: 'other' });
+    hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'other' });
 
     expect(navigate).not.toHaveBeenCalled();
     expect(store.people()).toEqual([ANN]);
@@ -96,5 +127,68 @@ describe('RoomStore', () => {
     await store.join('room-1');
 
     expect(hub.on).toHaveBeenCalledTimes(4);
+  });
+
+  it('aborts a join quietly when the store is closed while connecting', async () => {
+    let finishConnect!: () => void;
+    hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
+    hub.invoke.mockClear();
+    hub.on.mockClear();
+
+    const joining = store.join('room-2');
+    await store.close();
+    finishConnect();
+    await joining;
+
+    expect(hub.invoke).not.toHaveBeenCalled();
+    expect(hub.on).not.toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
+    expect(store.people()).toEqual([]);
+  });
+
+  it('joins normally again after a closed join was restarted', async () => {
+    await store.close();
+
+    await store.join('room-1');
+
+    expect(store.people()).toEqual([ANN]);
+    expect(hub.on).toHaveBeenCalledTimes(8);
+  });
+
+  it('ignores a reconnect after the store was closed', async () => {
+    await store.close();
+    hub.invoke.mockClear();
+
+    hub.reconnect();
+
+    expect(hub.invoke).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('isRoomGone', () => {
+  it('is true for room_not_found', () => {
+    expect(isRoomGone(new ApiRequestError(404, [{ code: 'room_not_found', message: 'Gone.' }]))).toBe(true);
+  });
+
+  it('is true for a malformed room id', () => {
+    const error = new ApiRequestError(400, [
+      { code: 'validation_failed', message: 'Bad id.', metadata: { field: 'roomId', reason: 'invalid_characters' } },
+    ]);
+
+    expect(isRoomGone(error)).toBe(true);
+  });
+
+  it('is false for other validation failures', () => {
+    const error = new ApiRequestError(400, [
+      { code: 'validation_failed', message: 'Bad name.', metadata: { field: 'name' } },
+    ]);
+
+    expect(isRoomGone(error)).toBe(false);
+  });
+
+  it('is false for other errors and plain errors', () => {
+    expect(isRoomGone(new ApiRequestError(500, [{ code: 'internal_error', message: 'Boom.' }]))).toBe(false);
+    expect(isRoomGone(new Error('Hub is not connected'))).toBe(false);
   });
 });

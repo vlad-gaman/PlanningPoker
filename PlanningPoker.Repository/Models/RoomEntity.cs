@@ -12,5 +12,8 @@ public class RoomEntity
 
     public bool VotingEnabled { get; set; }
 
+    /// <summary>Set when the last member leaves. A disposed room accepts no new members.</summary>
+    public bool IsDisposed { get; set; }
+
     public RoomConfigurationEntity Configuration { get; set; } = new();
 }

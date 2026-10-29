@@ -1,4 +1,5 @@
 using PlanningPoker.Common.Constants;
+using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
 using PlanningPoker.Service.Validations;
@@ -7,6 +8,8 @@ namespace PlanningPoker.UnitTests.Service;
 
 public class RoomValidationTests
 {
+    private static RoomRepository NewRooms() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()));
+
     [Theory]
     [InlineData("room")]
     [InlineData("42_big_red-cat")]
@@ -41,7 +44,7 @@ public class RoomValidationTests
     [Fact]
     public void RoomExists_KnownRoom_Succeeds()
     {
-        var rooms = new RoomRepository(new PlanningPoker.Repository.Mappers.RoomEntityMapper());
+        var rooms = NewRooms();
         rooms.TryAdd(new RoomEntity { Id = "r1" });
 
         Assert.True(new RoomExistsValidation(rooms).Validate("r1").IsSuccess);
@@ -50,9 +53,7 @@ public class RoomValidationTests
     [Fact]
     public void RoomExists_UnknownRoom_ReturnsRoomNotFoundWithRoomId()
     {
-        var rooms = new RoomRepository(new PlanningPoker.Repository.Mappers.RoomEntityMapper());
-
-        var error = Assert.Single(new RoomExistsValidation(rooms).Validate("r2").Errors);
+        var error = Assert.Single(new RoomExistsValidation(NewRooms()).Validate("r2").Errors);
 
         Assert.Equal(ErrorCodes.RoomNotFound, error.Code);
         Assert.Equal("r2", error.Metadata["room_id"]);

@@ -3,7 +3,7 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Mappers;
 
-public class RoomMapper : IRoomMapper
+public class RoomMapper(IRoomConfigurationMapper configurationMapper) : IRoomMapper
 {
     public Room Map(RoomEntity entity)
     {
@@ -12,13 +12,7 @@ public class RoomMapper : IRoomMapper
             Id = entity.Id,
             OwnerGuid = entity.OwnerGuid,
             VotingEnabled = entity.VotingEnabled,
-            Configuration = new RoomConfiguration
-            {
-                CardSet = entity.Configuration.CardSet,
-                CountdownSeconds = entity.Configuration.CountdownSeconds,
-                ShowFireworks = entity.Configuration.ShowFireworks,
-                MaxParticipants = entity.Configuration.MaxParticipants
-            }
+            Configuration = configurationMapper.Map(entity.Configuration)
         };
     }
 }

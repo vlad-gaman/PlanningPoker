@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, input, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -7,15 +7,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { ApiRequestError } from '../../core/api-request-error';
+import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
-import { NAME_MAX_LENGTH, NAME_MIN_LENGTH, PERSON_TYPES } from '../../models/person';
-import { RoomStore } from './room-store';
-
-export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
-const NO_SESSION_CODE = 'no_session';
-const ROOM_GONE_CODES = ['room_not_found', 'validation_failed'];
+import { ERROR_CODES } from '../../models/api';
+import { PERSON_TYPES } from '../../models/person';
+import { createPersonForm } from '../shared/person-form';
+import { ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 type Phase = 'loading' | 'name' | 'joined';
 
@@ -47,10 +45,7 @@ export class Room implements OnInit, OnDestroy {
   protected readonly phase = signal<Phase>('loading');
   protected readonly error = signal<string | null>(null);
 
-  protected readonly form = inject(FormBuilder).nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(NAME_MIN_LENGTH), Validators.maxLength(NAME_MAX_LENGTH)]],
-    personType: this.personTypes[0].value,
-  });
+  protected readonly form = createPersonForm(inject(FormBuilder));
 
   async ngOnInit(): Promise<void> {
     try {
@@ -60,8 +55,8 @@ export class Room implements OnInit, OnDestroy {
         return;
       }
     } catch (error) {
-      if (!(error instanceof ApiRequestError && error.hasCode(NO_SESSION_CODE))) {
-        this.error.set(this.messageOf(error));
+      if (!(error instanceof ApiRequestError && error.hasCode(ERROR_CODES.noSession))) {
+        this.error.set(errorMessage(error));
       }
     }
     this.phase.set('name');
@@ -80,7 +75,7 @@ export class Room implements OnInit, OnDestroy {
     try {
       await firstValueFrom(this.meService.update(this.form.getRawValue()));
     } catch (error) {
-      this.error.set(this.messageOf(error));
+      this.error.set(errorMessage(error));
       return;
     }
     await this.join();
@@ -99,18 +94,14 @@ export class Room implements OnInit, OnDestroy {
       await this.store.join(this.id());
       this.phase.set('joined');
     } catch (error) {
-      if (error instanceof ApiRequestError && ROOM_GONE_CODES.some((code) => error.hasCode(code))) {
+      await this.store.close();
+      if (isRoomGone(error)) {
         this.flash.show(ROOM_NOT_FOUND_MESSAGE);
-        await this.store.close();
         await this.router.navigateByUrl('/');
         return;
       }
-      this.error.set(this.messageOf(error));
+      this.error.set(errorMessage(error));
       this.phase.set('name');
     }
-  }
-
-  private messageOf(error: unknown): string {
-    return error instanceof ApiRequestError ? error.message : 'Something went wrong.';
   }
 }

@@ -2,7 +2,7 @@ using PlanningPoker.Repository.Models;
 
 namespace PlanningPoker.Repository.Mappers;
 
-public interface IRoomEntityMapper
+public interface IRoomEntityCopyMapper
 {
     RoomEntity Map(RoomEntity source);
 }

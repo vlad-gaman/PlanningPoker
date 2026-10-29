@@ -1,7 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
+import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
+import { HUB_EVENTS } from '../../models/hub-events';
 import { Person } from '../../models/person';
 import {
   JoinRoomResponse,
@@ -12,7 +15,17 @@ import {
   RoomDisposedEvent,
 } from '../../models/room';
 
+export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
 export const ROOM_DISPOSED_MESSAGE = 'The room was closed because everyone left.';
+
+/** True when the server says the room cannot be joined because it does not exist (any more). */
+export function isRoomGone(error: unknown): boolean {
+  return (
+    error instanceof ApiRequestError &&
+    (error.hasCode(ERROR_CODES.roomNotFound) ||
+      error.hasError(ERROR_CODES.validationFailed, { field: ROOM_ID_FIELD }))
+  );
+}
 
 /** Live state of the room the user is in, fed by the join response and the hub events. */
 @Injectable()
@@ -28,6 +41,8 @@ export class RoomStore {
 
   private roomId = '';
   private bound = false;
+  /** Set by close(); any in-flight join or rejoin checks it after each await and stops quietly. */
+  private closed = false;
 
   readonly people = this.peopleState.asReadonly();
   readonly ownerGuid = this.ownerState.asReadonly();
@@ -37,7 +52,11 @@ export class RoomStore {
 
   async join(roomId: string): Promise<void> {
     this.roomId = roomId;
+    this.closed = false;
     await this.hub.connect();
+    if (this.closed) {
+      return;
+    }
     this.bind();
     await this.joinRoom();
   }
@@ -49,6 +68,7 @@ export class RoomStore {
 
   /** Drops the hub connection and clears the room state; leaving the page triggers this too. */
   async close(): Promise<void> {
+    this.closed = true;
     this.bound = false;
     await this.hub.disconnect();
     this.peopleState.set([]);
@@ -62,21 +82,45 @@ export class RoomStore {
       return;
     }
     this.bound = true;
-    this.hub.on('PersonJoined', (event: PersonJoinedEvent) => this.personJoined(event));
-    this.hub.on('PersonExited', (event: PersonExitedEvent) => this.personExited(event));
-    this.hub.on('OwnershipTransferred', (event: OwnershipTransferredEvent) =>
+    this.hub.on(HUB_EVENTS.PersonJoined, (event: PersonJoinedEvent) => this.personJoined(event));
+    this.hub.on(HUB_EVENTS.PersonExited, (event: PersonExitedEvent) => this.personExited(event));
+    this.hub.on(HUB_EVENTS.OwnershipTransferred, (event: OwnershipTransferredEvent) =>
       this.ownerState.set(event.newOwner.guid),
     );
-    this.hub.on('RoomDisposed', (event: RoomDisposedEvent) => void this.roomDisposed(event));
-    this.hub.onReconnected(() => void this.joinRoom());
+    this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => void this.roomDisposed(event));
+    this.hub.onReconnected(() => void this.rejoin());
   }
 
   private async joinRoom(): Promise<void> {
     const response = await this.hub.invoke<JoinRoomResponse>('JoinRoom', this.roomId);
+    if (this.closed) {
+      return;
+    }
     this.peopleState.set(response.people);
     this.ownerState.set(response.ownerGuid);
     this.votesState.set(response.voteStatus.votes);
     this.configurationState.set(response.configuration);
+  }
+
+  /** Runs after the hub reconnected: the server has forgotten this connection, so join again. */
+  private async rejoin(): Promise<void> {
+    if (this.closed) {
+      return;
+    }
+    try {
+      await this.joinRoom();
+    } catch (error) {
+      await this.abandon(error);
+    }
+  }
+
+  /** Explains why the room cannot be used any more and leaves it. */
+  private async abandon(error: unknown): Promise<void> {
+    if (this.closed) {
+      return;
+    }
+    this.flash.show(isRoomGone(error) ? ROOM_NOT_FOUND_MESSAGE : errorMessage(error));
+    await this.leave();
   }
 
   private personJoined(event: PersonJoinedEvent): void {

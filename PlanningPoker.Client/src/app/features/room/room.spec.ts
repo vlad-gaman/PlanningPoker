@@ -5,8 +5,10 @@ import { ApiRequestError } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomHubClient } from '../../core/room-hub.client';
-import { ANN, JOIN_RESPONSE, fakeHub } from './fake-hub.testing';
-import { ROOM_NOT_FOUND_MESSAGE, Room } from './room';
+import { ERROR_CODES } from '../../models/api';
+import { ANN, JOIN_RESPONSE, fakeHub } from '../../testing/fake-hub.testing';
+import { ROOM_NOT_FOUND_MESSAGE } from './room-store';
+import { Room } from './room';
 
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
   await fixture.whenStable();
@@ -42,7 +44,7 @@ describe('Room', () => {
   }
 
   function noSession() {
-    return throwError(() => new ApiRequestError(401, [{ code: 'no_session', message: 'No session.' }]));
+    return throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'No session.' }]));
   }
 
   it('joins straight away when the visitor already has a name', async () => {
@@ -88,12 +90,61 @@ describe('Room', () => {
 
   it('goes home with a message when the room does not exist', async () => {
     me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: 'room_not_found', message: 'Gone.' }]));
+    hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }]));
 
     await render();
 
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
+  });
+
+  it('goes home with a message when the room id is malformed', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockRejectedValue(
+      new ApiRequestError(400, [
+        { code: ERROR_CODES.validationFailed, message: 'Bad id.', metadata: { field: 'roomId' } },
+      ]),
+    );
+
+    await render();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
+  });
+
+  it('shows other errors inline on the name step and closes the hub', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockRejectedValue(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]));
+
+    const { fixture, element } = await render();
+
+    expect(element.querySelector('.error')?.textContent).toContain('Server down.');
+    expect(element.querySelector('form')).not.toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(hub.disconnect).toHaveBeenCalled();
+    fixture.destroy();
+  });
+
+  it('shows other validation failures inline instead of going home', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockRejectedValue(
+      new ApiRequestError(400, [{ code: ERROR_CODES.validationFailed, message: 'Bad name.', metadata: { field: 'name' } }]),
+    );
+
+    const { element } = await render();
+
+    expect(element.querySelector('.error')?.textContent).toContain('Bad name.');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('closes the hub when joining fails with an unexpected error', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockRejectedValue(new Error('socket reset'));
+
+    const { element } = await render();
+
+    expect(element.querySelector('.error')?.textContent).toContain('Something went wrong.');
+    expect(hub.disconnect).toHaveBeenCalled();
   });
 
   it('leave returns to the home page', async () => {

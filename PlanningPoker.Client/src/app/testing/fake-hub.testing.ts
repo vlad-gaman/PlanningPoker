@@ -1,3 +1,5 @@
+import { HubEvent } from '../models/hub-events';
+
 /** Test double for RoomHubClient that lets a spec push server events and reconnects. */
 export function fakeHub(joinResponse: unknown = undefined) {
   const handlers = new Map<string, (event: unknown) => void>();
@@ -8,7 +10,7 @@ export function fakeHub(joinResponse: unknown = undefined) {
     on: vi.fn((method: string, handler: (event: unknown) => void) => handlers.set(method, handler)),
     onReconnected: vi.fn((handler: () => void) => (reconnected = handler)),
     invoke: vi.fn().mockResolvedValue(joinResponse),
-    emit: (method: string, event: unknown) => handlers.get(method)?.(event),
+    emit: (method: HubEvent, event: unknown) => handlers.get(method)?.(event),
     reconnect: () => reconnected?.(),
   };
 }

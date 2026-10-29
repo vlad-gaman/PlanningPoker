@@ -6,6 +6,7 @@ import { ApiRequestError } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomsService } from '../../core/rooms.service';
+import { ERROR_CODES } from '../../models/api';
 import { CreateRoomRequest } from '../../models/room';
 import { Home, extractRoomId } from './home';
 
@@ -34,7 +35,7 @@ describe('Home', () => {
 
   beforeEach(() => {
     [me.get, me.update, rooms.create, dialog.open].forEach((mock) => mock.mockReset());
-    me.get.mockReturnValue(throwError(() => new ApiRequestError(401, [{ code: 'no_session', message: 'x' }])));
+    me.get.mockReturnValue(throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'x' }])));
     me.update.mockReturnValue(of({ guid: 'g', name: 'Ann', personType: 'dev' }));
     dialog.open.mockReturnValue({ afterClosed: () => of(REQUEST) });
     TestBed.configureTestingModule({

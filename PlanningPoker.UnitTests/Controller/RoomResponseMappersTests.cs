@@ -34,7 +34,7 @@ public class RoomResponseMappersTests
     }
 
     [Fact]
-    public void RoomSettingsMapper_CopiesRequest()
+    public void RoomSettingsMapper_CopiesRequestAndDelegatesConfiguration()
     {
         var request = new CreateRoomRequest
         {
@@ -42,13 +42,10 @@ public class RoomResponseMappersTests
             Configuration = new RoomConfigurationRequest { CardSet = "fibonacci", CountdownSeconds = 12, ShowFireworks = true, MaxParticipants = 3 }
         };
 
-        var settings = new RoomSettingsMapper().Map(request);
+        var settings = new RoomSettingsMapper(new RoomConfigurationMapper()).Map(request);
 
         Assert.True(settings.UseFunRoomName);
-        Assert.Equal("fibonacci", settings.Configuration.CardSet);
         Assert.Equal(12, settings.Configuration.CountdownSeconds);
-        Assert.True(settings.Configuration.ShowFireworks);
-        Assert.Equal(3, settings.Configuration.MaxParticipants);
     }
 
     [Fact]

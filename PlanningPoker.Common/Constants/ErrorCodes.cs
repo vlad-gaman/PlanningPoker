@@ -10,4 +10,6 @@ public static class ErrorCodes
     public const string RoomNotFound = "room_not_found";
     public const string RoomIdGenerationFailed = "room_id_generation_failed";
     public const string NotRoomOwner = "not_room_owner";
+    public const string PersonStillInRoom = "person_still_in_room";
+    public const string ConnectionClosed = "connection_closed";
 }

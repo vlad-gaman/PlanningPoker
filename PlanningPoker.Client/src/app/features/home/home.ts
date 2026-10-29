@@ -7,11 +7,12 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { ApiRequestError } from '../../core/api-request-error';
+import { errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomsService } from '../../core/rooms.service';
-import { NAME_MAX_LENGTH, NAME_MIN_LENGTH, PERSON_TYPES } from '../../models/person';
+import { PERSON_TYPES } from '../../models/person';
+import { createPersonForm } from '../shared/person-form';
 import { RoomSettingsDialog } from './room-settings-dialog';
 
 /** Accepts a bare room id or a pasted room link and returns the room id. */
@@ -38,10 +39,7 @@ export class Home implements OnInit, OnDestroy {
   protected readonly personTypes = PERSON_TYPES;
   protected readonly error = signal<string | null>(null);
 
-  protected readonly form = this.builder.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(NAME_MIN_LENGTH), Validators.maxLength(NAME_MAX_LENGTH)]],
-    personType: this.personTypes[0].value,
-  });
+  protected readonly form = createPersonForm(this.builder);
   protected readonly joinForm = this.builder.nonNullable.group({
     room: ['', Validators.required],
   });
@@ -97,7 +95,7 @@ export class Home implements OnInit, OnDestroy {
     try {
       await action();
     } catch (error) {
-      this.error.set(error instanceof ApiRequestError ? error.message : 'Something went wrong.');
+      this.error.set(errorMessage(error));
     }
   }
 }
