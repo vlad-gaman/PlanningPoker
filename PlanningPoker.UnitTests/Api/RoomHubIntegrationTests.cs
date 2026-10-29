@@ -119,4 +119,87 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
             (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode == System.Net.HttpStatusCode.NotFound,
             TimeSpan.FromSeconds(5));
     }
+
+    private static bool HasErrors(JsonElement response)
+    {
+        return response.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array;
+    }
+
+    [Fact]
+    public async Task Vote_BroadcastsVoteCastAndMaskedStatusToTheWholeRoom()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var cast = room.Guest.NextEvent("VoteCast");
+        var status = room.Owner.NextEvent("VoteStatusUpdate");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("Vote", "5");
+
+        Assert.False(HasErrors(response));
+        Assert.NotEqual(Guid.Empty, (await cast).GetProperty("personGuid").GetGuid());
+        Assert.All((await status).GetProperty("votes").EnumerateObject(), vote => Assert.Equal("hide", vote.Value.GetString()));
+    }
+
+    [Fact]
+    public async Task Vote_InvalidMark_ReturnsValidationFailed()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("Vote", "not-a-card");
+
+        Assert.Equal("validation_failed", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task Vote_Observer_ReturnsObserverCannotVote()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var observerCookie = await factory.MintCookie("Cara", "obs");
+        await using var observer = factory.Connect(observerCookie);
+        await observer.StartAsync();
+        await observer.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+
+        var response = await observer.InvokeAsync<JsonElement>("Vote", "5");
+
+        Assert.Equal("observer_cannot_vote", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task ForceShowVotes_RevealsRealMarksToEveryone()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "8");
+        var shown = room.Guest.NextEvent("VotesShown");
+
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+
+        var payload = await shown;
+        Assert.True(payload.GetProperty("votingFinished").GetBoolean());
+        Assert.Contains(payload.GetProperty("votes").EnumerateObject(), vote => vote.Value.GetString() == "8");
+    }
+
+    [Fact]
+    public async Task Vote_AfterReveal_ReturnsVotingClosed()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+
+        var response = await room.Guest.InvokeAsync<JsonElement>("Vote", "3");
+
+        Assert.Equal("voting_closed", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task ClearVotes_BroadcastsVotesClearedAndReopensVoting()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+        var cleared = new TaskCompletionSource();
+        room.Guest.On("VotesCleared", () => cleared.TrySetResult());
+
+        await room.Owner.InvokeAsync<JsonElement>("ClearVotes");
+        await cleared.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var response = await room.Guest.InvokeAsync<JsonElement>("Vote", "3");
+
+        Assert.False(HasErrors(response));
+    }
 }
