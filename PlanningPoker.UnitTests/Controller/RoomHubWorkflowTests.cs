@@ -37,7 +37,7 @@ public class RoomHubWorkflowTests
             _publisher,
             _timer,
             new RoomIdentifierValidation(),
-            new JoinRoomResponseMapper(new PersonResponseMapper(), new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper(), new CardResponseMapper()),
+            new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
             NullLogger<RoomHub>.Instance)
         {

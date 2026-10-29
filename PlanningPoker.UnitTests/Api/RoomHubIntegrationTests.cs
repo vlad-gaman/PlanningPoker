@@ -202,4 +202,45 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
 
         Assert.False(HasErrors(response));
     }
+
+    [Fact]
+    public async Task VotesShown_CarriesTheStatisticsOfTheVotes()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "3");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "5");
+        var shown = room.Guest.NextEvent("VotesShown");
+
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+
+        var statistics = (await shown).GetProperty("statistics");
+        var all = statistics.GetProperty("all");
+        Assert.Equal(["3", "5"], all.GetProperty("marks").EnumerateArray().Select(share => share.GetProperty("mark").GetString()));
+        Assert.Equal(50m, all.GetProperty("marks")[0].GetProperty("percentage").GetDecimal());
+        Assert.Equal(JsonValueKind.Null, all.GetProperty("highestMark").ValueKind);
+        Assert.Equal(4m, all.GetProperty("averageMark").GetDecimal());
+        Assert.False(statistics.GetProperty("consensus").GetBoolean());
+    }
+
+    [Fact]
+    public async Task JoinRoom_AfterTheReveal_GetsTheSameStatistics_AndAfterClearingNone()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "3");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "3");
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+        await using var late = factory.Connect(await factory.MintCookie("Cara", "dev"));
+        await late.StartAsync();
+
+        var joined = await late.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+
+        var statistics = Data(joined).GetProperty("voteStatus").GetProperty("statistics");
+        Assert.True(statistics.GetProperty("consensus").GetBoolean());
+        Assert.Equal("3", statistics.GetProperty("all").GetProperty("highestMark").GetString());
+        Assert.Equal(JsonValueKind.Null, Data(await room.Owner.InvokeAsync<JsonElement>("ClearVotes")).ValueKind);
+        await using var after = factory.Connect(await factory.MintCookie("Dan", "dev"));
+        await after.StartAsync();
+        var fresh = await after.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+        Assert.Equal(JsonValueKind.Null, Data(fresh).GetProperty("voteStatus").GetProperty("statistics").ValueKind);
+    }
 }

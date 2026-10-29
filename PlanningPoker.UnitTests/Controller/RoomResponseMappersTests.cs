@@ -2,6 +2,7 @@ using PlanningPoker.Common.Models;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Service.Models;
+using PlanningPoker.UnitTests.Builders;
 
 namespace PlanningPoker.UnitTests.Controller;
 
@@ -80,7 +81,7 @@ public class RoomResponseMappersTests
     {
         var votes = new Dictionary<Guid, string> { [Ann.Guid] = "hide" };
 
-        var response = new VoteStatusResponseMapper().Map(new VoteStatus { Votes = votes, HasEveryoneVoted = true });
+        var response = ResponseMappers.VoteStatus().Map(new VoteStatus { Votes = votes, HasEveryoneVoted = true });
 
         Assert.Equal("hide", response.Votes[Ann.Guid]);
         Assert.True(response.HasEveryoneVoted);
@@ -89,7 +90,7 @@ public class RoomResponseMappersTests
     [Fact]
     public void JoinRoomResponseMapper_MapsPeopleOwnerStatusAndConfiguration()
     {
-        var mapper = new JoinRoomResponseMapper(PersonMapper, new VoteStatusResponseMapper(), new RoomConfigurationResponseMapper(), new CardResponseMapper());
+        var mapper = new JoinRoomResponseMapper(PersonMapper, ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper());
 
         var response = mapper.Map(JoinResult());
 
@@ -164,9 +165,53 @@ public class RoomResponseMappersTests
     [Fact]
     public void VoteStatusResponseMapper_CarriesFinishedAndCountdown()
     {
-        var response = new VoteStatusResponseMapper().Map(new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true, Countdown = 4 });
+        var response = ResponseMappers.VoteStatus().Map(new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true, Countdown = 4 });
 
         Assert.True(response.VotingFinished);
         Assert.Equal(4, response.Countdown);
+    }
+
+    private static VoteStatistics Statistics()
+    {
+        return new VoteStatistics
+        {
+            All = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 66.7m }, new MarkShare { Mark = "5", Percentage = 33.3m }], HighestMark = "3", AverageMark = 3.67m },
+            Developers = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 100m }], HighestMark = "3", AverageMark = 3m },
+            Testers = new GroupStatistics { Marks = [], HighestMark = null, AverageMark = null },
+            Consensus = true
+        };
+    }
+
+    [Fact]
+    public void VoteStatusResponseMapper_CarriesTheStatistics()
+    {
+        var response = ResponseMappers.VoteStatus().Map(new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true, Statistics = Statistics() });
+
+        var statistics = response.Statistics!;
+        Assert.Equal([("3", 66.7m), ("5", 33.3m)], statistics.All.Marks.Select(share => (share.Mark, share.Percentage)));
+        Assert.Equal("3", statistics.All.HighestMark);
+        Assert.Equal(3.67m, statistics.All.AverageMark);
+        Assert.Equal(3m, statistics.Developers.AverageMark);
+        Assert.Empty(statistics.Testers.Marks);
+        Assert.Null(statistics.Testers.HighestMark);
+        Assert.Null(statistics.Testers.AverageMark);
+        Assert.True(statistics.Consensus);
+    }
+
+    [Fact]
+    public void VoteStatusResponseMapper_WithoutStatistics_HasNone()
+    {
+        var response = ResponseMappers.VoteStatus().Map(new VoteStatus { Votes = new Dictionary<Guid, string>() });
+
+        Assert.Null(response.Statistics);
+    }
+
+    [Fact]
+    public void MarkShareResponseMapper_CopiesMarkAndPercentage()
+    {
+        var response = new MarkShareResponseMapper().Map(new MarkShare { Mark = "?", Percentage = 12.5m });
+
+        Assert.Equal("?", response.Mark);
+        Assert.Equal(12.5m, response.Percentage);
     }
 }

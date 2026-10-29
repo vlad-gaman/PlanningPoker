@@ -21,6 +21,7 @@ public class RoomService(
     IRoomMapper roomMapper,
     IPersonMapper personMapper,
     IVoteStatusMapper voteStatusMapper,
+    IRevealedVotesEntityMapper revealedMapper,
     IJoinRoomResultMapper joinRoomResultMapper,
     IExitRoomResultMapper exitRoomResultMapper,
     RoomIdentifierValidation identifierValidation,
@@ -302,6 +303,7 @@ public class RoomService(
         var cleared = InRoom(personGuid, connectionId, room =>
         {
             room.Votes.Clear();
+            room.Revealed = null;
             room.VotingEnabled = true;
             room.Revision++;
             return true;
@@ -311,44 +313,75 @@ public class RoomService(
 
     public ServiceResponse<RevealResult> ForceShowVotes(Guid personGuid, string connectionId)
     {
-        var revealed = InRoom(personGuid, connectionId, room =>
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
         {
-            if (!room.VotingEnabled)
-            {
-                return false;
-            }
-
-            room.VotingEnabled = false;
-            room.Revision++;
-            return true;
-        });
-        if (!revealed.IsSuccess)
-        {
-            return ServiceResponse<RevealResult>.Failure(revealed);
+            return ServiceResponse<RevealResult>.Failure(located);
         }
 
-        var change = revealed.Data!;
-        return ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = change.RoomId, VoteStatus = change.Changed ? RevealedStatus(change.RoomId) : null });
+        var roomId = located.Data.RoomId;
+        var found = UpdateRevealing(roomId, (room, freeze) =>
+        {
+            if (!IsMember(room, personGuid, connectionId))
+            {
+                return (Outcome: (Member: false, Changed: false), NeedsTypes: false);
+            }
+
+            if (!room.VotingEnabled)
+            {
+                return (Outcome: (Member: true, Changed: false), NeedsTypes: false);
+            }
+
+            var frozen = freeze(room);
+            if (frozen is null)
+            {
+                return (Outcome: default, NeedsTypes: true);
+            }
+
+            room.Revealed = frozen;
+            room.VotingEnabled = false;
+            room.Revision++;
+            return (Outcome: (Member: true, Changed: true), NeedsTypes: false);
+        }, out var outcome);
+        if (!found)
+        {
+            return ServiceResponse<RevealResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        if (!outcome.Member)
+        {
+            return ServiceResponse<RevealResult>.Failure(ServiceError.NotInRoom());
+        }
+
+        return ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = roomId, VoteStatus = outcome.Changed ? RevealedStatus(roomId) : null });
     }
 
     public TickResult Tick(string roomId, long revision)
     {
-        var found = rooms.Update(roomId, room =>
+        var found = UpdateRevealing(roomId, (room, freeze) =>
         {
             if (!room.VotingEnabled || room.CountdownRevision != revision || room.Revision != revision)
             {
-                return (Outcome: TickOutcome.Stale, Remaining: 0);
+                return (Outcome: (Outcome: TickOutcome.Stale, Remaining: 0), NeedsTypes: false);
             }
 
-            room.CountdownRemaining--;
-            if (room.CountdownRemaining > 0)
+            if (room.CountdownRemaining > 1)
             {
-                return (Outcome: TickOutcome.Ticked, Remaining: room.CountdownRemaining);
+                room.CountdownRemaining--;
+                return (Outcome: (Outcome: TickOutcome.Ticked, Remaining: room.CountdownRemaining), NeedsTypes: false);
             }
 
+            var frozen = freeze(room);
+            if (frozen is null)
+            {
+                return (Outcome: default, NeedsTypes: true);
+            }
+
+            room.CountdownRemaining = 0;
+            room.Revealed = frozen;
             room.VotingEnabled = false;
             room.Revision++;
-            return (Outcome: TickOutcome.Revealed, Remaining: 0);
+            return (Outcome: (Outcome: TickOutcome.Revealed, Remaining: 0), NeedsTypes: false);
         }, out var tick);
         if (!found || tick.Outcome == TickOutcome.Stale)
         {
@@ -428,16 +461,23 @@ public class RoomService(
         }
 
         var seconds = snapshot.Configuration.CountdownSeconds;
-        var found = rooms.Update(snapshot.Id, room =>
+        var found = UpdateRevealing(snapshot.Id, (room, freeze) =>
         {
             // A countdown already running at this revision means a concurrent change made the same decision first.
             if (room.Revision != snapshot.Revision || !room.VotingEnabled || room.CountdownRevision == room.Revision)
             {
-                return false;
+                return (Outcome: false, NeedsTypes: false);
             }
 
             if (seconds == 0)
             {
+                var frozen = freeze(room);
+                if (frozen is null)
+                {
+                    return (Outcome: false, NeedsTypes: true);
+                }
+
+                room.Revealed = frozen;
                 room.VotingEnabled = false;
                 room.Revision++;
             }
@@ -447,7 +487,7 @@ public class RoomService(
                 room.CountdownRemaining = seconds;
             }
 
-            return true;
+            return (Outcome: true, NeedsTypes: false);
         }, out var applied);
         if (!found || !applied)
         {
@@ -466,6 +506,57 @@ public class RoomService(
     }
 
     private sealed record RoomChange(string RoomId, bool Changed);
+
+    /// <summary>
+    /// Runs a room change that may reveal the votes. Freezing the votes needs the person type of every member, which
+    /// lives behind the person lock and must not be read under the room lock. So the change first runs without the
+    /// types and asks for them (NeedsTypes); the types are read from a snapshot and the change runs again, and the
+    /// freeze step refuses types that miss a member who joined in between. After a few rounds it freezes with what it
+    /// has, so a busy room can delay a reveal but never block it; a voter of unknown type then counts only in the
+    /// overall group.
+    /// </summary>
+    private bool UpdateRevealing<T>(
+        string roomId,
+        Func<RoomEntity, Func<RoomEntity, RevealedVotesEntity?>, (T Outcome, bool NeedsTypes)> change,
+        out T? outcome)
+    {
+        IReadOnlyDictionary<Guid, string>? types = null;
+        for (var round = 0; ; round++)
+        {
+            var known = types;
+            var last = round >= RoomConstraints.TypeResolutionRounds;
+            var found = rooms.Update(roomId, room => change(room, current => Freeze(current, known, last)), out var step);
+            if (!found)
+            {
+                outcome = default;
+                return false;
+            }
+
+            if (!step.NeedsTypes)
+            {
+                outcome = step.Outcome;
+                return true;
+            }
+
+            types = ResolveTypes(roomId);
+        }
+    }
+
+    private RevealedVotesEntity? Freeze(RoomEntity room, IReadOnlyDictionary<Guid, string>? types, bool last)
+    {
+        if (types is null || (!last && !room.MemberGuids.All(types.ContainsKey)))
+        {
+            return null;
+        }
+
+        return revealedMapper.Map(room, types);
+    }
+
+    private Dictionary<Guid, string> ResolveTypes(string roomId)
+    {
+        var snapshot = rooms.Get(roomId);
+        return snapshot is null ? [] : Members(snapshot).ToDictionary(member => member.Guid, member => member.PersonType);
+    }
 
     private List<Person> Members(RoomEntity room)
     {

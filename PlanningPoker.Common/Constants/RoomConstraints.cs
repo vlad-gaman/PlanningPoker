@@ -9,4 +9,7 @@ public static class RoomConstraints
     public const int IdGenerationAttempts = 5;
     public const string HiddenVote = "hide";
     public const int VoteMarkMaxLength = 20;
+
+    /// <summary>How often a reveal re-reads the member types when someone joined meanwhile, before it freezes with what it has.</summary>
+    public const int TypeResolutionRounds = 3;
 }

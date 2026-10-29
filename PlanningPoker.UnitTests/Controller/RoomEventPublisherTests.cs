@@ -31,7 +31,7 @@ public class RoomEventPublisherTests
             new OwnershipTransferredEventMapper(PersonMapper),
             new RoomDisposedEventMapper(),
             new VoteCastEventMapper(),
-            new VoteStatusResponseMapper());
+            ResponseMappers.VoteStatus());
     }
 
     [Fact]

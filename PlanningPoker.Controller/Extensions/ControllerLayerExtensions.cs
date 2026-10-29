@@ -36,6 +36,9 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IRoomCreatedResponseMapper, RoomCreatedResponseMapper>();
         services.AddSingleton<IRoomExistsResponseMapper, RoomExistsResponseMapper>();
         services.AddSingleton<IRoomConfigurationResponseMapper, RoomConfigurationResponseMapper>();
+        services.AddSingleton<IMarkShareResponseMapper, MarkShareResponseMapper>();
+        services.AddSingleton<IGroupStatisticsResponseMapper, GroupStatisticsResponseMapper>();
+        services.AddSingleton<IVoteStatisticsResponseMapper, VoteStatisticsResponseMapper>();
         services.AddSingleton<IVoteStatusResponseMapper, VoteStatusResponseMapper>();
         services.AddSingleton<IJoinRoomResponseMapper, JoinRoomResponseMapper>();
         services.AddSingleton<IPersonJoinedEventMapper, PersonJoinedEventMapper>();

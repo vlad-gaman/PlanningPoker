@@ -17,6 +17,8 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IRoomConfigurationEntityMapper, RoomConfigurationEntityMapper>();
         services.AddSingleton<IRoomEntityMapper, RoomEntityMapper>();
         services.AddSingleton<IRoomMapper, RoomMapper>();
+        services.AddSingleton<IVoteStatisticsMapper, VoteStatisticsMapper>();
+        services.AddSingleton<IRevealedVotesEntityMapper, RevealedVotesEntityMapper>();
         services.AddSingleton<IVoteStatusMapper, VoteStatusMapper>();
         services.AddSingleton<IJoinRoomResultMapper, JoinRoomResultMapper>();
         services.AddSingleton<IExitRoomResultMapper, ExitRoomResultMapper>();
