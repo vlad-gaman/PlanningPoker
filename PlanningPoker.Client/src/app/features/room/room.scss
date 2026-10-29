@@ -1,0 +1,28 @@
+.room {
+  max-width: 40rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.name-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 28rem;
+}
+
+.people {
+  width: 100%;
+  margin-bottom: 1rem;
+  background: var(--card-bg);
+  color: var(--text-color);
+}
+
+.owner {
+  color: var(--primary-color);
+  font-size: 0.85em;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}

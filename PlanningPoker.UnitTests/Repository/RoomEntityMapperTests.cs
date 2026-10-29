@@ -13,6 +13,7 @@ public class RoomEntityMapperTests
         {
             Id = "room",
             OwnerGuid = owner,
+            VotingEnabled = true,
             MemberGuids = [owner],
             Votes = new Dictionary<Guid, string> { [owner] = "5" },
             Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7 }
@@ -22,6 +23,7 @@ public class RoomEntityMapperTests
 
         Assert.Equal("room", copy.Id);
         Assert.Equal(owner, copy.OwnerGuid);
+        Assert.True(copy.VotingEnabled);
         Assert.Equal(source.MemberGuids, copy.MemberGuids);
         Assert.Equal("5", copy.Votes[owner]);
         Assert.Equal("linear", copy.Configuration.CardSet);

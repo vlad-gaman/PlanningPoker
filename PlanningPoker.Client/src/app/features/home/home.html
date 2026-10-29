@@ -1,24 +1,41 @@
 <section class="home">
   <h1>Planning Poker</h1>
-  <form (submit)="save($event)">
+
+  @if (flash.message(); as notice) {
+    <p class="notice" role="status">{{ notice }}</p>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="createRoom()">
     <mat-form-field appearance="outline">
       <mat-label>Your name</mat-label>
-      <input matInput name="name" [value]="name()" (input)="setName($event)" />
+      <input matInput formControlName="name" autocomplete="off" />
+      @if (form.controls.name.invalid) {
+        <mat-error>Use 2 to 20 characters.</mat-error>
+      }
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Role</mat-label>
-      <mat-select [value]="personType()" (valueChange)="personType.set($event)">
-        <mat-option value="dev">Developer</mat-option>
-        <mat-option value="test">Tester</mat-option>
-        <mat-option value="obs">Observer</mat-option>
+      <mat-select formControlName="personType">
+        @for (option of personTypes; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
       </mat-select>
     </mat-form-field>
-    <button mat-flat-button type="submit">Save</button>
+    <button mat-flat-button type="submit">Create room</button>
   </form>
+
+  <form class="join" [formGroup]="joinForm" (ngSubmit)="joinRoom()">
+    <mat-form-field appearance="outline">
+      <mat-label>Room name or link</mat-label>
+      <input matInput formControlName="room" autocomplete="off" />
+      @if (joinForm.controls.room.invalid) {
+        <mat-error>Enter a room name or link.</mat-error>
+      }
+    </mat-form-field>
+    <button mat-stroked-button type="submit">Join room</button>
+  </form>
+
   @if (error(); as message) {
     <p class="error" role="alert">{{ message }}</p>
-  }
-  @if (person(); as me) {
-    <p class="welcome">Welcome, {{ me.name }}.</p>
   }
 </section>

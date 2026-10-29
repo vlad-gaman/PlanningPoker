@@ -12,6 +12,7 @@ public class RoomEntityMapper : IRoomEntityMapper
             OwnerGuid = source.OwnerGuid,
             MemberGuids = [.. source.MemberGuids],
             Votes = new Dictionary<Guid, string>(source.Votes),
+            VotingEnabled = source.VotingEnabled,
             Configuration = new RoomConfigurationEntity
             {
                 CardSet = source.Configuration.CardSet,

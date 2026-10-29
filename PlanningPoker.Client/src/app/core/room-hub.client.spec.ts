@@ -8,6 +8,7 @@ function fakeConnection(invokeResult?: unknown) {
     start: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn().mockResolvedValue(undefined),
     on: vi.fn(),
+    onreconnected: vi.fn(),
     invoke: vi.fn().mockResolvedValue(invokeResult),
   };
 }
@@ -46,6 +47,18 @@ describe('RoomHubClient', () => {
     client.on('RoomChanged', handler);
 
     expect(connection.on).toHaveBeenCalledWith('RoomChanged', handler);
+  });
+
+  it('calls the handler when the connection reconnects', async () => {
+    const connection = fakeConnection();
+    const client = clientWith(connection);
+    await client.connect();
+    const handler = vi.fn();
+
+    client.onReconnected(handler);
+    connection.onreconnected.mock.calls[0][0]('new-id');
+
+    expect(handler).toHaveBeenCalledOnce();
   });
 
   it('unwraps data from a successful invocation', async () => {

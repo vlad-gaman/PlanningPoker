@@ -30,6 +30,11 @@ export class RoomHubClient {
     this.connection?.on(method, handler as (...args: unknown[]) => void);
   }
 
+  /** Runs after the automatic reconnect succeeded; the server has forgotten the old connection by then. */
+  onReconnected(handler: () => void): void {
+    this.connection?.onreconnected(() => handler());
+  }
+
   async invoke<T>(method: string, ...args: unknown[]): Promise<T> {
     if (!this.connection) {
       throw new Error('Hub is not connected');

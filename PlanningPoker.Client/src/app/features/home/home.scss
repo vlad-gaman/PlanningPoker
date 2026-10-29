@@ -10,6 +10,18 @@ form {
   gap: 0.5rem;
 }
 
+.join {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.notice {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+}
+
 .error {
   color: var(--mat-sys-error);
 }

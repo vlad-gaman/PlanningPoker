@@ -11,7 +11,10 @@ public static class ErrorStatusCodes
         [ErrorCodes.ValidationFailed] = StatusCodes.Status400BadRequest,
         [ErrorCodes.UnsupportedMediaType] = StatusCodes.Status415UnsupportedMediaType,
         [ErrorCodes.NoSession] = StatusCodes.Status401Unauthorized,
-        [ErrorCodes.NotFound] = StatusCodes.Status404NotFound
+        [ErrorCodes.NotFound] = StatusCodes.Status404NotFound,
+        [ErrorCodes.RoomNotFound] = StatusCodes.Status404NotFound,
+        [ErrorCodes.RoomIdGenerationFailed] = StatusCodes.Status409Conflict,
+        [ErrorCodes.NotRoomOwner] = StatusCodes.Status403Forbidden
     };
 
     public const int Fallback = StatusCodes.Status500InternalServerError;

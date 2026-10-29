@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>Room settings</h2>
+<form [formGroup]="form" (ngSubmit)="create()">
+  <mat-dialog-content class="settings">
+    <mat-form-field appearance="outline">
+      <mat-label>Card set</mat-label>
+      <mat-select formControlName="cardSet">
+        @for (cardSet of cardSets(); track cardSet.value) {
+          <mat-option [value]="cardSet.value">{{ cardSet.display }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Countdown (seconds)</mat-label>
+      <input matInput type="number" formControlName="countdownSeconds" />
+      @if (form.controls.countdownSeconds.invalid) {
+        <mat-error>Use {{ countdownRange.min }} to {{ countdownRange.max }} seconds.</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Maximum participants</mat-label>
+      <input matInput type="number" formControlName="maxParticipants" />
+      @if (form.controls.maxParticipants.invalid) {
+        <mat-error>At least 1 participant.</mat-error>
+      }
+    </mat-form-field>
+    <mat-checkbox formControlName="showFireworks">Show fireworks</mat-checkbox>
+    <mat-checkbox formControlName="useFunRoomName">Use a fun room name</mat-checkbox>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="submit">Create room</button>
+  </mat-dialog-actions>
+</form>

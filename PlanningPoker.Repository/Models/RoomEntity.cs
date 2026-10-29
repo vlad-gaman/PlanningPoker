@@ -10,5 +10,7 @@ public class RoomEntity
 
     public Dictionary<Guid, string> Votes { get; set; } = [];
 
+    public bool VotingEnabled { get; set; }
+
     public RoomConfigurationEntity Configuration { get; set; } = new();
 }
