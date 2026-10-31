@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LIBRARY_CREDITS } from './credits.data';
 
 @Component({
   selector: 'app-credits',
-  template: '<section class="credits"><h1>Credits</h1></section>',
+  templateUrl: './credits.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Credits {}
+export class Credits {
+  protected readonly libraries = LIBRARY_CREDITS;
+}

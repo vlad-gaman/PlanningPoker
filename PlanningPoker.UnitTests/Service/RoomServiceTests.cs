@@ -14,7 +14,7 @@ namespace PlanningPoker.UnitTests.Service;
 public class RoomServiceTests
 {
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
 
     private static RoomSettings Settings(bool fun = false)
     {

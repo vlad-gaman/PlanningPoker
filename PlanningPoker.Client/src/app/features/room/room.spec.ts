@@ -6,7 +6,17 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
-import { ANN, BOB, JOIN_RESPONSE, fakeHub } from '../../testing/fake-hub.testing';
+import {
+  ANN,
+  BOB,
+  CONSENSUS_STATISTICS,
+  JOIN_RESPONSE,
+  STATISTICS,
+  fakeHub,
+  revealed,
+} from '../../testing/fake-hub.testing';
+import { FireworksLauncher } from './fireworks/fireworks-launcher';
+import { ChartFactory } from './results/chart-factory';
 import { HUB_EVENTS } from '../../models/hub-events';
 import { ROOM_NOT_FOUND_MESSAGE, RoomStore } from './room-store';
 import { Room } from './room';
@@ -19,6 +29,8 @@ async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
 
 describe('Room', () => {
   const me = { get: vi.fn(), update: vi.fn() };
+  const fireworks = { launch: vi.fn(), dispose: vi.fn() };
+  const launcher = { create: vi.fn() };
   let hub: ReturnType<typeof fakeHub>;
   let navigate: ReturnType<typeof vi.spyOn>;
 
@@ -26,8 +38,20 @@ describe('Room', () => {
     me.get.mockReset();
     me.update.mockReset();
     hub = fakeHub(JOIN_RESPONSE);
+    fireworks.launch.mockReset();
+    fireworks.dispose.mockReset();
+    launcher.create.mockReset();
+    launcher.create.mockReturnValue(fireworks);
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: MeService, useValue: me }],
+      providers: [
+        provideRouter([]),
+        { provide: MeService, useValue: me },
+        { provide: FireworksLauncher, useValue: launcher },
+        {
+          provide: ChartFactory,
+          useValue: { create: () => ({ draw: vi.fn(), destroy: vi.fn() }) },
+        },
+      ],
     });
     // The room provides its own hub client at component level, so the fake replaces it there.
     TestBed.overrideComponent(Room, {
@@ -129,7 +153,9 @@ describe('Room', () => {
   it('shows other validation failures inline instead of going home', async () => {
     me.get.mockReturnValue(of(ANN));
     hub.invoke.mockRejectedValue(
-      new ApiRequestError(400, [{ code: ERROR_CODES.validationFailed, message: 'Bad name.', metadata: { field: 'name' } }]),
+      new ApiRequestError(400, [
+        { code: ERROR_CODES.validationFailed, message: 'Bad name.', metadata: { field: 'name' } },
+      ]),
     );
 
     const { element } = await render();
@@ -219,7 +245,9 @@ describe('Room', () => {
     const OBS = { guid: 'g-obs', name: 'Olga', personType: 'obs' } as const;
 
     function buttonLabelled(element: HTMLElement, text: string): HTMLButtonElement {
-      return Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes(text)) as HTMLButtonElement;
+      return Array.from(element.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes(text),
+      ) as HTMLButtonElement;
     }
 
     function markOf(element: HTMLElement, name: string): string {
@@ -251,6 +279,7 @@ describe('Room', () => {
         hasEveryoneVoted: true,
         votingFinished: true,
         countdown: null,
+        statistics: null,
       });
       await settle(fixture);
 
@@ -284,7 +313,13 @@ describe('Room', () => {
     it('disables the cards once the votes are revealed', async () => {
       const { fixture, element } = await render();
 
-      hub.emit(HUB_EVENTS.VotesShown, { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: {},
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+        statistics: null,
+      });
       await settle(fixture);
 
       const radios = Array.from(element.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
@@ -316,7 +351,13 @@ describe('Room', () => {
     it('disables Show votes once the votes are revealed', async () => {
       const { fixture, element } = await render();
 
-      hub.emit(HUB_EVENTS.VotesShown, { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: {},
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+        statistics: null,
+      });
       await settle(fixture);
 
       expect(buttonLabelled(element, 'Show votes').disabled).toBe(true);
@@ -324,11 +365,126 @@ describe('Room', () => {
     });
   });
 
+  describe('results', () => {
+    beforeEach(() => me.get.mockReturnValue(of(ANN)));
+
+    function withFireworks(showFireworks: boolean) {
+      hub.invoke.mockResolvedValue({
+        ...JOIN_RESPONSE,
+        configuration: { ...JOIN_RESPONSE.configuration, showFireworks },
+      });
+    }
+
+    it('shows no results while voting is open', async () => {
+      const { element } = await render();
+
+      expect(element.querySelector('app-results')).toBeNull();
+      expect(element.querySelector('app-fireworks')).not.toBeNull();
+    });
+
+    it('shows the three charts once the votes are revealed, and removes them when cleared', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      await settle(fixture);
+      expect(element.querySelectorAll('app-results-chart').length).toBe(3);
+
+      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      await settle(fixture);
+      expect(element.querySelector('app-results')).toBeNull();
+    });
+
+    it('shows the results straight away when joining a revealed room', async () => {
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, voteStatus: revealed(STATISTICS) });
+
+      const { element } = await render();
+
+      expect(element.querySelectorAll('app-results-chart').length).toBe(3);
+    });
+
+    it('launches fireworks when a live reveal ends in consensus', async () => {
+      const { fixture } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+      await settle(fixture);
+
+      expect(launcher.create).toHaveBeenCalledTimes(1);
+      expect(fireworks.launch).toHaveBeenCalled();
+    });
+
+    it('launches no fireworks without consensus', async () => {
+      const { fixture } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      await settle(fixture);
+
+      expect(launcher.create).not.toHaveBeenCalled();
+    });
+
+    it('launches no fireworks when the room turned them off', async () => {
+      withFireworks(false);
+      const { fixture } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+      await settle(fixture);
+
+      expect(launcher.create).not.toHaveBeenCalled();
+    });
+
+    it('launches no fireworks for a consensus that was already there when joining', async () => {
+      hub.invoke.mockResolvedValue({
+        ...JOIN_RESPONSE,
+        voteStatus: revealed(CONSENSUS_STATISTICS),
+      });
+
+      await render();
+
+      expect(launcher.create).not.toHaveBeenCalled();
+    });
+
+    it('stops the fireworks when the votes are cleared', async () => {
+      const { fixture } = await render();
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+      await settle(fixture);
+
+      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      await settle(fixture);
+
+      expect(fireworks.dispose).toHaveBeenCalled();
+    });
+
+    it('stops the fireworks when the user clears the votes', async () => {
+      const { fixture, element } = await render();
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+      await settle(fixture);
+
+      const clear = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Clear votes'));
+      (clear as HTMLButtonElement).click();
+
+      expect(fireworks.dispose).toHaveBeenCalled();
+    });
+
+    it('launches fireworks again for the next consensus reveal', async () => {
+      const { fixture } = await render();
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+      await settle(fixture);
+      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      await settle(fixture);
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+      await settle(fixture);
+
+      expect(launcher.create).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('leave returns to the home page', async () => {
     me.get.mockReturnValue(of(ANN));
     const { fixture, element } = await render();
 
-    (Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Leave')) as HTMLElement).click();
+    (
+      Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Leave')) as HTMLElement
+    ).click();
     await settle(fixture);
 
     expect(hub.disconnect).toHaveBeenCalled();

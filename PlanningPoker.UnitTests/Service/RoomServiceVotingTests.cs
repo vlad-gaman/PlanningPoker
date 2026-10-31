@@ -14,7 +14,7 @@ public class RoomServiceVotingTests
     private static readonly string[] ThreeDevs = [PersonTypes.Developer, PersonTypes.Developer, PersonTypes.Developer];
 
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
     private readonly RoomService _service;
 
     public RoomServiceVotingTests()

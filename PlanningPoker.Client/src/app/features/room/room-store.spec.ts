@@ -4,7 +4,15 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ApiRequestError } from '../../core/api-request-error';
 import { HUB_EVENTS } from '../../models/hub-events';
-import { ANN, BOB, JOIN_RESPONSE, fakeHub } from '../../testing/fake-hub.testing';
+import {
+  ANN,
+  BOB,
+  CONSENSUS_STATISTICS,
+  JOIN_RESPONSE,
+  STATISTICS,
+  fakeHub,
+  revealed,
+} from '../../testing/fake-hub.testing';
 import { ROOM_DISPOSED_MESSAGE, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 describe('RoomStore', () => {
@@ -175,7 +183,10 @@ describe('RoomStore', () => {
   });
 
   it('replays events received during the join in arrival order', async () => {
-    const { joining, respond } = await joinWithHeldResponse({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    const { joining, respond } = await joinWithHeldResponse({
+      ...JOIN_RESPONSE,
+      people: [ANN, BOB],
+    });
 
     hub.emit(HUB_EVENTS.PersonExited, { person: BOB });
     hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: 'hide', personType: 'test' });
@@ -187,7 +198,10 @@ describe('RoomStore', () => {
   });
 
   it('does not duplicate a person who is in the snapshot and also joined during the join', async () => {
-    const { joining, respond } = await joinWithHeldResponse({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    const { joining, respond } = await joinWithHeldResponse({
+      ...JOIN_RESPONSE,
+      people: [ANN, BOB],
+    });
 
     hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
     respond();
@@ -197,7 +211,10 @@ describe('RoomStore', () => {
   });
 
   it('applies an ownership transfer received during the join', async () => {
-    const { joining, respond } = await joinWithHeldResponse({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    const { joining, respond } = await joinWithHeldResponse({
+      ...JOIN_RESPONSE,
+      people: [ANN, BOB],
+    });
 
     hub.emit(HUB_EVENTS.OwnershipTransferred, { newOwner: BOB });
     respond();
@@ -247,7 +264,13 @@ describe('RoomStore', () => {
   });
 
   describe('voting', () => {
-    const hidden = { votes: { [BOB.guid]: 'hide' }, hasEveryoneVoted: false, votingFinished: false, countdown: null };
+    const hidden = {
+      votes: { [BOB.guid]: 'hide' },
+      hasEveryoneVoted: false,
+      votingFinished: false,
+      countdown: null,
+      statistics: null,
+    };
 
     it('exposes the cards and an open, empty vote state from the join response', () => {
       expect(store.cards().map((card) => card.value)).toEqual(['1', '5', 'coffee']);
@@ -260,7 +283,13 @@ describe('RoomStore', () => {
     it('applies a revealed snapshot with a running countdown', async () => {
       hub.invoke.mockResolvedValue({
         ...JOIN_RESPONSE,
-        voteStatus: { votes: { [ANN.guid]: '5' }, hasEveryoneVoted: true, votingFinished: false, countdown: 3 },
+        voteStatus: {
+          votes: { [ANN.guid]: '5' },
+          hasEveryoneVoted: true,
+          votingFinished: false,
+          countdown: 3,
+          statistics: null,
+        },
       });
 
       await store.join('room-2');
@@ -273,7 +302,13 @@ describe('RoomStore', () => {
     it('applies a snapshot of revealed votes', async () => {
       hub.invoke.mockResolvedValue({
         ...JOIN_RESPONSE,
-        voteStatus: { votes: { [ANN.guid]: '5' }, hasEveryoneVoted: true, votingFinished: true, countdown: null },
+        voteStatus: {
+          votes: { [ANN.guid]: '5' },
+          hasEveryoneVoted: true,
+          votingFinished: true,
+          countdown: null,
+          statistics: null,
+        },
       });
 
       await store.join('room-2');
@@ -288,7 +323,13 @@ describe('RoomStore', () => {
     });
 
     it('does not hide a mark that was already revealed when a late VoteCast arrives', () => {
-      hub.emit(HUB_EVENTS.VotesShown, { votes: { [BOB.guid]: '5' }, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: { [BOB.guid]: '5' },
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+        statistics: null,
+      });
 
       hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
 
@@ -305,7 +346,13 @@ describe('RoomStore', () => {
     it('shows the real marks and closes voting on VotesShown, ending the countdown', () => {
       hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 1, reset: false });
 
-      hub.emit(HUB_EVENTS.VotesShown, { votes: { [BOB.guid]: '8' }, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: { [BOB.guid]: '8' },
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+        statistics: null,
+      });
 
       expect(store.votes()).toEqual({ [BOB.guid]: '8' });
       expect(store.votingFinished()).toBe(true);
@@ -322,7 +369,13 @@ describe('RoomStore', () => {
     });
 
     it('ignores a CountdownUpdate once the votes are revealed', () => {
-      hub.emit(HUB_EVENTS.VotesShown, { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: {},
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+        statistics: null,
+      });
 
       hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 1, reset: false });
 
@@ -331,7 +384,13 @@ describe('RoomStore', () => {
 
     it('clears votes, countdown, selection and reopens voting on VotesCleared', async () => {
       await store.vote('5');
-      hub.emit(HUB_EVENTS.VotesShown, { votes: { [ANN.guid]: '5' }, hasEveryoneVoted: true, votingFinished: true, countdown: null });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        votes: { [ANN.guid]: '5' },
+        hasEveryoneVoted: true,
+        votingFinished: true,
+        countdown: null,
+        statistics: null,
+      });
 
       hub.emit(HUB_EVENTS.VotesCleared, undefined);
 
@@ -366,7 +425,9 @@ describe('RoomStore', () => {
 
     it('vote restores the previous selection and shows the message when the hub refuses', async () => {
       await store.vote('1');
-      hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'voting_closed', message: 'Voting is closed.' }]));
+      hub.invoke.mockRejectedValueOnce(
+        new ApiRequestError(0, [{ code: 'voting_closed', message: 'Voting is closed.' }]),
+      );
 
       await store.vote('5');
 
@@ -404,6 +465,98 @@ describe('RoomStore', () => {
     });
   });
 
+  describe('results', () => {
+    it('has no statistics while voting is open', () => {
+      expect(store.statistics()).toBeNull();
+      expect(store.revealCount()).toBe(0);
+    });
+
+    it('takes the statistics of a live reveal and counts it', () => {
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+
+      expect(store.statistics()).toEqual(STATISTICS);
+      expect(store.revealCount()).toBe(1);
+    });
+
+    it('counts every live reveal', () => {
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
+
+      expect(store.revealCount()).toBe(2);
+      expect(store.statistics()).toEqual(CONSENSUS_STATISTICS);
+    });
+
+    it('takes the statistics of the join snapshot without counting a reveal', async () => {
+      hub.invoke.mockResolvedValue({
+        ...JOIN_RESPONSE,
+        voteStatus: revealed(CONSENSUS_STATISTICS),
+      });
+
+      await store.join('room-2');
+
+      expect(store.statistics()).toEqual(CONSENSUS_STATISTICS);
+      expect(store.revealCount()).toBe(0);
+    });
+
+    it('keeps the statistics through a reconnect that rejoins a revealed room, without counting', async () => {
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, voteStatus: revealed(STATISTICS) });
+
+      hub.reconnect();
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
+
+      expect(store.statistics()).toEqual(STATISTICS);
+      expect(store.revealCount()).toBe(1);
+    });
+
+    it('clears the statistics when the votes are cleared', () => {
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+
+      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+
+      expect(store.statistics()).toBeNull();
+    });
+
+    it('has no statistics in an open-voting status update', () => {
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+
+      hub.emit(HUB_EVENTS.VoteStatusUpdate, {
+        votes: {},
+        hasEveryoneVoted: false,
+        votingFinished: false,
+        countdown: null,
+        statistics: null,
+      });
+
+      expect(store.statistics()).toBeNull();
+    });
+
+    it('counts a reveal that arrived while the join was in flight, after applying the snapshot', async () => {
+      let finishJoin: (value: unknown) => void = () => undefined;
+      hub.invoke.mockReturnValue(new Promise((resolve) => (finishJoin = resolve)));
+      const joining = store.join('room-2');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      expect(store.statistics()).toBeNull();
+      finishJoin(JOIN_RESPONSE);
+      await joining;
+
+      expect(store.statistics()).toEqual(STATISTICS);
+      expect(store.revealCount()).toBe(1);
+    });
+
+    it('forgets the statistics and the reveal count when the store closes', async () => {
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+
+      await store.close();
+
+      expect(store.statistics()).toBeNull();
+      expect(store.revealCount()).toBe(0);
+    });
+  });
+
   it('ignores a reconnect after the store was closed', async () => {
     await store.close();
     hub.invoke.mockClear();
@@ -422,7 +575,11 @@ describe('isRoomGone', () => {
 
   it('is true for a malformed room id', () => {
     const error = new ApiRequestError(400, [
-      { code: 'validation_failed', message: 'Bad id.', metadata: { field: 'roomId', reason: 'invalid_characters' } },
+      {
+        code: 'validation_failed',
+        message: 'Bad id.',
+        metadata: { field: 'roomId', reason: 'invalid_characters' },
+      },
     ]);
 
     expect(isRoomGone(error)).toBe(true);

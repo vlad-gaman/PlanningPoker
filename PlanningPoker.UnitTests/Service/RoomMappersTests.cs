@@ -2,6 +2,7 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Models;
+using PlanningPoker.UnitTests.Builders;
 
 namespace PlanningPoker.UnitTests.Service;
 
@@ -52,7 +53,7 @@ public class RoomMappersTests
         var voter = Member();
         var room = new RoomEntity { VotingEnabled = true, Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" } };
 
-        var status = new VoteStatusMapper().Map(room, [voter]);
+        var status = VoteStatusMappers.Create().Map(room, [voter]);
 
         Assert.Equal(RoomConstraints.HiddenVote, status.Votes[voter.Guid]);
         Assert.False(status.VotingFinished);
@@ -66,7 +67,7 @@ public class RoomMappersTests
         var gone = Guid.NewGuid();
         var room = new RoomEntity { VotingEnabled = false, Votes = new Dictionary<Guid, string> { [voter.Guid] = "8", [gone] = "3" } };
 
-        var status = new VoteStatusMapper().Map(room, [voter]);
+        var status = VoteStatusMappers.Create().Map(room, [voter]);
 
         Assert.Equal("8", Assert.Single(status.Votes).Value);
         Assert.True(status.VotingFinished);
@@ -77,7 +78,7 @@ public class RoomMappersTests
     {
         var room = new RoomEntity { VotingEnabled = true, Revision = 2, CountdownRevision = 2, CountdownRemaining = 4 };
 
-        Assert.Equal(4, new VoteStatusMapper().Map(room, [Member()]).Countdown);
+        Assert.Equal(4, VoteStatusMappers.Create().Map(room, [Member()]).Countdown);
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public class RoomMappersTests
         var observer = Member(PersonTypes.Observer);
         var room = new RoomEntity { Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" } };
 
-        Assert.True(new VoteStatusMapper().Map(room, [voter, observer]).HasEveryoneVoted);
+        Assert.True(VoteStatusMappers.Create().Map(room, [voter, observer]).HasEveryoneVoted);
     }
 
     [Fact]
@@ -97,13 +98,59 @@ public class RoomMappersTests
         var waiting = Member();
         var room = new RoomEntity { Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" } };
 
-        Assert.False(new VoteStatusMapper().Map(room, [voter, waiting]).HasEveryoneVoted);
+        Assert.False(VoteStatusMappers.Create().Map(room, [voter, waiting]).HasEveryoneVoted);
     }
 
     [Fact]
     public void VoteStatusMapper_NoVoters_IsFalse()
     {
-        Assert.False(new VoteStatusMapper().Map(new RoomEntity(), [Member(PersonTypes.Observer)]).HasEveryoneVoted);
+        Assert.False(VoteStatusMappers.Create().Map(new RoomEntity(), [Member(PersonTypes.Observer)]).HasEveryoneVoted);
+    }
+
+    [Fact]
+    public void VoteStatusMapper_VotingOpen_HasNoStatistics()
+    {
+        var voter = Member();
+        var room = new RoomEntity { VotingEnabled = true, Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" } };
+
+        Assert.Null(VoteStatusMappers.Create().Map(room, [voter]).Statistics);
+    }
+
+    [Fact]
+    public void VoteStatusMapper_Revealed_CarriesTheStatisticsOfTheFrozenVotes()
+    {
+        var voter = Member();
+        var gone = Guid.NewGuid();
+        var room = new RoomEntity
+        {
+            VotingEnabled = false,
+            Configuration = new RoomConfigurationEntity { CardSet = "linear" },
+            Votes = new Dictionary<Guid, string> { [voter.Guid] = "8" },
+            Revealed = new RevealedVotesEntity
+            {
+                EveryoneVoted = true,
+                Votes = new Dictionary<Guid, RevealedVoteEntity>
+                {
+                    [voter.Guid] = new() { Mark = "8", PersonType = PersonTypes.Developer },
+                    [gone] = new() { Mark = "3", PersonType = PersonTypes.Tester }
+                }
+            }
+        };
+
+        var statistics = VoteStatusMappers.Create().Map(room, [voter]).Statistics!;
+
+        // The leaver's frozen vote still counts in the statistics, although it is no longer in the votes.
+        Assert.Equal(["3", "8"], statistics.All.Marks.Select(share => share.Mark));
+        Assert.Equal(5.5m, statistics.All.AverageMark);
+        Assert.Equal(["3"], statistics.Testers.Marks.Select(share => share.Mark));
+    }
+
+    [Fact]
+    public void VoteStatusMapper_RevealedWithoutFrozenVotes_HasNoStatistics()
+    {
+        var room = new RoomEntity { VotingEnabled = false };
+
+        Assert.Null(VoteStatusMappers.Create().Map(room, [Member()]).Statistics);
     }
 
     [Fact]

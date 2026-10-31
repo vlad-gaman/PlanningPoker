@@ -3,7 +3,7 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Controller.Mappers;
 
-public class VoteStatusResponseMapper : IVoteStatusResponseMapper
+public class VoteStatusResponseMapper(IVoteStatisticsResponseMapper statisticsMapper) : IVoteStatusResponseMapper
 {
     public VoteStatusResponse Map(VoteStatus voteStatus)
     {
@@ -12,7 +12,8 @@ public class VoteStatusResponseMapper : IVoteStatusResponseMapper
             Votes = voteStatus.Votes,
             HasEveryoneVoted = voteStatus.HasEveryoneVoted,
             VotingFinished = voteStatus.VotingFinished,
-            Countdown = voteStatus.Countdown
+            Countdown = voteStatus.Countdown,
+            Statistics = voteStatus.Statistics is null ? null : statisticsMapper.Map(voteStatus.Statistics)
         };
     }
 }

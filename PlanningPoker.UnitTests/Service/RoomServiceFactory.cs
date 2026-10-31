@@ -1,4 +1,5 @@
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.UnitTests.Builders;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Services;
 using PlanningPoker.Service.Validations;
@@ -17,7 +18,8 @@ public static class RoomServiceFactory
             new RoomEntityMapper(new RoomConfigurationEntityMapper()),
             new RoomMapper(new RoomConfigurationMapper()),
             new PersonMapper(),
-            new VoteStatusMapper(),
+            VoteStatusMappers.Create(),
+            new RevealedVotesEntityMapper(),
             new JoinRoomResultMapper(),
             new ExitRoomResultMapper(),
             new RoomIdentifierValidation(),

@@ -8,7 +8,9 @@ import {
   inject,
   input,
   computed,
+  effect,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +28,8 @@ import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES, Person } from '../../models/person';
 import { createPersonForm } from '../shared/person-form';
 import { CardPicker, cardImage } from './card-picker/card-picker';
+import { FireworksOverlay } from './fireworks/fireworks-overlay';
+import { Results } from './results/results';
 import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 type Phase = 'loading' | 'name' | 'joined';
@@ -34,6 +38,8 @@ type Phase = 'loading' | 'name' | 'joined';
   selector: 'app-room',
   imports: [
     CardPicker,
+    FireworksOverlay,
+    Results,
     ReactiveFormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -68,10 +74,31 @@ export class Room implements OnInit, OnChanges, OnDestroy {
    */
   private generation = 0;
 
+  private readonly fireworks = viewChild(FireworksOverlay);
+  private seenReveals = 0;
+
   private readonly myGuid = signal<string | null>(null);
   protected readonly isObserver = computed(
     () => this.store.people().find((person) => person.guid === this.myGuid())?.personType === 'obs',
   );
+
+  constructor() {
+    // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
+    // in consensus, if the room has them on; they stop as soon as the votes are gone.
+    effect(() => {
+      const statistics = this.store.statistics();
+      const reveals = this.store.revealCount();
+      const showFireworks = this.store.configuration()?.showFireworks ?? false;
+      const overlay = this.fireworks();
+      const isNewReveal = reveals > this.seenReveals;
+      this.seenReveals = reveals;
+      if (!statistics) {
+        overlay?.stop();
+      } else if (isNewReveal && statistics.consensus && showFireworks) {
+        overlay?.start();
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     await this.enter();
@@ -107,6 +134,16 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     if (gen === this.generation) {
       await this.join(gen);
     }
+  }
+
+  protected clearVotes(): void {
+    this.fireworks()?.stop();
+    void this.store.clearVotes();
+  }
+
+  protected showVotes(): void {
+    this.fireworks()?.stop();
+    void this.store.showVotes();
   }
 
   protected leave(): void {

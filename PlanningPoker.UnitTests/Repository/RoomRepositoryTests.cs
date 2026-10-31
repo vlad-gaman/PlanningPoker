@@ -6,7 +6,7 @@ namespace PlanningPoker.UnitTests.Repository;
 
 public class RoomRepositoryTests
 {
-    private static RoomRepository NewRepository() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()));
+    private static RoomRepository NewRepository() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
 
     private static RoomEntity NewRoom(string id = "room", Guid? owner = null)
     {

@@ -32,6 +32,29 @@ export interface CardOption {
   display: string | null;
 }
 
+export interface MarkShare {
+  mark: string;
+  /** Share of the group's votes, 0 to 100, one decimal. */
+  percentage: number;
+}
+
+export interface GroupStatistics {
+  /** The marks that were cast, in card-set order. */
+  marks: MarkShare[];
+  /** The mark with the strictly highest share; null for a tie or an empty group. */
+  highestMark: string | null;
+  /** Mean of the numeric marks, two decimals; null when none is numeric. */
+  averageMark: number | null;
+}
+
+export interface VoteStatistics {
+  all: GroupStatistics;
+  developers: GroupStatistics;
+  testers: GroupStatistics;
+  /** At least two votes, all the same mark, and everyone had voted. */
+  consensus: boolean;
+}
+
 export interface VoteStatus {
   /** Person guid to mark; every mark is "hide" until the votes are revealed. */
   votes: Record<string, string>;
@@ -39,6 +62,8 @@ export interface VoteStatus {
   votingFinished: boolean;
   /** Seconds left before the votes are revealed; null when no countdown runs. */
   countdown: number | null;
+  /** Present once the votes are revealed, until they are cleared. */
+  statistics: VoteStatistics | null;
 }
 
 export interface JoinRoomResponse {

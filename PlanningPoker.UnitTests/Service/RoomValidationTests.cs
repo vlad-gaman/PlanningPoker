@@ -8,7 +8,7 @@ namespace PlanningPoker.UnitTests.Service;
 
 public class RoomValidationTests
 {
-    private static RoomRepository NewRooms() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()));
+    private static RoomRepository NewRooms() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
 
     [Theory]
     [InlineData("room")]

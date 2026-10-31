@@ -19,6 +19,9 @@ public class RoomEntity
     /// <summary>True while votes can be cast; false once they are revealed, until they are cleared.</summary>
     public bool VotingEnabled { get; set; }
 
+    /// <summary>The votes frozen at the reveal; null while voting is open.</summary>
+    public RevealedVotesEntity? Revealed { get; set; }
+
     /// <summary>
     /// Bumped, inside the room lock, by every change that cancels a running countdown: a stored vote, clearing, a reveal,
     /// a voter joining while voting is open and a person leaving.

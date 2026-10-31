@@ -24,7 +24,7 @@ public class RoomEntityCopyMapperTests
             Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7 }
         };
 
-        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper()).Map(source);
+        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(source);
 
         Assert.Equal("room", copy.Id);
         Assert.Equal(owner, copy.OwnerGuid);
@@ -42,5 +42,36 @@ public class RoomEntityCopyMapperTests
         Assert.NotSame(source.MemberConnections[owner], copy.MemberConnections[owner]);
         Assert.NotSame(source.Votes, copy.Votes);
         Assert.NotSame(source.Configuration, copy.Configuration);
+    }
+
+    [Fact]
+    public void Map_CopiesTheRevealedVotesWithoutSharingThem()
+    {
+        var voter = Guid.NewGuid();
+        var source = new RoomEntity
+        {
+            Revealed = new RevealedVotesEntity
+            {
+                EveryoneVoted = true,
+                Votes = new Dictionary<Guid, RevealedVoteEntity> { [voter] = new() { Mark = "5", PersonType = "dev" } }
+            }
+        };
+
+        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(source);
+
+        Assert.True(copy.Revealed!.EveryoneVoted);
+        Assert.Equal("5", copy.Revealed.Votes[voter].Mark);
+        Assert.Equal("dev", copy.Revealed.Votes[voter].PersonType);
+        Assert.NotSame(source.Revealed, copy.Revealed);
+        Assert.NotSame(source.Revealed.Votes, copy.Revealed.Votes);
+        Assert.NotSame(source.Revealed.Votes[voter], copy.Revealed.Votes[voter]);
+    }
+
+    [Fact]
+    public void Map_OfAnOpenRoom_HasNoRevealedVotes()
+    {
+        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(new RoomEntity());
+
+        Assert.Null(copy.Revealed);
     }
 }
