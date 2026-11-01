@@ -1,12 +1,34 @@
 <header class="navbar">
-  <a routerLink="/" class="brand">Planning Poker</a>
-  <button mat-button type="button" (click)="cycleTheme()" aria-label="Change theme">
-    Theme: {{ theme.preference() }}
-  </button>
+  <div class="shell">
+    <a routerLink="/" class="brand">
+      <img src="favicon-32x32.png" alt="Planning Poker logo" width="28" height="28" />
+      Planning Poker
+    </a>
+    <app-theme-select />
+  </div>
 </header>
 <main>
   <router-outlet />
 </main>
 <footer class="footer">
-  <a routerLink="/credits">Credits</a>
+  <div class="shell">
+    <div class="footer-links">
+      <span>&copy; {{ year }} - Planning Poker</span>
+      <span class="divider" aria-hidden="true">|</span>
+      <a routerLink="/credits">Credits</a>
+    </div>
+    <a
+      class="buymeacoffee-link"
+      href="https://buymeacoffee.com/vladg"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <img
+        src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg"
+        alt="Buy Me A Coffee"
+        width="12"
+        height="12"
+      />
+    </a>
+  </div>
 </footer>

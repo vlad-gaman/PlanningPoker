@@ -1,0 +1,33 @@
+.credits {
+  max-width: 44rem;
+}
+
+h1 {
+  text-align: center;
+}
+
+section {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+.actions {
+  text-align: center;
+}

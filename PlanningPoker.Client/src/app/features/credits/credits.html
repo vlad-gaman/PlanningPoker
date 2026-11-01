@@ -1,12 +1,38 @@
-<section class="credits">
-  <h1>Credits</h1>
-  <h2>Libraries</h2>
-  <ul>
-    @for (library of libraries; track library.name) {
-      <li>
-        <a [href]="library.url" target="_blank" rel="noopener noreferrer">{{ library.name }}</a>
-        ({{ library.license }})
-      </li>
-    }
-  </ul>
-</section>
+<div class="page credits">
+  <h1>Credits &amp; Attributions</h1>
+
+  <section class="icons">
+    <h2>Icons</h2>
+    <p>We would like to thank the following creators for their excellent work:</p>
+    <ul>
+      @for (icon of icons; track icon.slug) {
+        <li>
+          <a
+            [href]="iconUrl + icon.slug"
+            [title]="icon.slug + ' icons'"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ icon.label }} icons created by Freepik - Flaticon
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="libraries">
+    <h2>Libraries</h2>
+    <ul>
+      @for (library of libraries; track library.name) {
+        <li>
+          <a [href]="library.url" target="_blank" rel="noopener noreferrer">{{ library.name }}</a>
+          ({{ library.license }})
+        </li>
+      }
+    </ul>
+  </section>
+
+  <div class="actions">
+    <a mat-flat-button class="back-home" routerLink="/">Back to Home</a>
+  </div>
+</div>

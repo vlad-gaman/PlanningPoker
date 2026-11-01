@@ -1,0 +1,32 @@
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 4px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+
+  &:hover {
+    background: var(--card-hover-bg);
+    border-color: var(--primary-color);
+  }
+}
+
+select {
+  background: var(--card-bg);
+  border: none;
+  color: var(--text-color);
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+option {
+  background: var(--card-bg);
+  color: var(--text-color);
+}

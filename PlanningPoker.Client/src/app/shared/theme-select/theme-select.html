@@ -1,0 +1,8 @@
+<label class="theme-toggle">
+  <span aria-hidden="true">🎨</span>
+  <select aria-label="Theme" (change)="pick($event)">
+    <option value="auto" [selected]="theme.preference() === 'auto'">Auto</option>
+    <option value="light" [selected]="theme.preference() === 'light'">Light</option>
+    <option value="dark" [selected]="theme.preference() === 'dark'">Dark</option>
+  </select>
+</label>
