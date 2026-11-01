@@ -1,0 +1,724 @@
+﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+/* Theme System - CSS Variables */
+:root {
+    /* Light theme (default) */
+    --bg-color: #ffffff;
+    --text-color: #212529;
+    --border-color: #e5e5e5;
+    --card-bg: #ffffff;
+    --card-hover-bg: rgba(0, 0, 0, 0.075);
+    --card-selected-bg: rgba(0, 0, 0, 0.3);
+    --card-disabled-bg: rgba(0, 0, 0, 0.1);
+    --card-border: #a8a8a8;
+    --primary-color: #1b6ec2;
+    --primary-hover: #1861ac;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --navbar-bg: #ffffff;
+    --footer-bg: #ffffff;
+    --chart-color-primary: #007bff;
+    --chart-color-success: #28a745;
+}
+
+[data-theme="dark"] {
+    /* Dark theme */
+    --bg-color: #1a1a1a;
+    --text-color: #e9ecef;
+    --border-color: #404040;
+    --card-bg: #2d2d2d;
+    --card-hover-bg: rgba(255, 255, 255, 0.1);
+    --card-selected-bg: rgba(255, 255, 255, 0.3);
+    --card-disabled-bg: rgba(255, 255, 255, 0.1);
+    --card-border: #565656;
+    --primary-color: #4dabf7;
+    --primary-hover: #339af0;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --navbar-bg: #1a1a1a;
+    --footer-bg: #1a1a1a;
+    --chart-color-primary: #4dabf7;
+    --chart-color-success: #51cf66;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        /* Auto mode - use dark theme when system preference is dark */
+        --bg-color: #1a1a1a;
+        --text-color: #e9ecef;
+        --border-color: #404040;
+        --card-bg: #2d2d2d;
+        --card-hover-bg: rgba(255, 255, 255, 0.1);
+        --card-selected-bg: rgba(255, 255, 255, 0.3);
+        --card-disabled-bg: rgba(255, 255, 255, 0.1);
+        --card-border: #565656;
+        --primary-color: #4dabf7;
+        --primary-hover: #339af0;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+        --navbar-bg: #1a1a1a;
+        --footer-bg: #1a1a1a;
+        --chart-color-primary: #4dabf7;
+        --chart-color-success: #51cf66;
+    }
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
+
+/* Theme Toggle Button - Now in navbar */
+.theme-toggle {
+    margin-left: auto;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.theme-toggle:hover {
+    background: var(--card-hover-bg);
+    border-color: var(--primary-color);
+}
+
+.theme-toggle select {
+    background-color: var(--card-bg);
+    border: none;
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+}
+
+.theme-toggle select option {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* Force dark mode option styling for theme toggle */
+[data-theme="dark"] .theme-toggle select option {
+    background-color: #2d2d2d !important;
+    color: #e9ecef !important;
+}
+
+/* Auto mode for system dark preference for theme toggle */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .theme-toggle select option {
+        background-color: #2d2d2d !important;
+        color: #e9ecef !important;
+    }
+}
+
+/* Base theme styles */
+html, body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a.navbar-brand {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+  color: var(--text-color) !important;
+}
+
+/* Provide sufficient contrast */
+a {
+  color: var(--primary-color);
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-hover);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  color: #fff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-hover);
+}
+
+/* Navbar theme support */
+.navbar {
+    background-color: var(--navbar-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.navbar-light .navbar-brand {
+    color: var(--text-color) !important;
+}
+
+.navbar-light .navbar-toggler {
+    border-color: var(--border-color);
+}
+
+.container {
+    background-color: var(--bg-color);
+}
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+  font-size: 14px;
+}
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.border-top {
+  border-top: 1px solid var(--border-color);
+}
+.border-bottom {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.box-shadow {
+  box-shadow: 0 .25rem .75rem var(--shadow-color);
+}
+
+button.accept-policy {
+  font-size: 1rem;
+  line-height: inherit;
+}
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  /* Margin bottom by footer height */
+  margin-bottom: 60px;
+}
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px; /* Vertically center the text there */
+  background-color: var(--footer-bg);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+/* Voting card styles */
+div.table label:hover {
+    color: var(--text-color);
+    background-color: var(--card-hover-bg);
+}
+
+div.table input[type=radio][disabled] + label {
+    border: 1px solid var(--border-color);
+    background-color: var(--card-disabled-bg);
+    opacity: 0.6;
+}
+
+div.table label {
+    min-width: 4em;
+    width: 4em;
+    padding-top: 1.8em;
+    padding-bottom: 1.8em;
+    padding-right: 0;
+    padding-left: 0;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    margin: 2px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+div.table > :not(:first-child) {
+    border: none;
+}
+
+div.table span input[type=radio] {
+    display: none;
+}
+
+div.table span input[type=radio]:checked + label {
+    background-color: var(--card-selected-bg);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+/* Table styles */
+table.table tr > td {
+    width: 50%;
+    text-align: left;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.table {
+    color: var(--text-color);
+}
+
+.table td, .table th {
+    border-color: var(--border-color);
+}
+
+#show-votes-countdown {
+    font-weight: bold;
+}
+
+div.fireworks {
+    z-index: 2;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+div.fireworks > canvas {
+    z-index: 3;
+    position: relative;
+}
+
+.form-row {
+    z-index: 0;
+    position: relative;
+}
+
+.form-row > canvas {
+    z-index: 0;
+    position: relative;
+}
+
+/*div.main {
+    z-index: 2;
+}
+
+div.main > * {
+    z-index: 2;
+}
+*/
+input[type='radio'][name='personType'] {
+    display: none;
+}
+
+input[type='radio'][name='personType'] + label {
+    padding: 2px 4px;
+    border: 1px solid var(--card-border);
+    border-radius: 2px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+input[type='radio'][name='personType'] + label:hover {
+    background-color: var(--card-hover-bg);
+}
+
+input[type='radio'][name='personType']:checked + label {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Connection status indicator */
+.connection-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    max-width: 200px;
+}
+
+.connection-status.connected {
+    background-color: #28a745;
+    color: white;
+    border: 1px solid #1e7e34;
+}
+
+.connection-status.disconnected {
+    background-color: #dc3545;
+    color: white;
+    border: 1px solid #c82333;
+    animation: pulse 1.5s infinite;
+}
+
+.connection-status.reconnecting {
+    background-color: #ffc107;
+    color: #212529;
+    border: 1px solid #e0a800;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* Form controls and buttons */
+input[type="button"], input[type="submit"], .btn {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+input[type="button"]:hover, input[type="submit"]:hover, .btn:hover {
+    background-color: var(--card-hover-bg);
+}
+
+input[type="text"], input[type="number"], select, textarea {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
+}
+
+/* Checkbox styling for dark mode */
+input[type="checkbox"] {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+}
+
+input[type="checkbox"]:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+input[type="checkbox"]:focus {
+    box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
+}
+
+/* Select dropdown styling for dark mode */
+select {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+select option {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* Force dark mode option styling */
+[data-theme="dark"] select option {
+    background-color: #2d2d2d !important;
+    color: #e9ecef !important;
+}
+
+/* Auto mode for system dark preference */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) select option {
+        background-color: #2d2d2d !important;
+        color: #e9ecef !important;
+    }
+}
+
+select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
+}
+
+/* Form labels */
+label {
+    color: var(--text-color);
+}
+
+/* Modal and overlay styles */
+.modal-content {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+/* Image contrast adjustments for themes */
+[data-theme="dark"] img {
+    filter: brightness(0.9) contrast(1.1);
+}
+
+/* Specifically for hand gesture images (Fist of Five) */
+[data-theme="dark"] img[src*="finger"] {
+    filter: brightness(0.8) contrast(1.2) saturate(0.9);
+}
+
+/* Chart canvas adjustments */
+[data-theme="dark"] canvas {
+    filter: brightness(1.05);
+}
+
+/* Ensure good contrast for voting card images */
+[data-theme="dark"] div.table label img {
+    filter: brightness(0.85) contrast(1.15);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+/* Light theme ensures images are not filtered */
+[data-theme="light"] img,
+[data-theme="light"] canvas {
+    filter: none;
+}
+
+/* Auto theme respects system preference */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) img {
+        filter: brightness(0.9) contrast(1.1);
+    }
+    
+    :root:not([data-theme="light"]) img[src*="finger"] {
+        filter: brightness(0.8) contrast(1.2) saturate(0.9);
+    }
+    
+    :root:not([data-theme="light"]) canvas {
+        filter: brightness(1.05);
+    }
+    
+    :root:not([data-theme="light"]) div.table label img {
+        filter: brightness(0.85) contrast(1.15);
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        padding: 2px;
+    }
+}
+
+/* Additional dark mode fixes for room settings modal form controls */
+[data-theme="dark"] .room-settings .form-control option {
+    background-color: #2d2d2d !important;
+    color: #e9ecef !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .room-settings .form-control option {
+        background-color: #2d2d2d !important;
+        color: #e9ecef !important;
+    }
+}
+
+/* Error message styles */
+.error-message {
+    font-size: 0.875em; 
+    margin-bottom: 10px;
+}
+
+.field-error {
+    display: none; 
+    font-size: 0.875em; 
+    margin-left: 5px;
+}
+
+/* Modal/Settings styles */
+.room-settings {
+    display: none;
+}
+
+.hidden-theme-toggle {
+    display: none;
+}
+
+/* Card image styles */
+.card-image {
+    width: 40px; 
+    height: 40px;
+}
+
+/* Room settings modal styles */
+.room-settings {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+.settings-header h4 {
+    color: var(--text-color);
+    margin: 0;
+}
+
+.settings-content {
+    padding: 15px;
+    background: var(--card-bg);
+}
+
+.settings-footer {
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    background: var(--card-bg);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    color: var(--text-color);
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-check {
+    margin-bottom: 10px;
+}
+
+.form-check-label {
+    color: var(--text-color);
+}
+
+.room-settings .form-control,
+.room-settings .form-check-input {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.room-settings .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+.room-settings .text-muted {
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.room-settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+[data-theme="dark"] .room-settings-overlay {
+    background: rgba(0,0,0,0.7);
+}
+
+/* Buy Me a Coffee link styles */
+.buymeacoffee-link {
+    display: inline-block;
+    text-decoration: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.buymeacoffee-link:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+    text-decoration: none;
+}
+
+.buymeacoffee-link img {
+    border-radius: 50%;
+    box-shadow: 0 1px 3px var(--shadow-color);
+    transition: box-shadow 0.2s ease;
+    padding: 2px;
+    background-color: #ffdd00;
+}
+
+.buymeacoffee-link:hover img {
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+/* Dark mode adjustments for Buy Me a Coffee button */
+[data-theme="dark"] .buymeacoffee-link img {
+    filter: brightness(0.95) contrast(1.05);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .buymeacoffee-link img {
+        filter: brightness(0.95) contrast(1.05);
+    }
+}
+
+/* Bootstrap card styling for dark mode */
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.card-header {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.card-body {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6 {
+    color: var(--text-color);
+}
+
+.card p {
+    color: var(--text-color);
+}
+

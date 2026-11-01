@@ -1,41 +1,119 @@
-<section class="page home">
-  <h1>Planning Poker</h1>
+<section class="page home" [class.proto-wide]="variant() !== 'N'">
+  @if (variant() === 'N') {
+    <h1>Planning Poker</h1>
+  }
 
   @if (flash.message(); as notice) {
     <p class="notice" role="status">{{ notice }}</p>
   }
 
-  <form [formGroup]="form" (ngSubmit)="createRoom()">
-    <mat-form-field appearance="outline">
-      <mat-label>Your name</mat-label>
-      <input matInput formControlName="name" autocomplete="off" />
-      @if (form.controls.name.invalid) {
-        <mat-error>Use 2 to 20 characters.</mat-error>
-      }
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Role</mat-label>
-      <mat-select formControlName="personType">
-        @for (option of personTypes; track option.value) {
-          <mat-option [value]="option.value">{{ option.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <button mat-flat-button type="submit">Create room</button>
-  </form>
+  @switch (variant()) {
+    @case ('A') {
+      <ng-container *ngTemplateOutlet="oldMarkup" />
+    }
+    @case ('C') {
+      <div class="variant-c"><ng-container *ngTemplateOutlet="oldMarkup" /></div>
+    }
+    @case ('B') {
+      <div class="mat-bent">
+        <form [formGroup]="form" (ngSubmit)="createRoom()">
+          <div class="row">
+            <span>Your Name:</span>
+            <input class="plain" formControlName="name" size="10" />
+            <mat-button-toggle-group formControlName="personType" hideSingleSelectionIndicator>
+              @for (option of personTypes; track option.value) {
+                <mat-button-toggle [value]="option.value">{{ option.value === 'dev' ? 'Dev' : option.label }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
+          <div class="row">
+            <button mat-stroked-button type="button">⚙️ More Settings</button>
+            <small>Configure card set, countdown, and room options</small>
+          </div>
+          <div class="row"><button mat-stroked-button type="submit">Create room</button></div>
+        </form>
+        <form [formGroup]="joinForm" (ngSubmit)="joinRoom()">
+          <div class="row">
+            <span>Room Name:</span>
+            <input class="plain" formControlName="room" size="10" />
+          </div>
+          <div class="row"><button mat-stroked-button type="submit">Join room</button></div>
+        </form>
+      </div>
+    }
+    @default {
+      <form [formGroup]="form" (ngSubmit)="createRoom()">
+        <mat-form-field appearance="outline">
+          <mat-label>Your name</mat-label>
+          <input matInput formControlName="name" autocomplete="off" />
+          @if (form.controls.name.invalid) {
+            <mat-error>Use 2 to 20 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="personType">
+            @for (option of personTypes; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <button mat-flat-button type="submit">Create room</button>
+      </form>
 
-  <form class="join" [formGroup]="joinForm" (ngSubmit)="joinRoom()">
-    <mat-form-field appearance="outline">
-      <mat-label>Room name or link</mat-label>
-      <input matInput formControlName="room" autocomplete="off" />
-      @if (joinForm.controls.room.invalid) {
-        <mat-error>Enter a room name or link.</mat-error>
-      }
-    </mat-form-field>
-    <button mat-stroked-button type="submit">Join room</button>
-  </form>
+      <form class="join" [formGroup]="joinForm" (ngSubmit)="joinRoom()">
+        <mat-form-field appearance="outline">
+          <mat-label>Room name or link</mat-label>
+          <input matInput formControlName="room" autocomplete="off" />
+          @if (joinForm.controls.room.invalid) {
+            <mat-error>Enter a room name or link.</mat-error>
+          }
+        </mat-form-field>
+        <button mat-stroked-button type="submit">Join room</button>
+      </form>
+    }
+  }
 
   @if (error(); as message) {
     <p class="form-error" role="alert">{{ message }}</p>
   }
 </section>
+
+<ng-template #oldMarkup>
+  <div class="text-center align-items-start">
+    <form [formGroup]="form" (ngSubmit)="createRoom()">
+      <div class="form-row align-items-center">
+        <label for="name" class="m-1 noselect">Your Name:</label>
+        <input type="text" id="name" formControlName="name" maxlength="20" size="10" class="m-1" />
+        @for (option of personTypes; track option.value) {
+          <input type="radio" [id]="'pt-' + option.value" formControlName="personType" [value]="option.value" class="m-1" />
+          <label [for]="'pt-' + option.value" class="m-1 noselect">{{ option.value === 'dev' ? 'Dev' : option.label }}</label>
+        }
+      </div>
+      <div class="form-row align-items-center">
+        <button type="button" class="btn btn-secondary m-1">⚙️ More Settings</button>
+        <small class="text-muted m-1">Configure card set, countdown, and room options</small>
+      </div>
+      <div class="form-row align-items-center">
+        <input type="submit" value="Create room" class="m-1" />
+      </div>
+    </form>
+    <br />
+    <form [formGroup]="joinForm" (ngSubmit)="joinRoom()">
+      <div class="form-row align-items-center">
+        <label for="roomName" class="m-1 noselect">Room Name:</label>
+        <input type="text" id="roomName" formControlName="room" size="10" class="m-1" />
+      </div>
+      <div class="form-row align-items-center">
+        <input type="submit" value="Join room" class="m-1" />
+      </div>
+    </form>
+  </div>
+</ng-template>
+
+<nav class="proto-switcher">
+  @for (v of variants; track v) {
+    <a [routerLink]="[]" [queryParams]="{ variant: v }" [class.on]="variant() === v">{{ v }}</a>
+  }
+  <span>N current · A Bootstrap + old CSS · B Material bent · C custom CSS</span>
+</nav>

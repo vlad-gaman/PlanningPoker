@@ -1,12 +1,15 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, map } from 'rxjs';
 import { errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
@@ -23,7 +26,7 @@ export function extractRoomId(input: string): string {
 
 @Component({
   selector: 'app-home',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [ReactiveFormsModule, RouterLink, NgTemplateOutlet, MatButtonToggleModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +37,29 @@ export class Home implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly builder = inject(FormBuilder);
+
+  // PROTOTYPE (throwaway): ?variant=N (current) | A (Bootstrap + old CSS) | B (Material, bent) | C (custom CSS)
+  protected readonly variants = ['N', 'A', 'B', 'C'];
+  protected readonly variant = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => p.get('variant') ?? 'N')), {
+    initialValue: 'N',
+  });
+  private readonly doc = inject(DOCUMENT);
+  private readonly sheets = effect(() => {
+    const isA = this.variant() === 'A';
+    this.setSheet('proto-bootstrap', isA ? '/prototype/bootstrap.min.css' : null);
+    this.setSheet('proto-oldsite', isA ? '/prototype/old-site.css' : null);
+  });
+
+  private setSheet(id: string, href: string | null): void {
+    this.doc.getElementById(id)?.remove();
+    if (href) {
+      const link = this.doc.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = href;
+      this.doc.head.appendChild(link);
+    }
+  }
 
   protected readonly flash = inject(FlashMessageService);
   protected readonly personTypes = PERSON_TYPES;
@@ -54,6 +80,8 @@ export class Home implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.setSheet('proto-bootstrap', null);
+    this.setSheet('proto-oldsite', null);
     this.flash.clear();
   }
 
