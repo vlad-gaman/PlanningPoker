@@ -110,10 +110,3 @@
     </form>
   </div>
 </ng-template>
-
-<nav class="proto-switcher">
-  @for (v of variants; track v) {
-    <a [routerLink]="[]" [queryParams]="{ variant: v }" [class.on]="variant() === v">{{ v }}</a>
-  }
-  <span>N current · A Bootstrap + old CSS · B Material bent · C custom CSS</span>
-</nav>

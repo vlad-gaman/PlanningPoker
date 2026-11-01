@@ -25,37 +25,6 @@ form {
   max-width: none;
 }
 
-.proto-switcher {
-  position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  background: #111;
-  color: #fff;
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
-  box-shadow: 0 2px 10px #0008;
-  font: 13px sans-serif;
-
-  a {
-    color: #fff;
-    padding: 0.1rem 0.55rem;
-    border-radius: 999px;
-    text-decoration: none;
-    border: 1px solid #888;
-  }
-
-  a.on {
-    background: #4dabf7;
-    color: #000;
-    border-color: #4dabf7;
-  }
-}
-
 /* A markup leaves the forms as flex columns from the rule above; the old page is block-level */
 .text-center form {
   display: block;

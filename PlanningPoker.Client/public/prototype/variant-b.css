@@ -1,0 +1,23 @@
+/* PROTOTYPE B: Material stays; Material's own tokens and density bent toward the old look. No Bootstrap. */
+html[data-variant='B'] {
+  --mat-button-outlined-container-height: 30px;
+  --mat-button-outlined-label-text-color: var(--text-color);
+  --mat-button-outlined-outline-color: var(--border-color);
+  --mat-button-outlined-container-shape: 4px;
+  --mat-button-outlined-label-text-size: .9rem;
+  --mat-table-background-color: transparent;
+  --mat-table-header-container-height: 40px;
+  --mat-table-row-item-container-height: 40px;
+  --mat-table-header-headline-size: 1rem;
+  --mat-table-row-item-label-text-size: 1rem;
+  --mat-table-header-headline-color: var(--text-color);
+  --mat-table-row-item-label-text-color: var(--text-color);
+  --mat-table-row-item-outline-color: var(--border-color);
+}
+html[data-variant='B'] .room h1 { font-size: 1rem; font-weight: 400; text-align: center; }
+html[data-variant='B'] .room .layout, html[data-variant='B'] .actions, html[data-variant='B'] .role { justify-content: center; }
+html[data-variant='B'] .cards { justify-content: center; gap: 0; }
+html[data-variant='B'] .card { min-width: 4em !important; width: 4em; padding: 1.8em 0 !important; border-radius: 10px !important; margin: 2px; font-size: 1rem !important; }
+html[data-variant='B'] .card.selected { border-color: var(--primary-color) !important; box-shadow: 0 0 0 2px var(--primary-color); }
+html[data-variant='B'] .mat-mdc-button-base { letter-spacing: 0; }
+html[data-variant='B'] .people .mat-mdc-header-cell { text-align: center; font-weight: 600; }

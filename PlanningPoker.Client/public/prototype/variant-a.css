@@ -1,0 +1,18 @@
+/* PROTOTYPE A: Bootstrap 5.1.3 + the old site.css are loaded as-is; this file only maps the new DOM onto the old rules. */
+html[data-variant='A'] .room h1 { font-size: 1rem; font-weight: 400; text-align: center; }
+html[data-variant='A'] .room .layout { justify-content: center; }
+/* old voting cards (div.table label) retargeted at .card */
+html[data-variant='A'] .cards { justify-content: center; gap: 0; }
+html[data-variant='A'] .card { min-width: 4em !important; width: 4em; padding: 1.8em 0 !important; border: 1px solid var(--card-border) !important; border-radius: 10px !important; margin: 2px; background: var(--card-bg) !important; color: var(--text-color); font-size: 1rem !important; transition: all .3s ease; }
+html[data-variant='A'] .card:hover:not(.disabled) { background: var(--card-hover-bg) !important; }
+html[data-variant='A'] .card.selected { background: var(--card-selected-bg) !important; border-color: var(--primary-color) !important; box-shadow: 0 0 0 2px var(--primary-color); }
+html[data-variant='A'] .card.disabled { border-color: var(--border-color) !important; opacity: .6; }
+/* old buttons: Bootstrap .btn look on the Material buttons */
+html[data-variant='A'] .actions { justify-content: center; }
+html[data-variant='A'] .mat-mdc-outlined-button { --mat-button-outlined-container-height: 30px; --mat-button-outlined-label-text-color: var(--text-color); --mat-button-outlined-outline-color: var(--border-color); --mat-button-outlined-container-shape: 4px; font-size: .9rem; letter-spacing: 0; background: var(--card-bg); }
+/* old participant table: Bootstrap .table look on the Material table */
+html[data-variant='A'] .people { width: 100%; background: transparent; }
+html[data-variant='A'] .people .mat-mdc-header-cell { text-align: center; font-weight: 600; font-size: 1rem; }
+html[data-variant='A'] .people .mat-mdc-row { height: 40px; }
+html[data-variant='A'] .people .mat-mdc-cell, html[data-variant='A'] .people .mat-mdc-header-cell { border-bottom: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-size: 1rem; }
+html[data-variant='A'] .role { justify-content: center; }

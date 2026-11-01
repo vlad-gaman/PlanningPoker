@@ -1,0 +1,13 @@
+/* PROTOTYPE C: hand-written CSS, no Bootstrap; Material resets forced with !important where it fights back. */
+html[data-variant='C'] .room h1 { font-size: 1rem; font-weight: 400; text-align: center; }
+html[data-variant='C'] .room .layout, html[data-variant='C'] .actions, html[data-variant='C'] .role { justify-content: center; }
+html[data-variant='C'] .cards { justify-content: center; gap: 0; }
+html[data-variant='C'] .card { min-width: 4em !important; width: 4em; padding: 1.8em 0 !important; border: 1px solid var(--card-border) !important; border-radius: 10px !important; margin: 2px; background: var(--card-bg) !important; font-size: 1rem !important; }
+html[data-variant='C'] .card:hover:not(.disabled) { background: var(--card-hover-bg) !important; }
+html[data-variant='C'] .card.selected { background: var(--card-selected-bg) !important; border-color: var(--primary-color) !important; box-shadow: 0 0 0 2px var(--primary-color); }
+html[data-variant='C'] .card.disabled { opacity: .6; }
+html[data-variant='C'] button.mat-mdc-outlined-button { height: 30px !important; padding: 0 .6rem !important; min-width: 0 !important; border: 1px solid var(--border-color) !important; border-radius: 4px !important; background: var(--card-bg) !important; color: var(--text-color) !important; font-size: .9rem !important; letter-spacing: 0 !important; }
+html[data-variant='C'] button.mat-mdc-outlined-button:hover { background: var(--card-hover-bg) !important; }
+html[data-variant='C'] .people { background: transparent !important; }
+html[data-variant='C'] .people th, html[data-variant='C'] .people td { text-align: center !important; height: 40px !important; font-size: 1rem !important; color: var(--text-color) !important; border-bottom: 1px solid var(--border-color) !important; background: var(--bg-color) !important; }
+html[data-variant='C'] .people th { font-weight: 600 !important; }
