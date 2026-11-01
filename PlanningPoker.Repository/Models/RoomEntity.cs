@@ -24,7 +24,7 @@ public class RoomEntity
 
     /// <summary>
     /// Bumped, inside the room lock, by every change that cancels a running countdown: a stored vote, clearing, a reveal,
-    /// a voter joining while voting is open and a person leaving.
+    /// a voter joining while voting is open, a person leaving, and (while voting is open) a person type or settings change.
     /// </summary>
     public long Revision { get; set; }
 

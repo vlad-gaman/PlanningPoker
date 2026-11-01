@@ -1,3 +1,4 @@
+using PlanningPoker.Common.Models;
 using PlanningPoker.Controller.Constants;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
@@ -31,7 +32,9 @@ public class RoomEventPublisherTests
             new OwnershipTransferredEventMapper(PersonMapper),
             new RoomDisposedEventMapper(),
             new VoteCastEventMapper(),
-            ResponseMappers.VoteStatus());
+            ResponseMappers.VoteStatus(),
+            new PersonTypeChangedEventMapper(PersonMapper, ResponseMappers.VoteStatus()),
+            new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus()));
     }
 
     [Fact]
@@ -62,6 +65,87 @@ public class RoomEventPublisherTests
     {
         // A second tab or a reconnect: the person was already a member, so neither PersonJoined nor CountdownReset is sent.
         await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: true, personAdded: false), JoinerConnection);
+
+        Assert.Empty(_hub.Clients.Sent);
+    }
+
+    private static PersonTypeChangeResult TypeChange(bool changed = true)
+    {
+        return new PersonTypeChangeResult
+        {
+            RoomId = "room",
+            Person = Ann,
+            Changed = changed,
+            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = false }
+        };
+    }
+
+    private static RoomConfigurationChangeResult ConfigurationChange(bool votesCleared)
+    {
+        return new RoomConfigurationChangeResult
+        {
+            RoomId = "room",
+            Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = 5, ShowFireworks = false, MaxParticipants = 9 },
+            Cards = [new CardOption { Value = "1" }],
+            UpdatedBy = "Ann",
+            VotesCleared = votesCleared,
+            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = false }
+        };
+    }
+
+    [Fact]
+    public async Task PublishPersonTypeChanged_GoesToTheWholeRoomIncludingTheCaller()
+    {
+        await _publisher.PublishPersonTypeChangedAsync(TypeChange());
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.PersonTypeChanged, sent.Method);
+        Assert.Equal(RoomGroup, sent.Target);
+        Assert.Empty(sent.Excluded);
+        Assert.Equal("Ann", Assert.IsType<PersonTypeChangedEvent>(sent.Payload).Person.Name);
+    }
+
+    [Fact]
+    public async Task PublishPersonTypeChanged_Unchanged_SendsNothing()
+    {
+        await _publisher.PublishPersonTypeChangedAsync(TypeChange(changed: false));
+
+        Assert.Empty(_hub.Clients.Sent);
+    }
+
+    [Fact]
+    public async Task PublishRoomConfigurationUpdated_WithClearedVotes_SendsTheUpdateThenVotesCleared()
+    {
+        await _publisher.PublishRoomConfigurationUpdatedAsync(ConfigurationChange(votesCleared: true));
+
+        Assert.Equal([HubEvents.RoomConfigurationUpdated, HubEvents.VotesCleared], _hub.Clients.Sent.Select(message => message.Method));
+        Assert.All(_hub.Clients.Sent, message => Assert.Equal(RoomGroup, message.Target));
+        Assert.Equal("Ann", Assert.IsType<RoomConfigurationUpdatedEvent>(_hub.Clients.Sent[0].Payload).UpdatedBy);
+    }
+
+    [Fact]
+    public async Task PublishRoomConfigurationUpdated_VotesKept_SendsOnlyTheUpdate()
+    {
+        await _publisher.PublishRoomConfigurationUpdatedAsync(ConfigurationChange(votesCleared: false));
+
+        Assert.Equal(HubEvents.RoomConfigurationUpdated, Assert.Single(_hub.Clients.Sent).Method);
+    }
+
+    [Fact]
+    public async Task PublishOwnershipTransferred_SendsTheNewOwnerToTheWholeRoom()
+    {
+        await _publisher.PublishOwnershipTransferredAsync(new OwnershipTransferResult { RoomId = "room", NewOwner = Bob });
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.OwnershipTransferred, sent.Method);
+        Assert.Equal(RoomGroup, sent.Target);
+        Assert.Equal("Bob", Assert.IsType<OwnershipTransferredEvent>(sent.Payload).NewOwner.Name);
+    }
+
+    [Fact]
+    public async Task PublishOwnershipTransferred_NoNewOwner_SendsNothing()
+    {
+        await _publisher.PublishOwnershipTransferredAsync(new OwnershipTransferResult { RoomId = "room", NewOwner = null });
 
         Assert.Empty(_hub.Clients.Sent);
     }

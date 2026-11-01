@@ -31,6 +31,22 @@ public interface IRoomService
     ServiceResponse<RevealResult> ForceShowVotes(Guid personGuid, string connectionId);
 
     /// <summary>
+    /// Sets the caller's person type. The same type is a success with <see cref="PersonTypeChangeResult.Changed"/> false. While
+    /// voting is open the change cancels a running countdown and then decides again whether everyone has voted; after the
+    /// reveal the votes and the statistics stay as they were.
+    /// </summary>
+    ServiceResponse<PersonTypeChangeResult> ChangePersonType(Guid personGuid, string connectionId, string personType);
+
+    /// <summary>
+    /// Replaces the configuration of the caller's room; owner only. Shown votes are cleared, and so are votes cast for a card
+    /// set that is no longer the room's. Any change cancels a running countdown.
+    /// </summary>
+    ServiceResponse<RoomConfigurationChangeResult> UpdateConfiguration(Guid personGuid, string connectionId, RoomConfiguration configuration);
+
+    /// <summary>Hands the room to another member; owner only. Handing it to the current owner changes nothing.</summary>
+    ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid);
+
+    /// <summary>
     /// One second of the countdown that started at <paramref name="revision"/>. Stale when any later change cancelled it
     /// (the check is made under the room lock, so a stale tick never reveals).
     /// </summary>

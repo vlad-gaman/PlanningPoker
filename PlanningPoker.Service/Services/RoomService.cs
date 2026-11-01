@@ -27,6 +27,8 @@ public class RoomService(
     RoomIdentifierValidation identifierValidation,
     RoomExistsValidation existsValidation,
     VoteMarkValidation voteMarkValidation,
+    IRoomConfigurationEntityMapper configurationEntityMapper,
+    IRoomConfigurationMapper configurationMapper,
     ICardSetService cardSets) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
@@ -354,6 +356,204 @@ public class RoomService(
         }
 
         return ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = roomId, VoteStatus = outcome.Changed ? RevealedStatus(roomId) : null });
+    }
+
+    public ServiceResponse<PersonTypeChangeResult> ChangePersonType(Guid personGuid, string connectionId, string personType)
+    {
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
+        {
+            return ServiceResponse<PersonTypeChangeResult>.Failure(located);
+        }
+
+        // Person lock first, on its own: the reveal freeze reads types through the person lock, so a reveal after this point sees the new one.
+        var (roomId, before) = located.Data;
+        var typeSet = people.Update(personGuid, entity =>
+        {
+            var differs = entity.PersonType != personType;
+            entity.PersonType = personType;
+            return differs;
+        }, out var changed);
+        if (!typeSet)
+        {
+            return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.NoSession());
+        }
+
+        var person = new Person { Guid = before.Guid, Name = before.Name, PersonType = personType };
+        if (!changed)
+        {
+            var current = CurrentStatus(roomId);
+            return current is null
+                ? ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.RoomNotFound(roomId))
+                : ServiceResponse<PersonTypeChangeResult>.Success(new PersonTypeChangeResult { RoomId = roomId, Person = person, Changed = false, VoteStatus = current });
+        }
+
+        // Room lock second: while voting is open the change cancels a running countdown. After the reveal nothing moves.
+        var found = rooms.Update(roomId, room =>
+        {
+            if (!IsMember(room, personGuid, connectionId))
+            {
+                return false;
+            }
+
+            if (room.VotingEnabled)
+            {
+                room.Revision++;
+            }
+
+            return true;
+        }, out var member);
+        if (!found)
+        {
+            return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        if (!member)
+        {
+            return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.NotInRoom());
+        }
+
+        var status = CurrentStatus(roomId);
+        if (status is null)
+        {
+            return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        return ServiceResponse<PersonTypeChangeResult>.Success(new PersonTypeChangeResult
+        {
+            RoomId = roomId,
+            Person = person,
+            Changed = true,
+            VoteStatus = status,
+            FollowUp = FollowUpAfterChange(roomId)
+        });
+    }
+
+    public ServiceResponse<RoomConfigurationChangeResult> UpdateConfiguration(Guid personGuid, string connectionId, RoomConfiguration configuration)
+    {
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
+        {
+            return ServiceResponse<RoomConfigurationChangeResult>.Failure(located);
+        }
+
+        var (roomId, person) = located.Data;
+        var cards = cardSets.GetCards(configuration.CardSet);
+        if (!cards.IsSuccess)
+        {
+            return ServiceResponse<RoomConfigurationChangeResult>.Failure(cards);
+        }
+
+        var found = rooms.Update(roomId, room =>
+        {
+            if (!IsMember(room, personGuid, connectionId))
+            {
+                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Cleared: false);
+            }
+
+            if (room.OwnerGuid != personGuid)
+            {
+                return (Response: ServiceResponse.Failure(ServiceError.NotRoomOwner()), Cleared: false);
+            }
+
+            // Shown votes are dropped (the old rule). So are votes cast for another card set: their marks are not cards of the new one.
+            var cleared = !room.VotingEnabled || room.Configuration.CardSet != configuration.CardSet;
+            room.Configuration = configurationEntityMapper.Map(configuration);
+            if (cleared)
+            {
+                room.Votes.Clear();
+                room.Revealed = null;
+                room.VotingEnabled = true;
+            }
+
+            room.Revision++;
+            return (Response: ServiceResponse.Success(), Cleared: cleared);
+        }, out var outcome);
+        if (!found)
+        {
+            return ServiceResponse<RoomConfigurationChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        if (!outcome.Response.IsSuccess)
+        {
+            return ServiceResponse<RoomConfigurationChangeResult>.Failure(outcome.Response);
+        }
+
+        var snapshot = rooms.Get(roomId);
+        if (snapshot is null)
+        {
+            return ServiceResponse<RoomConfigurationChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        return ServiceResponse<RoomConfigurationChangeResult>.Success(new RoomConfigurationChangeResult
+        {
+            RoomId = roomId,
+            Configuration = configurationMapper.Map(snapshot.Configuration),
+            Cards = cards.Data!,
+            UpdatedBy = person.Name,
+            VotesCleared = outcome.Cleared,
+            VoteStatus = voteStatusMapper.Map(snapshot, Members(snapshot)),
+            FollowUp = outcome.Cleared ? VotingFollowUp.None : FollowUpAfterChange(roomId)
+        });
+    }
+
+    public ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid)
+    {
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
+        {
+            return ServiceResponse<OwnershipTransferResult>.Failure(located);
+        }
+
+        var roomId = located.Data.RoomId;
+        var found = rooms.Update(roomId, room =>
+        {
+            if (!IsMember(room, personGuid, connectionId))
+            {
+                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Changed: false);
+            }
+
+            if (room.OwnerGuid != personGuid)
+            {
+                return (Response: ServiceResponse.Failure(ServiceError.NotRoomOwner()), Changed: false);
+            }
+
+            if (!room.MemberGuids.Contains(targetPersonGuid))
+            {
+                return (Response: ServiceResponse.Failure(ServiceError.ValidationFailed("targetPersonGuid", "not_a_member")), Changed: false);
+            }
+
+            if (room.OwnerGuid == targetPersonGuid)
+            {
+                return (Response: ServiceResponse.Success(), Changed: false);
+            }
+
+            room.OwnerGuid = targetPersonGuid;
+            return (Response: ServiceResponse.Success(), Changed: true);
+        }, out var outcome);
+        if (!found)
+        {
+            return ServiceResponse<OwnershipTransferResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        if (!outcome.Response.IsSuccess)
+        {
+            return ServiceResponse<OwnershipTransferResult>.Failure(outcome.Response);
+        }
+
+        // Read after the room lock is released: the new owner's details come from their own person lock.
+        return ServiceResponse<OwnershipTransferResult>.Success(new OwnershipTransferResult
+        {
+            RoomId = roomId,
+            NewOwner = outcome.Changed ? SnapshotPerson(targetPersonGuid) : null
+        });
+    }
+
+    /// <summary>The vote status of the room as it is now; null when the room is gone.</summary>
+    private VoteStatus? CurrentStatus(string roomId)
+    {
+        var snapshot = rooms.Get(roomId);
+        return snapshot is null ? null : voteStatusMapper.Map(snapshot, Members(snapshot));
     }
 
     public TickResult Tick(string roomId, long revision)

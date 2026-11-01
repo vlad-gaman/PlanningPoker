@@ -23,6 +23,15 @@ public interface IRoomEventPublisher
     /// <summary>Tells the whole room that the votes were revealed.</summary>
     Task PublishVotesShownAsync(string roomId, VoteStatus status);
 
+    /// <summary>Tells the whole room, the person included, that a person changed type. Sends nothing when <see cref="PersonTypeChangeResult.Changed"/> is false.</summary>
+    Task PublishPersonTypeChangedAsync(PersonTypeChangeResult result);
+
+    /// <summary>Tells the whole room that the settings were saved, followed by <c>VotesCleared</c> when the save dropped the votes.</summary>
+    Task PublishRoomConfigurationUpdatedAsync(RoomConfigurationChangeResult result);
+
+    /// <summary>Tells the whole room who owns it now. Sends nothing when the ownership did not change.</summary>
+    Task PublishOwnershipTransferredAsync(OwnershipTransferResult result);
+
     /// <summary>Tells the whole room how many seconds are left before the votes are revealed.</summary>
     Task PublishCountdownUpdateAsync(string roomId, int countdown);
 }

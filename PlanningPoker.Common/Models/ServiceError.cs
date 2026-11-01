@@ -50,6 +50,12 @@ public class ServiceError
         return Create(ErrorCodes.VotingClosed, "Voting is closed until the votes are cleared.");
     }
 
+    /// <summary>The single definition of the error returned when a non-owner uses an owner-only command.</summary>
+    public static ServiceError NotRoomOwner()
+    {
+        return Create(ErrorCodes.NotRoomOwner, "Only the room owner can do this.");
+    }
+
     /// <summary>The single definition of a field-level validation failure.</summary>
     public static ServiceError ValidationFailed(string field, string reason)
     {

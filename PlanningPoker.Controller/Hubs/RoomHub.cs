@@ -6,6 +6,7 @@ using PlanningPoker.Controller.Extensions;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Controller.Services;
+using PlanningPoker.Controller.Validations;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.Service.Validations;
@@ -22,6 +23,10 @@ public class RoomHub(
     IRoomEventPublisher roomEvents,
     IRoomTimerService timer,
     RoomIdentifierValidation identifierValidation,
+    PersonTypeValidation personTypeValidation,
+    RoomConfigurationValidation configurationValidation,
+    TransferTargetValidation transferTargetValidation,
+    IRoomConfigurationRequestMapper configurationRequestMapper,
     IJoinRoomResponseMapper joinRoomResponseMapper,
     IApiResponseMapper apiResponseMapper,
     ILogger<RoomHub> logger) : Hub
@@ -123,6 +128,80 @@ public class RoomHub(
             await roomEvents.PublishVotesShownAsync(revealed.Data.RoomId, status);
         }
 
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Changes the caller's person type; the room hears about it and may start the countdown.</summary>
+    public async Task<ApiResponse<object>> ChangePersonType(string personType)
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var valid = personTypeValidation.Validate(personType);
+        if (!valid.IsSuccess)
+        {
+            return apiResponseMapper.Map(valid);
+        }
+
+        var changed = rooms.ChangePersonType(person.Guid, Context.ConnectionId, personType);
+        if (!changed.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(changed.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishPersonTypeChangedAsync(changed.Data!);
+        await ApplyFollowUpAsync(changed.Data!.RoomId, changed.Data.FollowUp);
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Saves the settings of the caller's room; owner only.</summary>
+    public async Task<ApiResponse<object>> UpdateRoomConfiguration(RoomConfigurationRequest? configuration)
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var valid = configurationValidation.Validate(configuration);
+        if (!valid.IsSuccess)
+        {
+            return apiResponseMapper.Map(valid);
+        }
+
+        var updated = rooms.UpdateConfiguration(person.Guid, Context.ConnectionId, configurationRequestMapper.Map(configuration!));
+        if (!updated.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(updated.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishRoomConfigurationUpdatedAsync(updated.Data!);
+        await ApplyFollowUpAsync(updated.Data!.RoomId, updated.Data.FollowUp);
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Hands the caller's room to another member; owner only.</summary>
+    public async Task<ApiResponse<object>> TransferOwnership(string targetPersonGuid)
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var target = transferTargetValidation.Validate(targetPersonGuid);
+        if (!target.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(target.Errors.ToArray()));
+        }
+
+        var transferred = rooms.TransferOwnership(person.Guid, Context.ConnectionId, target.Data);
+        if (!transferred.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(transferred.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishOwnershipTransferredAsync(transferred.Data!);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 

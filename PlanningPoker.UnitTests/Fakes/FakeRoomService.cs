@@ -75,6 +75,36 @@ public sealed class FakeRoomService : IRoomService
         }
     }
 
+    public ServiceResponse<PersonTypeChangeResult> ChangeTypeResult { get; set; } = ServiceResponse<PersonTypeChangeResult>.Failure();
+
+    public ServiceResponse<RoomConfigurationChangeResult> UpdateConfigurationResult { get; set; } = ServiceResponse<RoomConfigurationChangeResult>.Failure();
+
+    public ServiceResponse<OwnershipTransferResult> TransferResult { get; set; } = ServiceResponse<OwnershipTransferResult>.Failure();
+
+    public List<(Guid PersonGuid, string ConnectionId, string PersonType)> ChangeTypeCalls { get; } = [];
+
+    public List<(Guid PersonGuid, string ConnectionId, RoomConfiguration Configuration)> UpdateConfigurationCalls { get; } = [];
+
+    public List<(Guid PersonGuid, string ConnectionId, Guid Target)> TransferCalls { get; } = [];
+
+    public ServiceResponse<PersonTypeChangeResult> ChangePersonType(Guid personGuid, string connectionId, string personType)
+    {
+        ChangeTypeCalls.Add((personGuid, connectionId, personType));
+        return ChangeTypeResult;
+    }
+
+    public ServiceResponse<RoomConfigurationChangeResult> UpdateConfiguration(Guid personGuid, string connectionId, RoomConfiguration configuration)
+    {
+        UpdateConfigurationCalls.Add((personGuid, connectionId, configuration));
+        return UpdateConfigurationResult;
+    }
+
+    public ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid)
+    {
+        TransferCalls.Add((personGuid, connectionId, targetPersonGuid));
+        return TransferResult;
+    }
+
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings) => throw new NotSupportedException();
 
     public ServiceResponse<string> Exists(string roomId) => throw new NotSupportedException();
