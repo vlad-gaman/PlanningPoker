@@ -25,6 +25,8 @@ public static class RoomServiceFactory
             new RoomIdentifierValidation(),
             new RoomExistsValidation(rooms),
             new VoteMarkValidation(new CardSetService()),
+            new RoomConfigurationEntityMapper(),
+            new RoomConfigurationMapper(),
             new CardSetService());
     }
 }

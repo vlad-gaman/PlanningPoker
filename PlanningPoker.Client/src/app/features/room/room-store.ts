@@ -5,7 +5,7 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
-import { Person } from '../../models/person';
+import { Person, PersonType } from '../../models/person';
 import {
   CardOption,
   CountdownEvent,
@@ -13,6 +13,8 @@ import {
   OwnershipTransferredEvent,
   PersonExitedEvent,
   PersonJoinedEvent,
+  PersonTypeChangedEvent,
+  RoomConfigurationUpdatedEvent,
   RoomConfiguration,
   RoomDisposedEvent,
   VoteCastEvent,
@@ -120,6 +122,21 @@ export class RoomStore {
     await this.send(this.generation, 'ForceShowVotes');
   }
 
+  /** Switches the caller's own role; the server refuses an unknown one. */
+  async changePersonType(personType: PersonType): Promise<boolean> {
+    return this.send(this.generation, 'ChangePersonType', personType);
+  }
+
+  /** Owner only: replaces the whole room configuration. Returns the server's error instead of flashing it. */
+  async updateConfiguration(configuration: RoomConfiguration): Promise<void> {
+    await this.hub.invoke('UpdateRoomConfiguration', configuration);
+  }
+
+  /** Owner only: hands the room to another member. */
+  async transferOwnership(targetPersonGuid: string): Promise<void> {
+    await this.hub.invoke('TransferOwnership', targetPersonGuid);
+  }
+
   /** Drops the hub connection and clears the room state; leaving the page triggers this too. */
   async close(): Promise<void> {
     this.generation++;
@@ -151,6 +168,12 @@ export class RoomStore {
     this.hub.on(HUB_EVENTS.PersonExited, (event: PersonExitedEvent) => this.apply(() => this.personExited(event)));
     this.hub.on(HUB_EVENTS.OwnershipTransferred, (event: OwnershipTransferredEvent) =>
       this.apply(() => this.ownerState.set(event.newOwner.guid)),
+    );
+    this.hub.on(HUB_EVENTS.PersonTypeChanged, (event: PersonTypeChangedEvent) =>
+      this.apply(() => this.personTypeChanged(event)),
+    );
+    this.hub.on(HUB_EVENTS.RoomConfigurationUpdated, (event: RoomConfigurationUpdatedEvent) =>
+      this.apply(() => this.configurationUpdated(event)),
     );
     this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => this.apply(() => void this.roomDisposed(event)));
     this.hub.on(HUB_EVENTS.VoteCast, (event: VoteCastEvent) => this.apply(() => this.voteCast(event)));
@@ -280,6 +303,22 @@ export class RoomStore {
     if (vote !== null) {
       this.votesState.update((votes) => ({ ...votes, [person.guid]: vote }));
     }
+  }
+
+  private personTypeChanged(event: PersonTypeChangedEvent): void {
+    const { person } = event;
+    this.peopleState.update((people) => people.map((p) => (p.guid === person.guid ? person : p)));
+    this.applyVoteStatus(event.voteStatus);
+  }
+
+  private configurationUpdated(event: RoomConfigurationUpdatedEvent): void {
+    this.configurationState.set(event.configuration);
+    this.cardsState.set(event.cards);
+    const mark = this.myMarkState();
+    if (mark !== null && !event.cards.some((card) => card.value === mark)) {
+      this.myMarkState.set(null);
+    }
+    this.applyVoteStatus(event.voteStatus);
   }
 
   private personExited(event: PersonExitedEvent): void {

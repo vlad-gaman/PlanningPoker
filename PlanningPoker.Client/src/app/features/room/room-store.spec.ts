@@ -134,7 +134,7 @@ describe('RoomStore', () => {
   it('binds the hub handlers only once across joins', async () => {
     await store.join('room-1');
 
-    expect(hub.on).toHaveBeenCalledTimes(10);
+    expect(hub.on).toHaveBeenCalledTimes(12);
   });
 
   it('aborts a join quietly when the store is closed while connecting', async () => {
@@ -160,7 +160,7 @@ describe('RoomStore', () => {
     await store.join('room-1');
 
     expect(store.people()).toEqual([ANN]);
-    expect(hub.on).toHaveBeenCalledTimes(20);
+    expect(hub.on).toHaveBeenCalledTimes(24);
   });
 
   /** Starts a join whose JoinRoom response is held until respond() is called. */
@@ -565,6 +565,104 @@ describe('RoomStore', () => {
 
     expect(hub.invoke).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('RoomStore room management', () => {
+  let hub: ReturnType<typeof fakeHub>;
+  let store: RoomStore;
+  const status = (votes: Record<string, string>, extra = {}) => ({
+    votes,
+    hasEveryoneVoted: false,
+    votingFinished: false,
+    countdown: null,
+    statistics: null,
+    ...extra,
+  });
+
+  beforeEach(async () => {
+    hub = fakeHub(JOIN_RESPONSE);
+    TestBed.configureTestingModule({
+      providers: [RoomStore, provideRouter([]), { provide: RoomHubClient, useValue: hub }],
+    });
+    store = TestBed.inject(RoomStore);
+    await store.join('room-1');
+  });
+
+  it('replaces the person and the vote status when a person type changed', () => {
+    hub.emit(HUB_EVENTS.PersonTypeChanged, {
+      person: { ...ANN, personType: 'obs' },
+      voteStatus: status({}, { hasEveryoneVoted: true, countdown: 3 }),
+    });
+
+    expect(store.people()[0].personType).toBe('obs');
+    expect(store.hasEveryoneVoted()).toBe(true);
+    expect(store.countdown()).toBe(3);
+  });
+
+  it('does not count a person type change as a reveal', () => {
+    hub.emit(HUB_EVENTS.PersonTypeChanged, { person: ANN, voteStatus: revealed(STATISTICS) });
+
+    expect(store.revealCount()).toBe(0);
+  });
+
+  it('replaces configuration and cards when the configuration is updated', () => {
+    const cards = [{ value: 'S', display: null }];
+    const configuration = { cardSet: 'tshirt', countdownSeconds: 9, showFireworks: false, maxParticipants: 4 };
+
+    hub.emit(HUB_EVENTS.RoomConfigurationUpdated, { configuration, cards, updatedBy: 'Ann', voteStatus: status({}) });
+
+    expect(store.configuration()).toEqual(configuration);
+    expect(store.cards()).toEqual(cards);
+  });
+
+  it('drops the selected card when it is not in the new card set', async () => {
+    await store.vote('5');
+
+    hub.emit(HUB_EVENTS.RoomConfigurationUpdated, {
+      configuration: JOIN_RESPONSE.configuration,
+      cards: [{ value: 'S', display: null }],
+      updatedBy: 'Ann',
+      voteStatus: status({}),
+    });
+
+    expect(store.myMark()).toBeNull();
+  });
+
+  it('keeps the selected card when it is still in the card set', async () => {
+    await store.vote('5');
+
+    hub.emit(HUB_EVENTS.RoomConfigurationUpdated, {
+      configuration: JOIN_RESPONSE.configuration,
+      cards: JOIN_RESPONSE.cards,
+      updatedBy: 'Ann',
+      voteStatus: status({ [ANN.guid]: 'hide' }),
+    });
+
+    expect(store.myMark()).toBe('5');
+  });
+
+  it('sends the management commands to the hub', async () => {
+    await store.changePersonType('obs');
+    await store.updateConfiguration(JOIN_RESPONSE.configuration);
+    await store.transferOwnership(BOB.guid);
+
+    expect(hub.invoke).toHaveBeenCalledWith('ChangePersonType', 'obs');
+    expect(hub.invoke).toHaveBeenCalledWith('UpdateRoomConfiguration', JOIN_RESPONSE.configuration);
+    expect(hub.invoke).toHaveBeenCalledWith('TransferOwnership', BOB.guid);
+  });
+
+  it('flashes a refused role change', async () => {
+    hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'x', message: 'nope', metadata: {} }]));
+
+    expect(await store.changePersonType('obs')).toBe(false);
+    expect(TestBed.inject(FlashMessageService).message()).toBe('nope');
+  });
+
+  it('lets a refused configuration update reach the caller', async () => {
+    hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'not_room_owner', message: 'no', metadata: {} }]));
+
+    await expect(store.updateConfiguration(JOIN_RESPONSE.configuration)).rejects.toBeInstanceOf(ApiRequestError);
   });
 });
 

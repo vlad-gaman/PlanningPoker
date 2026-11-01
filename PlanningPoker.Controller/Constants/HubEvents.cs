@@ -12,4 +12,6 @@ public static class HubEvents
     public const string VoteStatusUpdate = "VoteStatusUpdate";
     public const string VotesShown = "VotesShown";
     public const string VotesCleared = "VotesCleared";
+    public const string PersonTypeChanged = "PersonTypeChanged";
+    public const string RoomConfigurationUpdated = "RoomConfigurationUpdated";
 }

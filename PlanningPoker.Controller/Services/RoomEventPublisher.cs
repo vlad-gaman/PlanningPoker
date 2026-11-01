@@ -15,7 +15,9 @@ public class RoomEventPublisher(
     IOwnershipTransferredEventMapper ownershipTransferredEventMapper,
     IRoomDisposedEventMapper roomDisposedEventMapper,
     IVoteCastEventMapper voteCastEventMapper,
-    IVoteStatusResponseMapper voteStatusResponseMapper) : IRoomEventPublisher, IRoomCountdownNotifier
+    IVoteStatusResponseMapper voteStatusResponseMapper,
+    IPersonTypeChangedEventMapper personTypeChangedEventMapper,
+    IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
@@ -60,6 +62,30 @@ public class RoomEventPublisher(
         var group = hub.Clients.Group(result.RoomId);
         await group.SendAsync(HubEvents.VoteCast, voteCastEventMapper.Map(result.PersonGuid));
         await group.SendAsync(HubEvents.VoteStatusUpdate, voteStatusResponseMapper.Map(result.VoteStatus));
+    }
+
+    public Task PublishPersonTypeChangedAsync(PersonTypeChangeResult result)
+    {
+        return result.Changed
+            ? hub.Clients.Group(result.RoomId).SendAsync(HubEvents.PersonTypeChanged, personTypeChangedEventMapper.Map(result))
+            : Task.CompletedTask;
+    }
+
+    public async Task PublishRoomConfigurationUpdatedAsync(RoomConfigurationChangeResult result)
+    {
+        var group = hub.Clients.Group(result.RoomId);
+        await group.SendAsync(HubEvents.RoomConfigurationUpdated, roomConfigurationUpdatedEventMapper.Map(result));
+        if (result.VotesCleared)
+        {
+            await group.SendAsync(HubEvents.VotesCleared);
+        }
+    }
+
+    public Task PublishOwnershipTransferredAsync(OwnershipTransferResult result)
+    {
+        return result.NewOwner is { } newOwner
+            ? hub.Clients.Group(result.RoomId).SendAsync(HubEvents.OwnershipTransferred, ownershipTransferredEventMapper.Map(newOwner))
+            : Task.CompletedTask;
     }
 
     public Task PublishVotesClearedAsync(string roomId)

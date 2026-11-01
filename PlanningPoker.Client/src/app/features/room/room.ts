@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -25,7 +26,8 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
-import { PERSON_TYPES, Person } from '../../models/person';
+import { PERSON_TYPES, Person, PersonType } from '../../models/person';
+import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
 import { createPersonForm } from '../shared/person-form';
 import { CardPicker, cardImage } from './card-picker/card-picker';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
@@ -59,6 +61,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly meService = inject(MeService);
   private readonly router = inject(Router);
   private readonly flash = inject(FlashMessageService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly columns = ['name', 'role', 'mark'];
@@ -81,6 +84,11 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected readonly isObserver = computed(
     () => this.store.people().find((person) => person.guid === this.myGuid())?.personType === 'obs',
   );
+
+  protected readonly myPersonType = computed(
+    () => this.store.people().find((person) => person.guid === this.myGuid())?.personType ?? null,
+  );
+  protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
     // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
@@ -144,6 +152,24 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected showVotes(): void {
     this.fireworks()?.stop();
     void this.store.showVotes();
+  }
+
+  protected changeRole(personType: PersonType): void {
+    void this.store.changePersonType(personType);
+  }
+
+  protected openSettings(): void {
+    const configuration = this.store.configuration();
+    if (!configuration) {
+      return;
+    }
+    const data: RoomSettingsDialogData = {
+      configuration,
+      candidates: this.store.people().filter((person) => person.guid !== this.myGuid()),
+      save: (updated) => this.store.updateConfiguration(updated),
+      transfer: (guid) => this.store.transferOwnership(guid),
+    };
+    this.dialog.open(RoomSettingsDialog, { data });
   }
 
   protected leave(): void {

@@ -17,7 +17,7 @@ public class CreateRoomRequestValidationTests
 
     private static List<string> Fields(CreateRoomRequest request)
     {
-        var response = new CreateRoomRequestValidation().Validate(request);
+        var response = new CreateRoomRequestValidation(new RoomConfigurationValidation()).Validate(request);
         Assert.All(response.Errors, error => Assert.Equal(ErrorCodes.ValidationFailed, error.Code));
         return response.Errors.Select(error => error.Metadata["field"]).ToList();
     }
@@ -27,7 +27,7 @@ public class CreateRoomRequestValidationTests
     [InlineData(30)]
     public void Validate_BoundaryCountdowns_Pass(int countdown)
     {
-        Assert.True(new CreateRoomRequestValidation().Validate(Request(countdown: countdown)).IsSuccess);
+        Assert.True(new CreateRoomRequestValidation(new RoomConfigurationValidation()).Validate(Request(countdown: countdown)).IsSuccess);
     }
 
     [Fact]

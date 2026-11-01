@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
@@ -31,6 +32,7 @@ describe('Room', () => {
   const me = { get: vi.fn(), update: vi.fn() };
   const fireworks = { launch: vi.fn(), dispose: vi.fn() };
   const launcher = { create: vi.fn() };
+  const dialog = { open: vi.fn() };
   let hub: ReturnType<typeof fakeHub>;
   let navigate: ReturnType<typeof vi.spyOn>;
 
@@ -41,12 +43,14 @@ describe('Room', () => {
     fireworks.launch.mockReset();
     fireworks.dispose.mockReset();
     launcher.create.mockReset();
+    dialog.open.mockReset();
     launcher.create.mockReturnValue(fireworks);
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: MeService, useValue: me },
         { provide: FireworksLauncher, useValue: launcher },
+        { provide: MatDialog, useValue: dialog },
         {
           provide: ChartFactory,
           useValue: { create: () => ({ draw: vi.fn(), destroy: vi.fn() }) },
@@ -322,7 +326,7 @@ describe('Room', () => {
       });
       await settle(fixture);
 
-      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('app-card-picker input[type="radio"]'));
       expect(radios.length).toBeGreaterThan(0);
       expect(radios.every((radio) => radio.disabled)).toBe(true);
     });
@@ -332,7 +336,7 @@ describe('Room', () => {
 
       const { element } = await render();
 
-      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('app-card-picker input[type="radio"]'));
       expect(radios.every((radio) => radio.disabled)).toBe(true);
     });
 
@@ -489,5 +493,80 @@ describe('Room', () => {
 
     expect(hub.disconnect).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  describe('room management', () => {
+    const radioFor = (element: HTMLElement, value: string) =>
+      element.querySelector(`[aria-label="Your role"] input[value="${value}"]`) as HTMLInputElement;
+
+    it('checks the radio of the own role', async () => {
+      me.get.mockReturnValue(of(ANN));
+
+      const { element } = await render();
+
+      expect(radioFor(element, 'dev').checked).toBe(true);
+      expect(radioFor(element, 'obs').checked).toBe(false);
+    });
+
+    it('sends the chosen role to the hub', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+
+      radioFor(element, 'obs').click();
+      await settle(fixture);
+
+      expect(hub.invoke).toHaveBeenLastCalledWith('ChangePersonType', 'obs');
+    });
+
+    it('follows a role change pushed by the server', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.PersonTypeChanged, {
+        person: { ...ANN, personType: 'obs' },
+        voteStatus: JOIN_RESPONSE.voteStatus,
+      });
+      await settle(fixture);
+
+      expect(radioFor(element, 'obs').checked).toBe(true);
+      const radios = Array.from(element.querySelectorAll<HTMLInputElement>('app-card-picker input[type="radio"]'));
+      expect(radios.every((radio) => radio.disabled)).toBe(true);
+    });
+
+    it('shows Settings to the owner only and opens the dialog with the other members', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+      hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+      await settle(fixture);
+
+      const settings = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Settings'));
+      settings?.click();
+
+      const data = dialog.open.mock.calls[0][1].data;
+      expect(data.configuration).toEqual(JOIN_RESPONSE.configuration);
+      expect(data.candidates).toEqual([BOB]);
+    });
+
+    it('hides Settings from a member who is not the owner', async () => {
+      me.get.mockReturnValue(of(BOB));
+
+      const { element } = await render();
+
+      expect(Array.from(element.querySelectorAll('button')).some((b) => b.textContent?.includes('Settings'))).toBe(
+        false,
+      );
+    });
+
+    it('shows Settings after ownership is transferred to the user', async () => {
+      me.get.mockReturnValue(of(BOB));
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.OwnershipTransferred, { newOwner: BOB });
+      await settle(fixture);
+
+      expect(Array.from(element.querySelectorAll('button')).some((b) => b.textContent?.includes('Settings'))).toBe(
+        true,
+      );
+    });
   });
 });

@@ -3,6 +3,8 @@ export const HUB_EVENTS = {
   PersonJoined: 'PersonJoined',
   PersonExited: 'PersonExited',
   OwnershipTransferred: 'OwnershipTransferred',
+  PersonTypeChanged: 'PersonTypeChanged',
+  RoomConfigurationUpdated: 'RoomConfigurationUpdated',
   RoomDisposed: 'RoomDisposed',
   CountdownReset: 'CountdownReset',
   VoteCast: 'VoteCast',

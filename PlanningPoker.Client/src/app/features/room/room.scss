@@ -67,3 +67,10 @@ app-results {
   border-radius: 3px;
   background: #e9ecef;
 }
+
+.role {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}

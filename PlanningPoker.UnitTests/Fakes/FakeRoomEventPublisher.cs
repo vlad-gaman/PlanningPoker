@@ -18,6 +18,36 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
 
     public List<(string RoomId, int Countdown)> CountdownUpdates { get; } = [];
 
+    public List<PersonTypeChangeResult> TypeChanges { get; } = [];
+
+    public List<RoomConfigurationChangeResult> ConfigurationUpdates { get; } = [];
+
+    public List<OwnershipTransferResult> OwnershipTransfers { get; } = [];
+
+    /// <summary>Every publish call in order, by name, so a test can check the order guarantees of the hub.</summary>
+    public List<string> Order { get; } = [];
+
+    public Task PublishPersonTypeChangedAsync(PersonTypeChangeResult result)
+    {
+        TypeChanges.Add(result);
+        Order.Add("PersonTypeChanged");
+        return Task.CompletedTask;
+    }
+
+    public Task PublishRoomConfigurationUpdatedAsync(RoomConfigurationChangeResult result)
+    {
+        ConfigurationUpdates.Add(result);
+        Order.Add("RoomConfigurationUpdated");
+        return Task.CompletedTask;
+    }
+
+    public Task PublishOwnershipTransferredAsync(OwnershipTransferResult result)
+    {
+        OwnershipTransfers.Add(result);
+        Order.Add("OwnershipTransferred");
+        return Task.CompletedTask;
+    }
+
     public Task PublishVoteCastAsync(VoteResult result)
     {
         VoteCasts.Add(result);
@@ -33,12 +63,14 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
     public Task PublishVotesShownAsync(string roomId, VoteStatus status)
     {
         Shown.Add((roomId, status));
+        Order.Add("VotesShown");
         return Task.CompletedTask;
     }
 
     public Task PublishCountdownUpdateAsync(string roomId, int countdown)
     {
         CountdownUpdates.Add((roomId, countdown));
+        Order.Add("CountdownUpdate");
         return Task.CompletedTask;
     }
 

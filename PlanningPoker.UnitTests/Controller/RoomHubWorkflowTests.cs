@@ -7,6 +7,7 @@ using PlanningPoker.Controller.Extensions;
 using PlanningPoker.Controller.Hubs;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
+using PlanningPoker.Controller.Validations;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Validations;
 using PlanningPoker.UnitTests.Builders;
@@ -37,6 +38,10 @@ public class RoomHubWorkflowTests
             _publisher,
             _timer,
             new RoomIdentifierValidation(),
+            new PersonTypeValidation(),
+            new RoomConfigurationValidation(),
+            new TransferTargetValidation(),
+            new RoomConfigurationRequestMapper(),
             new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
             NullLogger<RoomHub>.Instance)
@@ -186,6 +191,197 @@ public class RoomHubWorkflowTests
 
         Assert.Empty(_rooms.ExitCalls);
         Assert.Empty(_publisher.Exited);
+    }
+
+    private static PersonTypeChangeResult TypeChange(VotingFollowUp? followUp = null, bool changed = true)
+    {
+        return new PersonTypeChangeResult
+        {
+            RoomId = "room",
+            Person = Ann,
+            Changed = changed,
+            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = true },
+            FollowUp = followUp ?? VotingFollowUp.None
+        };
+    }
+
+    private static RoomConfigurationChangeResult ConfigurationChange(VotingFollowUp? followUp = null)
+    {
+        return new RoomConfigurationChangeResult
+        {
+            RoomId = "room",
+            Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = 5, ShowFireworks = false, MaxParticipants = 9 },
+            Cards = [new CardOption { Value = "1" }],
+            UpdatedBy = "Ann",
+            VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = true },
+            FollowUp = followUp ?? VotingFollowUp.None
+        };
+    }
+
+    private static RoomConfigurationRequest ConfigurationRequest(string cardSet = "linear", int countdown = 5)
+    {
+        return new RoomConfigurationRequest { CardSet = cardSet, CountdownSeconds = countdown, ShowFireworks = true, MaxParticipants = 9 };
+    }
+
+    [Fact]
+    public async Task ChangePersonType_Success_PublishesTheChangeThenTheCountdownItCaused()
+    {
+        _rooms.ChangeTypeResult = ServiceResponse<PersonTypeChangeResult>.Success(TypeChange(new VotingFollowUp { Countdown = new CountdownStart { Revision = 7, Seconds = 5 } }));
+
+        var response = await NewHub(Ann).ChangePersonType("obs");
+
+        Assert.Null(response.Errors);
+        Assert.Equal((Ann.Guid, ConnectionId, "obs"), Assert.Single(_rooms.ChangeTypeCalls));
+        Assert.Equal(["PersonTypeChanged", "CountdownUpdate"], _publisher.Order);
+        Assert.Equal(("room", 7L), Assert.Single(_timer.Started));
+    }
+
+    [Fact]
+    public async Task ChangePersonType_ThatRevealsAtOnce_PublishesTheChangeThenVotesShown()
+    {
+        var revealed = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = true, VotingFinished = true };
+        _rooms.ChangeTypeResult = ServiceResponse<PersonTypeChangeResult>.Success(TypeChange(new VotingFollowUp { Revealed = revealed }));
+
+        await NewHub(Ann).ChangePersonType("obs");
+
+        Assert.Equal(["PersonTypeChanged", "VotesShown"], _publisher.Order);
+    }
+
+    [Fact]
+    public async Task ChangePersonType_Unchanged_IsASuccessThatStartsNothing()
+    {
+        _rooms.ChangeTypeResult = ServiceResponse<PersonTypeChangeResult>.Success(TypeChange(changed: false));
+
+        var response = await NewHub(Ann).ChangePersonType("dev");
+
+        Assert.Null(response.Errors);
+        Assert.False(Assert.Single(_publisher.TypeChanges).Changed);
+        Assert.Empty(_timer.Started);
+    }
+
+    [Fact]
+    public async Task ChangePersonType_InvalidType_IsRejectedBeforeTheService()
+    {
+        var response = await NewHub(Ann).ChangePersonType("admin");
+
+        var error = Assert.Single(response.Errors!);
+        Assert.Equal(ErrorCodes.ValidationFailed, error.Code);
+        Assert.Equal("personType", error.Metadata["field"]);
+        Assert.Empty(_rooms.ChangeTypeCalls);
+        Assert.Empty(_publisher.TypeChanges);
+    }
+
+    [Fact]
+    public async Task ChangePersonType_NotInRoom_ReturnsTheErrorAndPublishesNothing()
+    {
+        _rooms.ChangeTypeResult = ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.NotInRoom());
+
+        var response = await NewHub(Ann).ChangePersonType("obs");
+
+        Assert.Equal(ErrorCodes.NotInRoom, ErrorCode(response));
+        Assert.Empty(_publisher.TypeChanges);
+    }
+
+    [Fact]
+    public async Task ChangePersonType_NoSession_ReturnsNoSession()
+    {
+        var response = await NewHub(null).ChangePersonType("obs");
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.ChangeTypeCalls);
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_Success_PublishesTheUpdateThenTheCountdownItRestarted()
+    {
+        _rooms.UpdateConfigurationResult = ServiceResponse<RoomConfigurationChangeResult>.Success(ConfigurationChange(new VotingFollowUp { Countdown = new CountdownStart { Revision = 3, Seconds = 8 } }));
+
+        var response = await NewHub(Ann).UpdateRoomConfiguration(ConfigurationRequest(countdown: 8));
+
+        Assert.Null(response.Errors);
+        var call = Assert.Single(_rooms.UpdateConfigurationCalls);
+        Assert.Equal((Ann.Guid, ConnectionId, "linear", 8), (call.PersonGuid, call.ConnectionId, call.Configuration.CardSet, call.Configuration.CountdownSeconds));
+        Assert.Equal(["RoomConfigurationUpdated", "CountdownUpdate"], _publisher.Order);
+        Assert.Equal(("room", 3L), Assert.Single(_timer.Started));
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_NotTheOwner_ReturnsTheErrorAndPublishesNothing()
+    {
+        _rooms.UpdateConfigurationResult = ServiceResponse<RoomConfigurationChangeResult>.Failure(ServiceError.NotRoomOwner());
+
+        var response = await NewHub(Ann).UpdateRoomConfiguration(ConfigurationRequest());
+
+        Assert.Equal(ErrorCodes.NotRoomOwner, ErrorCode(response));
+        Assert.Empty(_publisher.ConfigurationUpdates);
+    }
+
+    [Theory]
+    [InlineData(null, "configuration")]
+    [InlineData("tarot", "cardSet")]
+    public async Task UpdateRoomConfiguration_Invalid_IsRejectedBeforeTheService(string? cardSet, string field)
+    {
+        var request = cardSet is null ? null : ConfigurationRequest(cardSet);
+
+        var response = await NewHub(Ann).UpdateRoomConfiguration(request);
+
+        var error = Assert.Single(response.Errors!);
+        Assert.Equal(ErrorCodes.ValidationFailed, error.Code);
+        Assert.Equal(field, error.Metadata["field"]);
+        Assert.Empty(_rooms.UpdateConfigurationCalls);
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_NoSession_ReturnsNoSession()
+    {
+        var response = await NewHub(null).UpdateRoomConfiguration(ConfigurationRequest());
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.UpdateConfigurationCalls);
+    }
+
+    [Fact]
+    public async Task TransferOwnership_Success_PublishesTheTransfer()
+    {
+        var bob = Guid.NewGuid();
+        _rooms.TransferResult = ServiceResponse<OwnershipTransferResult>.Success(new OwnershipTransferResult { RoomId = "room", NewOwner = Ann });
+
+        var response = await NewHub(Ann).TransferOwnership(bob.ToString());
+
+        Assert.Null(response.Errors);
+        Assert.Equal((Ann.Guid, ConnectionId, bob), Assert.Single(_rooms.TransferCalls));
+        Assert.Same(Ann, Assert.Single(_publisher.OwnershipTransfers).NewOwner);
+    }
+
+    [Fact]
+    public async Task TransferOwnership_NotAGuid_IsRejectedBeforeTheService()
+    {
+        var response = await NewHub(Ann).TransferOwnership("nope");
+
+        var error = Assert.Single(response.Errors!);
+        Assert.Equal("targetPersonGuid", error.Metadata["field"]);
+        Assert.Equal("invalid_guid", error.Metadata["reason"]);
+        Assert.Empty(_rooms.TransferCalls);
+    }
+
+    [Fact]
+    public async Task TransferOwnership_ServiceRefuses_ReturnsTheErrorAndPublishesNothing()
+    {
+        _rooms.TransferResult = ServiceResponse<OwnershipTransferResult>.Failure(ServiceError.NotRoomOwner());
+
+        var response = await NewHub(Ann).TransferOwnership(Guid.NewGuid().ToString());
+
+        Assert.Equal(ErrorCodes.NotRoomOwner, ErrorCode(response));
+        Assert.Empty(_publisher.OwnershipTransfers);
+    }
+
+    [Fact]
+    public async Task TransferOwnership_NoSession_ReturnsNoSession()
+    {
+        var response = await NewHub(null).TransferOwnership(Guid.NewGuid().ToString());
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.TransferCalls);
     }
 
     private static VoteResult VoteOutcome(VotingFollowUp? followUp = null)

@@ -47,12 +47,17 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IRoomDisposedEventMapper, RoomDisposedEventMapper>();
         services.AddSingleton<IRoomCountdownEventMapper, RoomCountdownEventMapper>();
         services.AddSingleton<IVoteCastEventMapper, VoteCastEventMapper>();
+        services.AddSingleton<IPersonTypeChangedEventMapper, PersonTypeChangedEventMapper>();
+        services.AddSingleton<IRoomConfigurationUpdatedEventMapper, RoomConfigurationUpdatedEventMapper>();
         services.AddSingleton<ICardResponseMapper, CardResponseMapper>();
         services.AddSingleton<RoomEventPublisher>();
         services.AddSingleton<IRoomEventPublisher>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<IRoomCountdownNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<UpdateMeRequestValidation>();
+        services.AddSingleton<RoomConfigurationValidation>();
         services.AddSingleton<CreateRoomRequestValidation>();
+        services.AddSingleton<PersonTypeValidation>();
+        services.AddSingleton<TransferTargetValidation>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<ApiBehaviorOptions>, ApiBehaviorOptionsSetup>());
         return services;
     }
