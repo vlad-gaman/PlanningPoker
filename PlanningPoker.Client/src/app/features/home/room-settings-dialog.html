@@ -1,5 +1,5 @@
 <h2 mat-dialog-title>Room settings</h2>
-<form [formGroup]="form" (ngSubmit)="create()">
+<form [formGroup]="form" (ngSubmit)="submit()">
   <mat-dialog-content class="settings">
     <mat-form-field appearance="outline">
       <mat-label>Card set</mat-label>
@@ -24,10 +24,30 @@
       }
     </mat-form-field>
     <mat-checkbox formControlName="showFireworks">Show fireworks</mat-checkbox>
-    <mat-checkbox formControlName="useFunRoomName">Use a fun room name</mat-checkbox>
+    @if (!data) {
+      <mat-checkbox formControlName="useFunRoomName">Use a fun room name</mat-checkbox>
+    }
+    @if (data && data.candidates.length) {
+      <div class="transfer">
+        <mat-form-field appearance="outline">
+          <mat-label>New owner</mat-label>
+          <mat-select [value]="transferTarget()" (selectionChange)="transferTarget.set($event.value)">
+            @for (person of data.candidates; track person.guid) {
+              <mat-option [value]="person.guid">{{ person.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <button mat-stroked-button type="button" [disabled]="!transferTarget()" (click)="transferOwnership()">
+          Transfer ownership
+        </button>
+      </div>
+    }
+    @if (error(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit">Create room</button>
+    <button mat-flat-button type="submit">{{ data ? 'Save settings' : 'Create room' }}</button>
   </mat-dialog-actions>
 </form>

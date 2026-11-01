@@ -97,6 +97,18 @@ export interface OwnershipTransferredEvent {
   newOwner: Person;
 }
 
+export interface PersonTypeChangedEvent {
+  person: Person;
+  voteStatus: VoteStatus;
+}
+
+export interface RoomConfigurationUpdatedEvent {
+  configuration: RoomConfiguration;
+  cards: CardOption[];
+  updatedBy: string;
+  voteStatus: VoteStatus;
+}
+
 export interface RoomDisposedEvent {
   roomId: string;
 }

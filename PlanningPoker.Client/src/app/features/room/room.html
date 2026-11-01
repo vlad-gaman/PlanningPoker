@@ -75,7 +75,26 @@
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
             <tr mat-row *matRowDef="let row; columns: columns"></tr>
           </table>
-          <button mat-stroked-button type="button" (click)="leave()">Leave room</button>
+          <div class="role" role="radiogroup" aria-label="Your role">
+            @for (option of personTypes; track option.value) {
+              <label>
+                <input
+                  type="radio"
+                  name="role"
+                  [value]="option.value"
+                  [checked]="myPersonType() === option.value"
+                  (change)="changeRole(option.value)"
+                />
+                {{ option.label }}
+              </label>
+            }
+          </div>
+          <div class="actions">
+            @if (isOwner()) {
+              <button mat-stroked-button type="button" (click)="openSettings()">Settings</button>
+            }
+            <button mat-stroked-button type="button" (click)="leave()">Leave room</button>
+          </div>
         </div>
         @if (store.statistics(); as statistics) {
           <app-results [statistics]="statistics" [cards]="store.cards()" />

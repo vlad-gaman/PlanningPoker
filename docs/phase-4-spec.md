@@ -108,7 +108,7 @@ One room `Update`: owner check (`not_room_owner`), target must be in `Members` (
 
 ### 3.4 Mappers and validations
 
-New mappers, named after their output: `PersonTypeChangedEventMapper`, `RoomConfigurationUpdatedEventMapper`, `RoomConfigurationMapper` (request DTO -> service model; the room's `Configuration` already has a response mapper). Validations: `RoomConfigurationValidation` (Controller, request shape, shared with `CreateRoomRequestValidation`, which delegates to it), `TransferTargetValidation` (guid format, Controller), `RoomOwnerValidation` (Service, caller is the owner). All registered in dependency injection. `RoomConstraints` is the single place for the countdown and max participants bounds.
+New mappers, named after their output: `PersonTypeChangedEventMapper`, `RoomConfigurationUpdatedEventMapper`, `RoomConfigurationUpdatedEventMapper` reuses the existing `RoomConfigurationRequestMapper` for the request DTO and the room's configuration response mapper. Validations: `RoomConfigurationValidation` (Controller, request shape, shared with `CreateRoomRequestValidation`, which delegates to it), `PersonTypeValidation` (Controller), `TransferTargetValidation` (guid format, Controller); the owner check lives inside `RoomService` as `not_room_owner`. All registered in dependency injection. `RoomConstraints` is the single place for the countdown and max participants bounds.
 
 ### 3.5 Publisher and hub
 
