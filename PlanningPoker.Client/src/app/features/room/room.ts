@@ -15,9 +15,6 @@ import {
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -28,6 +25,7 @@ import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES, Person, PersonType } from '../../models/person';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
+import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
 import { CardPicker, cardImage } from './card-picker/card-picker';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
@@ -43,10 +41,8 @@ type Phase = 'loading' | 'name' | 'joined';
     FireworksOverlay,
     Results,
     ReactiveFormsModule,
+    PersonFields,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatTableModule,
   ],
   providers: [RoomStore, RoomHubClient],

@@ -17,8 +17,8 @@ async function createRoom(page: Page, name: string): Promise<string> {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create room' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Use a fun room name').uncheck();
-  await dialog.getByLabel('Countdown (seconds)').fill('2');
+  await dialog.getByLabel('Use fun room name').uncheck();
+  await dialog.getByLabel('Countdown Duration').fill('2');
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(GUID_ROOM_PATH);
   return page.url();
@@ -58,12 +58,12 @@ test('only the owner sees Settings; saving them reaches every member', async ({ 
 
   await settings(ann.page).click();
   const dialog = ann.page.getByRole('dialog');
-  await dialog.getByLabel('Countdown (seconds)').fill('7');
-  await dialog.getByRole('button', { name: 'Save settings' }).click();
+  await dialog.getByLabel('Countdown Duration').fill('7');
+  await dialog.getByRole('button', { name: 'Save Settings' }).click();
   await expect(dialog).toHaveCount(0);
 
   await ann.page.getByRole('button', { name: 'Settings' }).click();
-  await expect(ann.page.getByRole('dialog').getByLabel('Countdown (seconds)')).toHaveValue('7');
+  await expect(ann.page.getByRole('dialog').getByLabel('Countdown Duration')).toHaveValue('7');
 
   await Promise.all([ann.context.close(), bob.context.close()]);
 });
@@ -76,9 +76,8 @@ test('transferring ownership moves the Settings button to the new owner', async 
 
   await settings(ann.page).click();
   const dialog = ann.page.getByRole('dialog');
-  await dialog.getByRole('combobox', { name: 'New owner' }).click();
-  await ann.page.getByRole('option', { name: 'Bob' }).click();
-  await dialog.getByRole('button', { name: 'Transfer ownership' }).click();
+  await dialog.getByLabel('Transfer Ownership').selectOption({ label: 'Bob' });
+  await dialog.getByRole('button', { name: 'Transfer Ownership' }).click();
 
   await expect(settings(bob.page)).toBeVisible();
   await expect(settings(ann.page)).toHaveCount(0);

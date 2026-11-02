@@ -58,8 +58,10 @@ describe('Home', () => {
   }
 
   function type(element: HTMLElement, label: string, value: string): void {
-    const field = Array.from(element.querySelectorAll('mat-form-field')).find((f) => f.textContent?.includes(label));
-    const input = field?.querySelector('input') as HTMLInputElement;
+    const labelElement = Array.from(element.querySelectorAll('label')).find((l) =>
+      l.textContent?.toLowerCase().includes(label.toLowerCase()),
+    );
+    const input = element.querySelector(`#${labelElement?.htmlFor}`) as HTMLInputElement;
     input.value = value;
     input.dispatchEvent(new Event('input'));
   }
@@ -110,7 +112,7 @@ describe('Home', () => {
     fixture.detectChanges();
 
     expect(dialog.open).not.toHaveBeenCalled();
-    expect(element.querySelector('mat-error')?.textContent).toContain('2 to 20');
+    expect(element.querySelector('.field-error')?.textContent).toContain('2 to 20');
   });
 
   it('shows the server error inline when creating fails', async () => {
@@ -132,7 +134,7 @@ describe('Home', () => {
     const { fixture, element } = await render();
 
     type(element, 'Your name', 'Ann');
-    type(element, 'Room name or link', 'https://host/room/room-9');
+    type(element, 'Room Name', 'https://host/room/room-9');
     submit(element, 1);
     await fixture.whenStable();
 

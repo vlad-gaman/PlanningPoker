@@ -23,11 +23,10 @@ async function createRoom(page: Page, name: string, options: RoomOptions = {}): 
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create room' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Use a fun room name').uncheck();
-  await dialog.getByLabel('Countdown (seconds)').fill('2');
+  await dialog.getByLabel('Use fun room name').uncheck();
+  await dialog.getByLabel('Countdown Duration').fill('2');
   if (options.cardSet) {
-    await dialog.getByRole('combobox', { name: 'Card set' }).click();
-    await page.getByRole('option', { name: options.cardSet }).click();
+    await dialog.getByLabel('Card Set').selectOption({ label: options.cardSet });
   }
   if (options.fireworks === false) {
     await dialog.getByLabel('Show fireworks').uncheck();
@@ -41,8 +40,7 @@ async function join(page: Page, roomUrl: string, name: string, role?: string): P
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
   if (role) {
-    await page.getByRole('combobox', { name: 'Role' }).click();
-    await page.getByRole('option', { name: role }).click();
+    await page.getByLabel('Role').selectOption({ label: role });
   }
   await page.getByRole('button', { name: 'Join room' }).click();
   await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();

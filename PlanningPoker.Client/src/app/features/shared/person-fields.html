@@ -1,0 +1,12 @@
+<div class="row" [formGroup]="form()">
+  <label [for]="nameId">Your Name:</label>
+  <input class="plain-input" [id]="nameId" formControlName="name" autocomplete="off" />
+  <select class="plain-input" aria-label="Role" formControlName="personType">
+    @for (option of personTypes; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+</div>
+@if (form().controls.name.invalid && form().controls.name.touched) {
+  <div class="field-error" role="alert">Use 2 to 20 characters.</div>
+}

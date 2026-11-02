@@ -18,8 +18,8 @@ async function createRoom(page: Page, name: string, countdown: number): Promise<
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create room' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Use a fun room name').uncheck();
-  await dialog.getByLabel('Countdown (seconds)').fill(String(countdown));
+  await dialog.getByLabel('Use fun room name').uncheck();
+  await dialog.getByLabel('Countdown Duration').fill(String(countdown));
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(GUID_ROOM_PATH);
   return page.url();
@@ -29,8 +29,7 @@ async function join(page: Page, roomUrl: string, name: string, role?: string): P
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
   if (role) {
-    await page.getByRole('combobox', { name: 'Role' }).click();
-    await page.getByRole('option', { name: role }).click();
+    await page.getByLabel('Role').selectOption({ label: role });
   }
   await page.getByRole('button', { name: 'Join room' }).click();
   await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();

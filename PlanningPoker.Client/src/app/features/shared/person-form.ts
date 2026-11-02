@@ -8,3 +8,5 @@ export function createPersonForm(builder: FormBuilder) {
     personType: PERSON_TYPES[0].value,
   });
 }
+
+export type PersonForm = ReturnType<typeof createPersonForm>;

@@ -1,38 +1,24 @@
-<section class="page home">
-  <h1>Planning Poker</h1>
+<section class="home">
+  <h1 class="visually-hidden">Planning Poker</h1>
 
   @if (flash.message(); as notice) {
     <p class="notice" role="status">{{ notice }}</p>
   }
 
-  <form [formGroup]="form" (ngSubmit)="createRoom()">
-    <mat-form-field appearance="outline">
-      <mat-label>Your name</mat-label>
-      <input matInput formControlName="name" autocomplete="off" />
-      @if (form.controls.name.invalid) {
-        <mat-error>Use 2 to 20 characters.</mat-error>
-      }
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Role</mat-label>
-      <mat-select formControlName="personType">
-        @for (option of personTypes; track option.value) {
-          <mat-option [value]="option.value">{{ option.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <button mat-flat-button type="submit">Create room</button>
+  <form (ngSubmit)="createRoom()" [formGroup]="form">
+    <app-person-fields [form]="form" />
+    <button class="plain-button" type="submit">Create room</button>
   </form>
 
   <form class="join" [formGroup]="joinForm" (ngSubmit)="joinRoom()">
-    <mat-form-field appearance="outline">
-      <mat-label>Room name or link</mat-label>
-      <input matInput formControlName="room" autocomplete="off" />
-      @if (joinForm.controls.room.invalid) {
-        <mat-error>Enter a room name or link.</mat-error>
-      }
-    </mat-form-field>
-    <button mat-stroked-button type="submit">Join room</button>
+    <div class="row">
+      <label for="room-name">Room Name:</label>
+      <input class="plain-input" id="room-name" formControlName="room" autocomplete="off" />
+    </div>
+    @if (joinForm.controls.room.invalid && joinForm.controls.room.touched) {
+      <div class="field-error" role="alert">Enter a room name or link.</div>
+    }
+    <button class="plain-button" type="submit">Join room</button>
   </form>
 
   @if (error(); as message) {
