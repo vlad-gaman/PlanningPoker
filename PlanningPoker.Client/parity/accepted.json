@@ -22,5 +22,53 @@
   "text": "transfer ownership",
   "prop": "color",
   "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-desktop-light",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-desktop-dark",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-phone-light",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-phone-dark",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
  }
 ]

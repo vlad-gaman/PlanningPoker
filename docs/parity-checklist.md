@@ -9,7 +9,7 @@ How to read it:
 - **Note** records an accepted difference or what is left. Differences accepted for all rows are listed in the spec (section 2). Per-row style exceptions live in `PlanningPoker.Client/parity/accepted.json`.
 - **Slice** is the fix slice that owns the row. Phone rows belong to 6d.
 
-## Probed states (8 states x desktop/phone x light/dark)
+## Probed states (16 states x desktop/phone x light/dark)
 
 | State | Size | Scheme | Slice | Automated | Owner | Note |
 |---|---|---|---|---|---|---|
@@ -45,24 +45,50 @@ How to read it:
 | credits | desktop | dark | 6d | | | |
 | credits | phone | light | 6d | | | |
 | credits | phone | dark | 6d | | | |
+| home-join-error | desktop | light | 6b | | | |
+| home-join-error | desktop | dark | 6b | | | |
+| home-join-error | phone | light | 6d | | | |
+| home-join-error | phone | dark | 6d | | | |
+| room-not-found | desktop | light | 6b | | | |
+| room-not-found | desktop | dark | 6b | | | |
+| room-not-found | phone | light | 6d | | | |
+| room-not-found | phone | dark | 6d | | | |
+| room-settings-transfer | desktop | light | 6b | | | |
+| room-settings-transfer | desktop | dark | 6b | | | |
+| room-settings-transfer | phone | light | 6d | | | |
+| room-settings-transfer | phone | dark | 6d | | | |
+| room-observer | desktop | light | 6c | | | |
+| room-observer | desktop | dark | 6c | | | |
+| room-observer | phone | light | 6d | | | |
+| room-observer | phone | dark | 6d | | | |
+| room-nonowner | desktop | light | 6c | | | |
+| room-nonowner | desktop | dark | 6c | | | |
+| room-nonowner | phone | light | 6d | | | |
+| room-nonowner | phone | dark | 6d | | | |
+| room-role-change | desktop | light | 6c | | | |
+| room-role-change | desktop | dark | 6c | | | |
+| room-role-change | phone | light | 6d | | | |
+| room-role-change | phone | dark | 6d | | | |
+| room-countdown | desktop | light | 6c | | | |
+| room-countdown | desktop | dark | 6c | | | |
+| room-countdown | phone | light | 6d | | | |
+| room-countdown | phone | dark | 6d | | | |
+| room-fireworks | desktop | light | 6c | | | |
+| room-fireworks | desktop | dark | 6c | | | |
+| room-fireworks | phone | light | 6d | | | |
+| room-fireworks | phone | dark | 6d | | | |
 
-## Not yet in the script
+## Not reachable by the script
 
-Rows of the inventory table (`docs/research/ui-inventory.md` on branch `research/ui-inventory`) that the script does not reach yet. Slice 6a adds those it can reach; each is checked in the slice that owns it, in both sizes and schemes.
+Inventory rows (`docs/research/ui-inventory.md` on branch `research/ui-inventory`) with no state to capture. Each is an owner check in the slice that owns it.
 
 | Inventory row | State | Slice | Owner | Note |
 |---|---|---|---|---|
-| 3 | join action and validation messages | 6b | | |
-| 5 | room loading | 6c | | |
-| 8 | countdown running | 6c | | |
-| 10 | fireworks on consensus (motion, owner check) | 6c | | |
-| 11 | observer view | 6c | | |
-| 13 | non-owner view | 6c | | |
-| 15 | ownership transfer | 6b | | |
-| 16 | role change in the room | 6c | | |
-| 17 | leave room | 6c | | |
-| 19 | error and not-found | 6b | | |
-| 20 | connection status and reconnect | 6c | | |
+| 5 | room loading | 6c | | The old app has no loading state (server-rendered); the new one shows only the heading for a moment, too short to capture. |
+| 17 | leave room | 6c | | The old app has no Leave button; the new button is styled like the old buttons (accepted as route and behaviour only). |
+| 20 | connection status, reconnecting and disconnected | 6c | | Taking the network offline did not trigger the old "Reconnecting..." pill within 3 s, so it is not captured. The connected pill shows in every room state. |
+
+The probed rows above cover inventory rows 3 (`home-join-error`), 8 (`room-countdown`), 10 (`room-fireworks`, pixel noise expected from the particles), 11 (`room-observer`), 13 (`room-nonowner`), 15 (`room-settings-transfer`), 16 (`room-role-change`) and 19 (`room-not-found`).
 
 ## Owner checks without automation
 

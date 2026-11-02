@@ -14,8 +14,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
-import { ALL_STATES, ALL_SIZES, ALL_SCHEMES, SIZES, probeFn, mask } from './probe.mjs';
-import { oldFlow, newFlow } from './flows.mjs';
+import { ALL_STATES, MAIN_STATES, EXTRA_STATES, ALL_SIZES, ALL_SCHEMES, SIZES, probeFn, mask } from './probe.mjs';
+import { oldFlow, newFlow, oldExtraFlow, newExtraFlow } from './flows.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const REFERENCE = path.join(here, '..', '..', 'docs', 'parity', 'reference');
@@ -99,7 +99,12 @@ for (const size of sizes) {
     const shot = (page, name) => (states.includes(name) ? capture(page, target, size, scheme, name) : Promise.resolve());
     const options = { viewport: SIZES[size], colorScheme: scheme };
     try {
-      await (captureOld ? oldFlow(browser, OLD_URL, options, shot) : newFlow(browser, NEW_URL, options, shot));
+      if (states.some((s) => MAIN_STATES.includes(s))) {
+        await (captureOld ? oldFlow(browser, OLD_URL, options, shot) : newFlow(browser, NEW_URL, options, shot));
+      }
+      if (states.some((s) => EXTRA_STATES.includes(s))) {
+        await (captureOld ? oldExtraFlow(browser, OLD_URL, options, shot) : newExtraFlow(browser, NEW_URL, options, shot));
+      }
     } catch (error) {
       console.error(`FAILED ${target} ${size} ${scheme}: ${error.message.split('\n')[0]}`);
       process.exitCode = 1;

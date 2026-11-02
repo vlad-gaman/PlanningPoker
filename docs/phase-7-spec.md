@@ -57,7 +57,7 @@ Each slice ends with the owner ticking that slice's rows in `docs/parity-checkli
 | **6c Room and results** | The room in all its states, results, charts, motion. | 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 20 |
 | **6d Shell, credits and phone** | Header, footer, credits, the 768px breakpoint, the phone pass. | 18, 23; header and footer on every screen |
 
-Rows 1 to 23 are the inventory's screens and states. The probe so far covered rows 1, 2, 4, 6, 7, 9, 12, 14, 18, 21, 22 and 23 (the home, create dialog, join, lobby, voting, revealed, room-settings dialog, credits, both themes, both sizes). **Not yet probed** (11 rows): 3 (join action, validation messages), 5 (loading), 8 (countdown), 10 (fireworks), 11 (observer), 13 (non-owner), 15 (transfer), 16 (role change), 17 (leave), 19 (error and not-found), 20 (connection status). 6a extends the script to them; each is checked in the slice that owns the row.
+Rows 1 to 23 are the inventory's screens and states. The probe so far covered rows 1, 2, 4, 6, 7, 9, 12, 14, 18, 21, 22 and 23 (the home, create dialog, join, lobby, voting, revealed, room-settings dialog, credits, both themes, both sizes). **Probed by 6a** (8 more states): 3 (`home-join-error`), 8, 10, 11, 13, 15, 16 and 19 (`room-not-found`). **Not reachable by the script** (3 rows): 5 (loading: the old app has none), 17 (leave: the old app has none), 20 (reconnecting: going offline did not trigger the old pill); they are owner checks. Each row is checked in the slice that owns it.
 
 ## 5. Gaps (old -> new, from the comparison run)
 
@@ -69,7 +69,7 @@ Measured on the current new app against `razor-final`, desktop 1280x800 and phon
 - Footer: the "|" separator grey (108,117,125) -> (33,37,41); the "Credits" link grey -> blue; dark mode (77,171,247).
 - Dark mode: dialog and button background (45,45,45) -> (26,26,26); table row stripes inverted ((26,26,26) -> (45,45,45)); primary button text and background differ.
 - Content width: content left edge x=82 -> x=70 at 1280px.
-- Tooling: reference shots, the script with an `npm run parity` command, the checklist file, every unprobed row added to the script.
+- Tooling: reference shots, the script with an `npm run parity` command, the checklist file, every reachable unprobed row added to the script.
 
 **6b Home and dialogs**
 - Home: centred form rows ("Your Name:" + input + Dev/Tester/Observer toggles; "⚙️ More Settings" + muted hint; "Create room"; "Room Name:" + input; "Join room") -> h1, two outlined floating-label fields, Role select, blue pill "Create room", divider, outlined pill "Join room".

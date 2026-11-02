@@ -1,17 +1,28 @@
-export const ALL_STATES = ['home', 'home-dialog', 'join', 'room-lobby', 'room-voting', 'room-revealed', 'room-settings', 'credits'];
+export const MAIN_STATES = ['home', 'home-dialog', 'join', 'room-lobby', 'room-voting', 'room-revealed', 'room-settings', 'credits'];
+export const EXTRA_STATES = [
+  'home-join-error',
+  'room-not-found',
+  'room-observer',
+  'room-nonowner',
+  'room-role-change',
+  'room-settings-transfer',
+  'room-countdown',
+  'room-fireworks',
+];
+export const ALL_STATES = [...MAIN_STATES, ...EXTRA_STATES];
 export const ALL_SIZES = ['desktop', 'phone'];
 export const ALL_SCHEMES = ['light', 'dark'];
 export const SIZES = { desktop: { width: 1280, height: 800 }, phone: { width: 375, height: 812 } };
 
 const GUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
-/** The room id differs per run: blank it in the page text so it never counts as a difference. */
+/** The room id differs per run and the countdown ticks: blank both in the page text so they never count as a difference. */
 export async function mask(page) {
   await page.evaluate((source) => {
     const re = new RegExp(source, 'g');
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      node.nodeValue = node.nodeValue.replace(re, 'ROOM-ID');
+      node.nodeValue = node.nodeValue.replace(re, 'ROOM-ID').replace(/(Showing results in )\d+/, '$1N');
     }
   }, GUID);
 }
