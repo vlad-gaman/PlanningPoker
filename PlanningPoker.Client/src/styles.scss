@@ -130,3 +130,8 @@ a {
 .mat-mdc-button:not(:disabled) {
   border: 1px solid var(--border-color);
 }
+
+// A wide font lets a form-field label overlap the middle of its control; clicks must reach the control underneath.
+.mat-mdc-form-field .mdc-notched-outline .mat-mdc-floating-label.mdc-floating-label {
+  pointer-events: none;
+}
