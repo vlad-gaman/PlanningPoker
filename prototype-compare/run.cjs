@@ -27,6 +27,46 @@ async function shot(page, app, size, scheme, name) {
   await page.waitForTimeout(400);
   const file = path.join(OUT, `${app}-${size}-${scheme}-${name}.png`);
   await page.screenshot({ path: file, animations: 'disabled', fullPage: true });
+  const data = await page.evaluate(probeFn);
+  fs.writeFileSync(file.replace('.png', '.json'), JSON.stringify(data, null, 1));
+}
+
+// Style probe: one record per visible text, keyed by normalised text, so old and new pair up despite different DOM.
+function probeFn() {
+  const out = {};
+  const bgOf = (el) => {
+    for (let e = el; e; e = e.parentElement) {
+      const c = getComputedStyle(e).backgroundColor;
+      if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c;
+    }
+    return 'rgba(0, 0, 0, 0)';
+  };
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const t = n.nodeValue.replace(/\s+/g, ' ').trim();
+    const el = n.parentElement;
+    if (!t || !el || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    const s = getComputedStyle(el);
+    if (s.visibility === 'hidden' || s.display === 'none') continue;
+    const key = t.toLowerCase();
+    if (out[key]) continue;
+    out[key] = {
+      tag: el.tagName.toLowerCase(),
+      font: s.fontFamily.split(',')[0].replace(/["']/g, '').trim(),
+      size: s.fontSize,
+      weight: s.fontWeight,
+      color: s.color,
+      bg: bgOf(el),
+      align: s.textAlign,
+      deco: s.textDecorationLine,
+      radius: s.borderRadius,
+      pad: s.padding,
+      x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height),
+    };
+  }
+  return out;
 }
 
 async function oldFlow(browser, size, scheme) {
@@ -35,6 +75,10 @@ async function oldFlow(browser, size, scheme) {
   const [a, b, c] = await Promise.all(ctxs.map((x) => x.newPage()));
   await a.goto(APPS.old);
   await shot(a, 'old', size, scheme, 'home');
+  await a.click('#room-creation-settings-btn');
+  await a.waitForTimeout(600);
+  await shot(a, 'old', size, scheme, 'home-dialog');
+  await a.goto(APPS.old);
   await a.fill('#name', 'Alice');
   await a.click('input[value="Create room"]');
   await a.waitForURL(/\/Room\//);
@@ -43,6 +87,7 @@ async function oldFlow(browser, size, scheme) {
   const url = a.url();
   for (const [p, n, t] of [[b, 'Bob', 'dev'], [c, 'Carol', 'test']]) {
     await p.goto(url);
+    if (n === 'Bob') await shot(p, 'old', size, scheme, 'join');
     await p.fill('#name', n);
     await p.locator(t === 'dev' ? 'label[for=isDev]' : 'label[for=isTest]').click();
     await p.click('input[value="Join room"]');
@@ -55,6 +100,11 @@ async function oldFlow(browser, size, scheme) {
   await a.click('#show-votes');
   await a.waitForTimeout(1500);
   await shot(a, 'old', size, scheme, 'room-revealed');
+  await a.click('#room-settings-btn');
+  await a.waitForTimeout(600);
+  await shot(a, 'old', size, scheme, 'room-settings');
+  await a.goto(APPS.old + '/Credits');
+  await shot(a, 'old', size, scheme, 'credits');
   await Promise.all(ctxs.map((x) => x.close()));
 }
 
@@ -68,6 +118,10 @@ async function newFlow(browser, size, scheme) {
   await a.getByLabel('Your name').fill('Alice');
   await a.getByRole('button', { name: 'Create room' }).click();
   const d = a.getByRole('dialog');
+  await d.waitFor();
+  await a.waitForTimeout(600);
+  await shot(a, 'new', size, scheme, 'home-dialog');
+  await d.getByLabel('Use a fun room name').uncheck();
   await d.getByRole('button', { name: 'Create room' }).click();
   await a.waitForURL(/\/room\//);
   await a.waitForSelector('tr[mat-row]');
@@ -75,6 +129,8 @@ async function newFlow(browser, size, scheme) {
   const url = a.url();
   for (const [p, n, t] of [[b, 'Bob', 'Developer'], [c, 'Carol', 'Tester']]) {
     await p.goto(url);
+    await p.getByLabel('Your name').waitFor();
+    if (n === 'Bob') await shot(p, 'new', size, scheme, 'join');
     await p.getByLabel('Your name').fill(n);
     await p.getByRole('combobox', { name: 'Role' }).click();
     await p.getByRole('option', { name: t }).click();
@@ -88,6 +144,12 @@ async function newFlow(browser, size, scheme) {
   await a.getByRole('button', { name: /show votes/i }).click();
   await a.waitForTimeout(1500);
   await shot(a, 'new', size, scheme, 'room-revealed');
+  await a.getByRole('button', { name: 'Settings' }).click();
+  await a.waitForTimeout(600);
+  await shot(a, 'new', size, scheme, 'room-settings');
+  await a.goto(APPS.new + '/credits');
+  await a.waitForTimeout(500);
+  await shot(a, 'new', size, scheme, 'credits');
   await Promise.all(ctxs.map((x) => x.close()));
 }
 
