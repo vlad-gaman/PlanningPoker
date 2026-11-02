@@ -1,9 +1,13 @@
 @use '@angular/material' as mat;
 
+// The old Razor UI's Bootstrap font stack; no webfont, so Material controls and the page render the same face.
+$font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+
 :root {
   --bg-color: #ffffff;
   --text-color: #212529;
   --border-color: #e5e5e5;
+  --muted-color: #6c757d;
   --card-bg: #ffffff;
   --card-hover-bg: rgba(0, 0, 0, 0.075);
   --card-selected-bg: rgba(0, 0, 0, 0.3);
@@ -23,6 +27,7 @@
   --bg-color: #1a1a1a;
   --text-color: #e9ecef;
   --border-color: #404040;
+  --muted-color: #6c757d;
   --card-bg: #2d2d2d;
   --card-hover-bg: rgba(255, 255, 255, 0.1);
   --card-selected-bg: rgba(255, 255, 255, 0.3);
@@ -42,10 +47,48 @@ html {
   @include mat.theme(
     (
       color: mat.$azure-palette,
-      typography: Roboto,
+      typography: (
+        plain-family: $font-stack,
+        brand-family: $font-stack,
+        bold-weight: 700,
+        medium-weight: 500,
+        regular-weight: 400,
+      ),
       density: 0,
     )
   );
+
+  // Buttons look like the old Bootstrap ones: 16px/400 text, 4px radius, 1px border, white (dark #2d2d2d) fill.
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 4px,
+      filled-container-height: 38px,
+      filled-horizontal-padding: 12px,
+      filled-container-color: var(--card-bg),
+      filled-label-text-color: var(--text-color),
+      filled-hover-state-layer-opacity: 0.075,
+      outlined-container-shape: 4px,
+      outlined-container-height: 38px,
+      outlined-horizontal-padding: 12px,
+      outlined-label-text-color: var(--text-color),
+      outlined-outline-color: var(--border-color),
+      text-container-shape: 4px,
+      text-container-height: 38px,
+      text-horizontal-padding: 12px,
+      text-label-text-color: var(--text-color),
+    )
+  );
+
+  @include mat.dialog-overrides((container-color: var(--card-bg)));
+
+  // Text is 16px like the old page (Material defaults to 14px for labels and table cells).
+  --mat-sys-label-large-size: 1rem;
+  --mat-sys-label-large-weight: 400;
+  --mat-sys-body-large-size: 1rem;
+  --mat-sys-body-medium-size: 1rem;
+
+  // Table rows sit on the page colour, like the old table.
+  --mat-table-background-color: var(--bg-color);
 
   // Material reads these system tokens; point them at the site's variables so both stay in sync.
   --mat-sys-primary: var(--primary-color);
@@ -61,7 +104,7 @@ body {
   margin: 0;
   background: var(--bg-color);
   color: var(--text-color);
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-family: $font-stack;
 }
 
 a {
@@ -80,4 +123,15 @@ a {
 
 .form-error {
   color: var(--mat-sys-error);
+}
+
+// The old footer text and link are muted grey in both themes; `.mat-mdc-unelevated-button` and the text button carry the old 1px border.
+.mat-mdc-unelevated-button:not(:disabled),
+.mat-mdc-button:not(:disabled) {
+  border: 1px solid var(--border-color);
+}
+
+// A wide font lets a form-field label overlap the middle of its control; clicks must reach the control underneath.
+.mat-mdc-form-field .mdc-notched-outline .mat-mdc-floating-label.mdc-floating-label {
+  pointer-events: none;
 }
