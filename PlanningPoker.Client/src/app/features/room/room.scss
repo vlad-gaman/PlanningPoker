@@ -21,10 +21,14 @@ app-results {
 }
 
 .name-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-width: 28rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 400;
+  text-align: center;
 }
 
 .people {

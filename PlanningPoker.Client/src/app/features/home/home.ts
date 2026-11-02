@@ -1,17 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomsService } from '../../core/rooms.service';
-import { PERSON_TYPES } from '../../models/person';
+import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
 import { RoomSettingsDialog } from './room-settings-dialog';
 
@@ -23,7 +19,7 @@ export function extractRoomId(input: string): string {
 
 @Component({
   selector: 'app-home',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [ReactiveFormsModule, PersonFields],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,7 +32,6 @@ export class Home implements OnInit, OnDestroy {
   private readonly builder = inject(FormBuilder);
 
   protected readonly flash = inject(FlashMessageService);
-  protected readonly personTypes = PERSON_TYPES;
   protected readonly error = signal<string | null>(null);
 
   protected readonly form = createPersonForm(this.builder);

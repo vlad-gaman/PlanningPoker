@@ -1,21 +1,24 @@
 .home {
-  max-width: 28rem;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  margin: 1.25rem auto;
+  padding: 0 0.75rem;
+  text-align: center;
 }
 
 .join {
   margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+
+  label {
+    margin: 0.25rem;
+  }
 }
 
 .notice {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--primary-color);
-  border-radius: 4px;
+  color: var(--mat-sys-error);
 }

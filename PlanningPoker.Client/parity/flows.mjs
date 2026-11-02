@@ -116,7 +116,7 @@ export async function newExtraFlow(browser, url, options, shot) {
   await a.getByRole('button', { name: 'Create room' }).click();
   const dialog = a.getByRole('dialog');
   await dialog.waitFor();
-  await dialog.getByLabel('Use a fun room name').uncheck();
+  await dialog.getByLabel('Use fun room name').uncheck();
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await a.waitForURL(/\/room\//);
   await a.waitForSelector('tr[mat-row]');
@@ -125,8 +125,7 @@ export async function newExtraFlow(browser, url, options, shot) {
     await page.goto(room);
     await page.getByLabel('Your name').waitFor();
     await page.getByLabel('Your name').fill(name);
-    await page.getByRole('combobox', { name: 'Role' }).click();
-    await page.getByRole('option', { name: role }).click();
+    await page.getByLabel('Role').selectOption({ label: role });
     await page.getByRole('button', { name: 'Join room' }).click();
     await page.waitForSelector('tr[mat-row]');
   }
@@ -139,8 +138,7 @@ export async function newExtraFlow(browser, url, options, shot) {
   await b.getByRole('radio', { name: 'Developer' }).check();
   await a.getByRole('button', { name: 'Settings' }).click();
   await a.waitForTimeout(600);
-  await a.getByRole('dialog').getByRole('combobox', { name: 'New owner' }).click();
-  await a.getByRole('option', { name: 'Bob' }).click();
+  await a.getByRole('dialog').getByLabel('Transfer Ownership').selectOption({ label: 'Bob' });
   await a.waitForTimeout(400);
   await shot(a, 'room-settings-transfer');
   await a.getByRole('button', { name: 'Cancel' }).click();
@@ -167,7 +165,7 @@ export async function newFlow(browser, url, options, shot) {
   await dialog.waitFor();
   await a.waitForTimeout(600);
   await shot(a, 'home-dialog');
-  await dialog.getByLabel('Use a fun room name').uncheck();
+  await dialog.getByLabel('Use fun room name').uncheck();
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await a.waitForURL(/\/room\//);
   await a.waitForSelector('tr[mat-row]');
@@ -180,8 +178,7 @@ export async function newFlow(browser, url, options, shot) {
       await shot(page, 'join');
     }
     await page.getByLabel('Your name').fill(name);
-    await page.getByRole('combobox', { name: 'Role' }).click();
-    await page.getByRole('option', { name: role }).click();
+    await page.getByLabel('Role').selectOption({ label: role });
     await page.getByRole('button', { name: 'Join room' }).click();
     await page.waitForSelector('tr[mat-row]');
   }

@@ -78,6 +78,17 @@ How to read it:
 | room-fireworks | phone | light | 6d | | | |
 | room-fireworks | phone | dark | 6d | | | |
 
+## Slice 6b notes
+
+Home, join, both dialogs and the notices now match the old look on desktop (0.8% to 2.7% pixel noise, no font, size, weight, colour or background failure). Differences kept, for the owner to confirm:
+
+- No "More Settings" button or hint on the home page: "Create room" opens the settings dialog (behaviour from slice 3). The dialog's submit button reads "Create room" where the old one read "Apply Settings".
+- "Use fun room name?" starts checked in the new dialog (old: unchecked).
+- The home page keeps a visually hidden `h1` "Planning Poker" for screen readers; the old page had none.
+- Role stays a select (owner decision), now a native select next to the name; the old Dev/Tester/Observer toggles are not restored.
+- The join step shows a one-line sentence "Enter your name to join this room." and has no "Use Different Name" button.
+- Phone rows differ only by the 14px root font below 768px (slice 6d). The room-settings rows still list 20px card text; that is slice 6c.
+
 ## Not reachable by the script
 
 Inventory rows (`docs/research/ui-inventory.md` on branch `research/ui-inventory`) with no state to capture. Each is an owner check in the slice that owns it.

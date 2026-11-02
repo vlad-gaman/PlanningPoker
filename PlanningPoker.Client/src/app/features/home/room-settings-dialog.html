@@ -1,53 +1,68 @@
-<h2 mat-dialog-title>Room settings</h2>
+<div class="settings-header">
+  <h2 mat-dialog-title>Room Settings</h2>
+  <button type="button" class="btn btn-sm close" mat-dialog-close aria-label="Close">×</button>
+</div>
 <form [formGroup]="form" (ngSubmit)="submit()">
-  <mat-dialog-content class="settings">
-    <mat-form-field appearance="outline">
-      <mat-label>Card set</mat-label>
-      <mat-select formControlName="cardSet">
+  <div class="settings-content">
+    <div class="form-group">
+      <label for="card-set">Card Set:</label>
+      <select id="card-set" class="form-control" formControlName="cardSet">
         @for (cardSet of cardSets(); track cardSet.value) {
-          <mat-option [value]="cardSet.value">{{ cardSet.display }}</mat-option>
+          <option [value]="cardSet.value">{{ cardSet.display }}</option>
         }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Countdown (seconds)</mat-label>
-      <input matInput type="number" formControlName="countdownSeconds" />
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="countdown-seconds">Countdown Duration (seconds):</label>
+      <input id="countdown-seconds" class="form-control" type="number" formControlName="countdownSeconds" />
+      <small class="hint">Set to 0 for instant reveal{{ data ? ' when everyone votes' : '' }}</small>
       @if (form.controls.countdownSeconds.invalid) {
-        <mat-error>Use {{ countdownRange.min }} to {{ countdownRange.max }} seconds.</mat-error>
+        <div class="field-error" role="alert">Use {{ countdownRange.min }} to {{ countdownRange.max }} seconds.</div>
       }
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Maximum participants</mat-label>
-      <input matInput type="number" formControlName="maxParticipants" />
-      @if (form.controls.maxParticipants.invalid) {
-        <mat-error>At least 1 participant.</mat-error>
-      }
-    </mat-form-field>
-    <mat-checkbox formControlName="showFireworks">Show fireworks</mat-checkbox>
+    </div>
     @if (!data) {
-      <mat-checkbox formControlName="useFunRoomName">Use a fun room name</mat-checkbox>
+      <div class="form-check">
+        <input id="use-fun-room-name" class="form-check-input" type="checkbox" formControlName="useFunRoomName" />
+        <label for="use-fun-room-name">Use fun room name?</label>
+        <small class="hint block">Caution! It may generate weird names!!!</small>
+      </div>
     }
+    <div class="form-check">
+      <input id="show-fireworks" class="form-check-input" type="checkbox" formControlName="showFireworks" />
+      <label for="show-fireworks">Show fireworks on consensus</label>
+    </div>
+    <div class="form-group">
+      <label for="max-participants">Max Participants:</label>
+      <input id="max-participants" class="form-control" type="number" formControlName="maxParticipants" />
+      @if (form.controls.maxParticipants.invalid) {
+        <div class="field-error" role="alert">At least 1 participant.</div>
+      }
+    </div>
     @if (data && data.candidates.length) {
-      <div class="transfer">
-        <mat-form-field appearance="outline">
-          <mat-label>New owner</mat-label>
-          <mat-select [value]="transferTarget()" (selectionChange)="transferTarget.set($event.value)">
-            @for (person of data.candidates; track person.guid) {
-              <mat-option [value]="person.guid">{{ person.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <button mat-stroked-button type="button" [disabled]="!transferTarget()" (click)="transferOwnership()">
-          Transfer ownership
+      <div class="form-group">
+        <label for="transfer-ownership">Transfer Ownership:</label>
+        <select
+          id="transfer-ownership"
+          class="form-control"
+          [value]="transferTarget() ?? ''"
+          (change)="transferTarget.set($any($event.target).value || null)"
+        >
+          <option value="">Select person to transfer ownership to...</option>
+          @for (person of data.candidates; track person.guid) {
+            <option [value]="person.guid">{{ person.name }}</option>
+          }
+        </select>
+        <button type="button" class="btn btn-sm transfer" [disabled]="!transferTarget()" (click)="transferOwnership()">
+          Transfer Ownership
         </button>
       </div>
     }
     @if (error(); as message) {
       <p class="form-error" role="alert">{{ message }}</p>
     }
-  </mat-dialog-content>
-  <mat-dialog-actions align="end">
-    <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit">{{ data ? 'Save settings' : 'Create room' }}</button>
-  </mat-dialog-actions>
+  </div>
+  <div class="settings-footer">
+    <button type="submit" class="btn">{{ data ? 'Save Settings' : 'Create room' }}</button>
+    <button type="button" class="btn" mat-dialog-close>Cancel</button>
+  </div>
 </form>

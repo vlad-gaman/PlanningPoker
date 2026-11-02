@@ -8,23 +8,9 @@
   @switch (phase()) {
     @case ('name') {
       <form class="name-entry" [formGroup]="form" (ngSubmit)="submitName()">
-        <p>Enter your name to join this room.</p>
-        <mat-form-field appearance="outline">
-          <mat-label>Your name</mat-label>
-          <input matInput formControlName="name" autocomplete="off" />
-          @if (form.controls.name.invalid) {
-            <mat-error>Use 2 to 20 characters.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Role</mat-label>
-          <mat-select formControlName="personType">
-            @for (option of personTypes; track option.value) {
-              <mat-option [value]="option.value">{{ option.label }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <button mat-flat-button type="submit">Join room</button>
+        <p class="hint">Enter your name to join this room.</p>
+        <app-person-fields [form]="form" />
+        <button class="plain-button" type="submit">Join room</button>
       </form>
     }
     @case ('joined') {
