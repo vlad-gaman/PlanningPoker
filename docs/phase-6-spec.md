@@ -6,7 +6,7 @@ Scope is **cutover only**: no new features, no behaviour change in the new app. 
 
 ## 0. Where this slice sits
 
-[Issue #15](https://github.com/vlad-gaman/PlanningPoker/issues/15) orders the slices; this is the last. Slices 0 to 5 are built (voting, results, room management, shell and credits) and every slice spec listed "cutover" as its remaining later item.
+[Issue #15](https://github.com/vlad-gaman/PlanningPoker/issues/15) orders the slices; this is the last **functional** one, and it comes after the visual-parity slices 6a to 6d ([phase-7-spec.md](phase-7-spec.md), wayfinder map [issue #27](https://github.com/vlad-gaman/PlanningPoker/issues/27)). Slices 0 to 5 are built (voting, results, room management, shell and credits) and every slice spec listed "cutover" as its remaining later item. **This slice starts only after 6a to 6d are merged and every row of `docs/parity-checklist.md` is ticked by the owner or carries an accepted-difference note.**
 
 Already in place: `PlanningPoker.Api` serving the built SPA from `wwwroot` (`MapFallbackToFile`), `PlanningPoker.sln` (the new projects only), `PlanningPokerUi.sln` (the old project only), CI (`.github/workflows/ci.yml`: backend, client, package and Playwright against the published app, `site.zip` artifact), `deploy-staging.yml` (manual, `staging` slot, tags `staging-N` and keeps the zip as a pre-release; `staging-1` to `staging-4` exist), `rollback-staging.yml`.
 
@@ -27,17 +27,17 @@ Before deleting, confirm nothing in `PlanningPoker.*` references the old project
 
 ## 2. Parity checklist (owner sign-off)
 
-The owner walks this against the **staging slot** running the CI-built `site.zip` of the slice branch, side by side with the old app where wanted. A box is ticked only by the owner. Anything unticked is either fixed in a follow-up slice before the merge to `main` or recorded as an accepted difference in section 6.
+The owner walks this against the **staging slot** running the CI-built `site.zip` of the slice branch, side by side with the old app where wanted. A box is ticked only by the owner. Anything unticked is either fixed in a follow-up slice before the merge to `main` or recorded as an accepted difference in the checklist note (visual) or in the PR description (functional). The **visual** side of every item (look, spacing, colours, phone layout, motion) is covered by `docs/parity-checklist.md` from slices 6a to 6d, not here; items below keep their functional parts.
 
 1. Create a room with each of the **7 card sets**; join, vote, clear, reveal, force reveal work on each; custom card values where the old app had them.
 2. **Ownership and transfer**: owner leaves, ownership moves; owner transfers manually; the settings dialog is owner-only; "clear votes if shown" behaves as the old app.
 3. **Countdown**: starts, shows to everyone, ends in reveal; cancelled by a new vote or clear as before.
 4. **Results**: statistics, chart, fireworks (including no fireworks for a one-person vote, the old bug fix).
 5. **Person type**: voter / observer switch, observers cannot vote.
-6. **Dark mode**: auto / light / dark, preference kept across reloads, no flash of the wrong theme.
+6. **Dark mode** (functional part): auto / light / dark, preference kept across reloads, no flash of the wrong theme. The colours are in the parity checklist.
 7. **Credits**: every attribution of the old page present, links work, Back to Home works.
 8. **Join / leave / reconnect**: refresh the room page and rejoin as the same person; close a tab and the others see the leave; drop the connection (offline in dev tools) and reconnect; open a room link in a fresh browser (join dialog); an unknown room id shows the not-found path.
-9. **Phone** (375x812, or a real phone): create, join and vote in light and dark.
+9. **Phone** (375x812, or a real phone), functional part: create, join and vote work in light and dark. The layout is in the parity checklist; the real-phone look is checked once in step 3 of section 5.
 10. **Old links**: `/Room/<id>` and `/Credits` still land on the right pages (the redirects from slices 1 and 5).
 
 ## 3. Contract
@@ -58,9 +58,9 @@ No REST, hub or Swagger change. One thing to settle before production, because t
 
 Order matters; each step has a way back.
 
-1. **Tag and keep the old build.** On `main` (the last commit that still has `PlanningPokerUi` as the only app, today `9282f09`): tag `razor-final`, and keep the last old build as a GitHub release. There is no CI zip for the old app, so build it once locally (`dotnet publish PlanningPokerUi -c Release`), zip it and attach it to the release `razor-final`. Done by the owner or by an agent only on the owner's go-ahead (it publishes a release).
+1. **Tag and keep the old build.** On `angular-migration`, at the last commit before the slice 6 deletions (`main` is older and lacks dark mode, settings and the credits page, so it is not the old app to keep): tag `razor-final`, and keep the last old build as a GitHub release. There is no CI zip for the old app, so build it once locally (`dotnet publish PlanningPokerUi -c Release`), zip it and attach it to the release `razor-final`. Done by the owner or by an agent only on the owner's go-ahead (it publishes a release).
 2. **Slice PR** (`slice-6-cutover` into `angular-migration`): deletions, README, IDE files, workflow changes, parity checklist added to the PR description for the owner to tick. CI green.
-3. **Deploy the `angular-migration` build to the staging slot** (`Deploy to staging`), owner walks the parity checklist (section 2) against it.
+3. **Deploy the `angular-migration` build to the staging slot** (`Deploy to staging`), owner walks the parity checklist (section 2) against it, and checks the look once on **one real phone** and once in **Firefox**.
 4. **Merge `angular-migration` into `main`** (owner, merge commit, not squash, so the slice history stays; the long-lived branch also carries the earlier slice PRs). CI runs on `main`.
 5. **Production deploy** with the new workflow; owner swaps the slot (or the direct deploy runs), checks the live site (create a room, join from a second browser, vote, reveal), and keeps the old slot content in place until the check passes: the swap is its own rollback.
 6. **After a quiet week** (owner's call): delete the `angular-migration` branch and the other merged `slice-*` branches; archive or close the migration issues (#3, #15) with a link to the release notes; remove the `staging-N` pre-releases older than the last three.
@@ -76,7 +76,7 @@ No new application behaviour, so no new unit tests (CLAUDE.md asks for a test pe
 
 ## 7. Acceptance criteria
 
-1. Every box of the parity checklist is ticked by the owner, or the difference is listed here as accepted before the merge to `main`.
+1. Every box of the parity checklist (section 2) is ticked by the owner, or the difference is listed here as accepted before the merge to `main`; and `docs/parity-checklist.md` is complete (every row ticked or noted) before this slice starts.
 2. `PlanningPokerUi`, its solution, Dockerfile and the root-level debug files are gone; nothing references them (except `docs/`).
 3. CI runs on `main`; `Deploy to staging` and the production deploy both work from `main`; rollback is documented and was dry-run once on staging.
 4. `razor-final` tag and release exist before the old project is deleted from `main`.
