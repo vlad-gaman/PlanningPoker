@@ -1,0 +1,26 @@
+[
+ {
+  "key": "room-settings-desktop-light",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-settings-desktop-dark",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-settings-phone-light",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-settings-phone-dark",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ }
+]
