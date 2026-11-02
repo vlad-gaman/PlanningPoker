@@ -14,23 +14,40 @@
       </form>
     }
     @case ('joined') {
+      <div class="top">
+        <div class="actions">
+          <button mat-stroked-button type="button" (click)="clearVotes()">Clear votes</button>
+          <button mat-stroked-button type="button" [disabled]="store.votingFinished()" (click)="showVotes()">
+            Show votes
+          </button>
+          @if (isOwner()) {
+            <button mat-stroked-button type="button" (click)="openSettings()">Settings</button>
+          }
+          <button mat-stroked-button type="button" (click)="leave()">Leave room</button>
+        </div>
+        <div class="role" role="radiogroup" aria-label="Your role">
+          @for (option of personTypes; track option.value) {
+            <label>
+              <input
+                type="radio"
+                name="role"
+                [value]="option.value"
+                [checked]="myPersonType() === option.value"
+                (change)="changeRole(option.value)"
+              />
+              {{ option.label }}
+            </label>
+          }
+        </div>
+        <app-card-picker
+          [cards]="store.cards()"
+          [selected]="store.myMark()"
+          [disabled]="store.votingFinished() || isObserver()"
+          (markSelected)="store.vote($event)"
+        />
+      </div>
       <div class="layout">
         <div class="main">
-          <app-card-picker
-            [cards]="store.cards()"
-            [selected]="store.myMark()"
-            [disabled]="store.votingFinished() || isObserver()"
-            (markSelected)="store.vote($event)"
-          />
-          @if (store.countdown(); as seconds) {
-            <p class="countdown" role="status">Showing results in {{ seconds }}!</p>
-          }
-          <div class="actions">
-            <button mat-stroked-button type="button" (click)="clearVotes()">Clear votes</button>
-            <button mat-stroked-button type="button" [disabled]="store.votingFinished()" (click)="showVotes()">
-              Show votes
-            </button>
-          </div>
           <table mat-table [dataSource]="store.people()" class="people" aria-label="Participants">
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Name</th>
@@ -61,30 +78,15 @@
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
             <tr mat-row *matRowDef="let row; columns: columns"></tr>
           </table>
-          <div class="role" role="radiogroup" aria-label="Your role">
-            @for (option of personTypes; track option.value) {
-              <label>
-                <input
-                  type="radio"
-                  name="role"
-                  [value]="option.value"
-                  [checked]="myPersonType() === option.value"
-                  (change)="changeRole(option.value)"
-                />
-                {{ option.label }}
-              </label>
-            }
-          </div>
-          <div class="actions">
-            @if (isOwner()) {
-              <button mat-stroked-button type="button" (click)="openSettings()">Settings</button>
-            }
-            <button mat-stroked-button type="button" (click)="leave()">Leave room</button>
-          </div>
         </div>
-        @if (store.statistics(); as statistics) {
-          <app-results [statistics]="statistics" [cards]="store.cards()" />
-        }
+        <div class="side">
+          @if (store.countdown(); as seconds) {
+            <p class="countdown" role="status">Showing results in {{ seconds }}!</p>
+          }
+          @if (store.statistics(); as statistics) {
+            <app-results [statistics]="statistics" [cards]="store.cards()" />
+          }
+        </div>
       </div>
     }
   }

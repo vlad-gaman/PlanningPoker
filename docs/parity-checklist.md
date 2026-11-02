@@ -29,16 +29,16 @@ How to read it:
 | room-settings | desktop | dark | 6b | | | |
 | room-settings | phone | light | 6d | | | |
 | room-settings | phone | dark | 6d | | | |
-| room-lobby | desktop | light | 6c | | | |
-| room-lobby | desktop | dark | 6c | | | |
+| room-lobby | desktop | light | 6c | ok | | |
+| room-lobby | desktop | dark | 6c | ok | | |
 | room-lobby | phone | light | 6d | | | |
 | room-lobby | phone | dark | 6d | | | |
-| room-voting | desktop | light | 6c | | | |
-| room-voting | desktop | dark | 6c | | | |
+| room-voting | desktop | light | 6c | ok | | |
+| room-voting | desktop | dark | 6c | ok | | |
 | room-voting | phone | light | 6d | | | |
 | room-voting | phone | dark | 6d | | | |
-| room-revealed | desktop | light | 6c | | | |
-| room-revealed | desktop | dark | 6c | | | |
+| room-revealed | desktop | light | 6c | ok | | |
+| room-revealed | desktop | dark | 6c | ok | | |
 | room-revealed | phone | light | 6d | | | |
 | room-revealed | phone | dark | 6d | | | |
 | credits | desktop | light | 6d | | | |
@@ -57,24 +57,24 @@ How to read it:
 | room-settings-transfer | desktop | dark | 6b | | | |
 | room-settings-transfer | phone | light | 6d | | | |
 | room-settings-transfer | phone | dark | 6d | | | |
-| room-observer | desktop | light | 6c | | | |
-| room-observer | desktop | dark | 6c | | | |
+| room-observer | desktop | light | 6c | ok | | |
+| room-observer | desktop | dark | 6c | ok | | |
 | room-observer | phone | light | 6d | | | |
 | room-observer | phone | dark | 6d | | | |
-| room-nonowner | desktop | light | 6c | | | |
-| room-nonowner | desktop | dark | 6c | | | |
+| room-nonowner | desktop | light | 6c | ok | | |
+| room-nonowner | desktop | dark | 6c | ok | | |
 | room-nonowner | phone | light | 6d | | | |
 | room-nonowner | phone | dark | 6d | | | |
-| room-role-change | desktop | light | 6c | | | |
-| room-role-change | desktop | dark | 6c | | | |
+| room-role-change | desktop | light | 6c | ok | | |
+| room-role-change | desktop | dark | 6c | ok | | |
 | room-role-change | phone | light | 6d | | | |
 | room-role-change | phone | dark | 6d | | | |
-| room-countdown | desktop | light | 6c | | | |
-| room-countdown | desktop | dark | 6c | | | |
+| room-countdown | desktop | light | 6c | ok | | |
+| room-countdown | desktop | dark | 6c | ok | | |
 | room-countdown | phone | light | 6d | | | |
 | room-countdown | phone | dark | 6d | | | |
-| room-fireworks | desktop | light | 6c | | | |
-| room-fireworks | desktop | dark | 6c | | | |
+| room-fireworks | desktop | light | 6c | ok | | |
+| room-fireworks | desktop | dark | 6c | ok | | |
 | room-fireworks | phone | light | 6d | | | |
 | room-fireworks | phone | dark | 6d | | | |
 
@@ -87,7 +87,14 @@ Home, join, both dialogs and the notices now match the old look on desktop (0.8%
 - The home page keeps a visually hidden `h1` "Planning Poker" for screen readers; the old page had none.
 - Role stays a select (owner decision), now a native select next to the name; the old Dev/Tester/Observer toggles are not restored.
 - The join step shows a one-line sentence "Enter your name to join this room." and has no "Use Different Name" button.
-- Phone rows differ only by the 14px root font below 768px (slice 6d). The room-settings rows still list 20px card text; that is slice 6c.
+- Phone rows differ only by the 14px root font below 768px (slice 6d). Room desktop rows are done in 6c.
+
+## Slice 6c differences
+
+- Observers see greyed cards (they cannot vote); the old page does not grey them.
+- The people table keeps its Name/Role/Vote header row and the "(owner)" marker; the old table has neither.
+- The role control stays a radio group, restyled as the old toggle buttons.
+- There is no connection badge in the new client, so rows 5 and 20 need nothing; row 17 (Leave room) uses the standard button style.
 
 ## Not reachable by the script
 
