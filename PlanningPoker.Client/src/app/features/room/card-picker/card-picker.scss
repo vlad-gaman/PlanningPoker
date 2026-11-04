@@ -1,39 +1,48 @@
 .cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  justify-content: center;
   margin-bottom: 1rem;
 }
 
+// Same box as the old Razor card: 4em wide, 1.8em of padding above and below, 10px corners, 2px margin.
 .card {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 3rem;
-  min-height: 3rem;
-  padding: 0 0.5rem;
+  box-sizing: border-box;
+  width: 4em;
+  min-width: 4em;
+  margin: 2px;
+  padding: 1.8em 0;
   border: 1px solid var(--card-border);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--card-bg);
   color: var(--text-color);
-  font-size: 1.25rem;
+  font-size: 1rem;
   cursor: pointer;
   user-select: none;
+  transition: all 0.3s ease;
 
-  &:hover:not(.disabled) {
+  &:hover:not(.disabled, .selected) {
     background: var(--card-hover-bg);
   }
 
   &.selected {
+    border-color: var(--primary-color);
     background: var(--card-selected-bg);
+    box-shadow: 0 0 0 2px var(--primary-color);
   }
 
   &.disabled {
+    border-color: var(--border-color);
     background: var(--card-disabled-bg);
+    opacity: 0.6;
     cursor: not-allowed;
 
     &.selected {
+      border-color: var(--primary-color);
       background: var(--card-selected-bg);
     }
   }
@@ -52,8 +61,8 @@
   }
 
   img {
-    height: 2.25rem;
-    width: 2.25rem;
+    height: 40px;
+    width: 40px;
   }
 }
 
