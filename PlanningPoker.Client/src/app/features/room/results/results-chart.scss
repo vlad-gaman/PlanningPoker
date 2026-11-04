@@ -12,6 +12,14 @@ figcaption {
 .canvas-box {
   position: relative;
   height: 15rem;
+
+  // The old Chart.js canvas kept a 2:1 box on a phone instead of a fixed height.
+  @media (max-width: 767.98px) {
+    height: auto;
+    aspect-ratio: 2 / 1;
+    max-width: 245px;
+    margin-inline: auto;
+  }
 }
 
 .average {

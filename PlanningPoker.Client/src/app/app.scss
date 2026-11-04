@@ -44,7 +44,14 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 400;
+  text-decoration: none;
+  color: var(--text-color);
+
+  &:hover {
+    color: var(--text-color);
+  }
 }
 
 .footer-links {

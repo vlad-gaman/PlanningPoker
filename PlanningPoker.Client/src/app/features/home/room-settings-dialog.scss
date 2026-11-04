@@ -15,7 +15,12 @@
   h2 {
     margin: 0;
     padding: 0;
-    font-size: 1.5rem;
+    // Bootstrap's heading scale: fluid below 1200px, fixed above.
+    font-size: calc(1.275rem + 0.3vw);
+
+    @media (min-width: 1200px) {
+      font-size: 1.5rem;
+    }
     font-weight: 500;
     line-height: 1.2;
     color: var(--text-color);
