@@ -109,15 +109,6 @@ html {
   }
 }
 
-// The old page's root font size: 14px on a phone, 16px from the 768px breakpoint up (all rem sizes follow).
-html {
-  font-size: 14px;
-
-  @media (min-width: 768px) {
-    font-size: 16px;
-  }
-}
-
 body {
   margin: 0;
   background: var(--bg-color);
