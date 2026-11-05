@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Credits } from './credits';
+import { ICON_CREDITS, ICON_CREDIT_URL, LIBRARY_CREDITS } from './credits.data';
 
 describe('Credits', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([])] }));
@@ -15,10 +16,9 @@ describe('Credits', () => {
     const links = Array.from(render().querySelectorAll('section.icons a')) as HTMLAnchorElement[];
 
     expect(links.map((l) => l.getAttribute('href'))).toEqual(
-      ['poker', 'fist', 'finger', 'two', 'three', 'four', 'fingers'].map(
-        (slug) => `https://www.flaticon.com/free-icons/${slug}`,
-      ),
+      ICON_CREDITS.map((c) => `${ICON_CREDIT_URL}${c.slug}`),
     );
+    expect(links.length).toBe(7);
     expect(links[0].textContent?.trim()).toBe('Poker icons created by Freepik - Flaticon');
     expect(links[0].title).toBe('poker icons');
   });
@@ -36,7 +36,7 @@ describe('Credits', () => {
   it('opens every external link safely in a new tab', () => {
     const links = Array.from(render().querySelectorAll('a[href^="http"]')) as HTMLAnchorElement[];
 
-    expect(links.length).toBe(9);
+    expect(links.length).toBe(ICON_CREDITS.length + LIBRARY_CREDITS.length);
     expect(links.every((l) => l.target === '_blank' && l.rel === 'noopener noreferrer')).toBe(true);
   });
 

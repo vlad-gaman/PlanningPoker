@@ -61,11 +61,12 @@ main {
     display: block;
     padding: 2px;
     border-radius: 50%;
-    background: #ffdd00;
+    background: var(--coffee-bg);
+    filter: var(--coffee-filter);
     box-shadow: 0 1px 3px var(--shadow-color);
   }
 }
 
-:host-context([data-theme='dark']) .buymeacoffee-link img {
-  filter: brightness(0.95) contrast(1.05);
+.divider {
+  color: var(--border-color);
 }
