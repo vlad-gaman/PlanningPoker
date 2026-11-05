@@ -20,6 +20,8 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --footer-bg: #fff;
   --chart-color-primary: #007bff;
   --chart-color-success: #28a745;
+  --coffee-bg: #ffdd00;
+  --coffee-filter: none;
   color-scheme: light;
 }
 
@@ -40,6 +42,8 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --footer-bg: #1a1a1a;
   --chart-color-primary: #4dabf7;
   --chart-color-success: #51cf66;
+  --coffee-bg: #ffdd00;
+  --coffee-filter: brightness(0.95) contrast(1.05);
   color-scheme: dark;
 }
 

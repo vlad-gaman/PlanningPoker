@@ -24,10 +24,12 @@ describe('ThemeSelect', () => {
 
   it('applies and persists the picked option', () => {
     const { select } = create();
+    const set = vi.spyOn(TestBed.inject(ThemeService), 'set');
 
     select.value = 'light';
     select.dispatchEvent(new Event('change'));
 
+    expect(set).toHaveBeenCalledWith('light');
     expect(TestBed.inject(ThemeService).preference()).toBe('light');
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
   });

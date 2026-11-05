@@ -40,10 +40,10 @@ test('the footer leads to the credits page, which has icons, libraries and a way
   await expect(page).toHaveURL(/\/credits$/);
 });
 
-for (const colorScheme of ['light', 'dark'] as const) {
-  test(`navbar, footer and credits fit a phone in ${colorScheme} mode`, async ({ page }) => {
+for (const [colorScheme, width] of [['light', 375], ['dark', 375], ['light', 360], ['dark', 360]] as const) {
+  test(`navbar, footer and credits fit a ${width}px phone in ${colorScheme} mode`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });
-    await page.setViewportSize({ width: 375, height: 812 });
+    await page.setViewportSize({ width, height: 812 });
 
     for (const path of ['/', '/credits']) {
       await page.goto(path);

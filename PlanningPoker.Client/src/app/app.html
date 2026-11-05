@@ -1,8 +1,8 @@
 <header class="navbar">
   <div class="shell">
     <a routerLink="/" class="brand">
-      <img src="favicon-32x32.png" alt="Planning Poker logo" width="28" height="28" />
-      Planning Poker
+      <img src="favicon-32x32.png" alt="{{ productName }} logo" width="28" height="28" />
+      {{ productName }}
     </a>
     <app-theme-select />
   </div>
@@ -13,7 +13,7 @@
 <footer class="footer">
   <div class="shell">
     <div class="footer-links">
-      <span>&copy; {{ year }} - Planning Poker</span>
+      <span>&copy; {{ year }} - {{ productName }}</span>
       <span class="divider" aria-hidden="true">|</span>
       <a routerLink="/credits">Credits</a>
     </div>

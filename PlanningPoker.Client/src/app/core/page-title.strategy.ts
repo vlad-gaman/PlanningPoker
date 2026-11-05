@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
-
-const PRODUCT_NAME = 'Planning Poker';
+import { PRODUCT_NAME } from './product';
 
 /** Tab title "<page> - Planning Poker", like the Razor layout's `ViewData["Title"]`. */
 @Injectable({ providedIn: 'root' })
