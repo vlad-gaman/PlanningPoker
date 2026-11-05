@@ -136,7 +136,8 @@ public class RoomService(
             members,
             voteStatusMapper.Map(snapshot, members),
             cardSets.GetCards(snapshot.Configuration.CardSet).Data!,
-            admission.PersonAdded));
+            admission.PersonAdded,
+            snapshot.Votes.GetValueOrDefault(personGuid)));
     }
 
     /// <summary>Drops the connection's index entry for the room, if it still points there (person lock only).</summary>

@@ -32,6 +32,7 @@ export const JOIN_RESPONSE = {
     { value: '5', display: null },
     { value: 'coffee', display: '☕' },
   ],
+  myMark: null,
   ownerGuid: ANN.guid,
   configuration: {
     cardSet: 'linear',
