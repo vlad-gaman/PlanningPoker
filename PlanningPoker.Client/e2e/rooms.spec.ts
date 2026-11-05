@@ -1,4 +1,5 @@
 import { Browser, BrowserContext, Page, expect, test } from '@playwright/test';
+import { seedRoomDefaults } from './room-defaults';
 
 const FUN_ROOM_PATH = /\/room\/\d{1,2}_[\w-]+_[\w-]+_[\w-]+$/;
 const GUID_ROOM_PATH = /\/room\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -13,14 +14,10 @@ async function chooseRole(page: Page, role: string): Promise<void> {
 }
 
 async function createRoom(page: Page, name: string, options: { funName: boolean }): Promise<string> {
+  await seedRoomDefaults(page, { useFunRoomName: options.funName });
   await page.goto('/');
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create room' }).click();
-  const dialog = page.getByRole('dialog');
-  if (!options.funName) {
-    await dialog.getByLabel('Use fun room name').uncheck();
-  }
-  await dialog.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(options.funName ? FUN_ROOM_PATH : GUID_ROOM_PATH);
   return page.url();
 }
@@ -121,7 +118,28 @@ test('an invalid name is rejected on the home page', async ({ page }) => {
   await page.getByRole('button', { name: 'Create room' }).click();
 
   await expect(page.getByText('Use 2 to 20 characters.')).toBeVisible();
+  await expect(page).toHaveURL('/');
+});
+
+test('creating a room asks nothing more and reuses the settings the owner saved last time', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Your name').fill('Ann');
+  await page.getByLabel('Use a fun name').uncheck();
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page).toHaveURL(GUID_ROOM_PATH);
   await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('dialog').getByLabel('Countdown Duration').fill('9');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save Settings' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.goto('/');
+  await expect(page.getByLabel('Use a fun name')).not.toBeChecked();
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page).toHaveURL(GUID_ROOM_PATH);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('dialog').getByLabel('Countdown Duration')).toHaveValue('9');
 });
 
 test('an invalid name is rejected when joining through a link', async ({ browser }) => {

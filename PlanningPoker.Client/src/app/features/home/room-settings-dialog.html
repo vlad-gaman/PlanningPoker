@@ -15,18 +15,11 @@
     <div class="form-group">
       <label for="countdown-seconds">Countdown Duration (seconds):</label>
       <input id="countdown-seconds" class="form-control" type="number" formControlName="countdownSeconds" />
-      <small class="hint">Set to 0 for instant reveal{{ data ? ' when everyone votes' : '' }}</small>
+      <small class="hint">Set to 0 for instant reveal when everyone votes</small>
       @if (form.controls.countdownSeconds.invalid) {
         <div class="field-error" role="alert">Use {{ countdownRange.min }} to {{ countdownRange.max }} seconds.</div>
       }
     </div>
-    @if (!data) {
-      <div class="form-check">
-        <input id="use-fun-room-name" class="form-check-input" type="checkbox" formControlName="useFunRoomName" />
-        <label for="use-fun-room-name">Use fun room name?</label>
-        <small class="hint block">Caution! It may generate weird names!!!</small>
-      </div>
-    }
     <div class="form-check">
       <input id="show-fireworks" class="form-check-input" type="checkbox" formControlName="showFireworks" />
       <label for="show-fireworks">Show fireworks on consensus</label>
@@ -38,7 +31,7 @@
         <div class="field-error" role="alert">At least 1 participant.</div>
       }
     </div>
-    @if (data && data.candidates.length) {
+    @if (data.candidates.length) {
       <div class="form-group">
         <label for="transfer-ownership">Transfer Ownership:</label>
         <select
@@ -62,7 +55,7 @@
     }
   </div>
   <div class="settings-footer">
-    <button type="submit" class="btn">{{ data ? 'Save Settings' : 'Create room' }}</button>
+    <button type="submit" class="btn">Save Settings</button>
     <button type="button" class="btn" mat-dialog-close>Cancel</button>
   </div>
 </form>

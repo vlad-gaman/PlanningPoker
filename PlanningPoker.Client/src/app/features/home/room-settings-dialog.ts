@@ -8,13 +8,11 @@ import { RoomsService } from '../../core/rooms.service';
 import {
   COUNTDOWN_MAX_SECONDS,
   COUNTDOWN_MIN_SECONDS,
-  CreateRoomRequest,
-  DEFAULT_ROOM_CONFIGURATION,
   MAX_PARTICIPANTS_MIN,
   RoomConfiguration,
 } from '../../models/room';
 
-/** Opens the dialog for a room that exists: prefilled, saved through the room, with ownership transfer. */
+/** What the owner's room settings dialog needs: the current configuration, saving it, and ownership transfer. */
 export interface RoomSettingsDialogData {
   configuration: RoomConfiguration;
   /** Other members the owner can hand the room to. */
@@ -31,9 +29,9 @@ export interface RoomSettingsDialogData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RoomSettingsDialog {
-  private readonly dialogRef = inject<MatDialogRef<RoomSettingsDialog, CreateRoomRequest>>(MatDialogRef);
+  private readonly dialogRef = inject<MatDialogRef<RoomSettingsDialog>>(MatDialogRef);
 
-  protected readonly data = inject<RoomSettingsDialogData | null>(MAT_DIALOG_DATA, { optional: true });
+  protected readonly data = inject<RoomSettingsDialogData>(MAT_DIALOG_DATA);
   protected readonly error = signal<string | null>(null);
   protected readonly transferTarget = signal<string | null>(null);
 
@@ -41,17 +39,16 @@ export class RoomSettingsDialog {
   protected readonly countdownRange = { min: COUNTDOWN_MIN_SECONDS, max: COUNTDOWN_MAX_SECONDS };
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    cardSet: (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).cardSet,
+    cardSet: this.data.configuration.cardSet,
     countdownSeconds: [
-      (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).countdownSeconds,
+      this.data.configuration.countdownSeconds,
       [Validators.required, Validators.min(COUNTDOWN_MIN_SECONDS), Validators.max(COUNTDOWN_MAX_SECONDS)],
     ],
-    showFireworks: (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).showFireworks,
+    showFireworks: this.data.configuration.showFireworks,
     maxParticipants: [
-      (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).maxParticipants,
+      this.data.configuration.maxParticipants,
       [Validators.required, Validators.min(MAX_PARTICIPANTS_MIN)],
     ],
-    useFunRoomName: true,
   });
 
   protected async submit(): Promise<void> {
@@ -59,14 +56,9 @@ export class RoomSettingsDialog {
       this.form.markAllAsTouched();
       return;
     }
-    const { useFunRoomName, ...configuration } = this.form.getRawValue();
-    if (!this.data) {
-      this.dialogRef.close({ useFunRoomName, configuration });
-      return;
-    }
     this.error.set(null);
     try {
-      await this.data.save(configuration);
+      await this.data.save(this.form.getRawValue());
       this.dialogRef.close();
     } catch (error) {
       this.error.set(errorMessage(error));
@@ -75,7 +67,7 @@ export class RoomSettingsDialog {
 
   protected async transferOwnership(): Promise<void> {
     const target = this.transferTarget();
-    if (!this.data || !target) {
+    if (!target) {
       return;
     }
     this.error.set(null);
