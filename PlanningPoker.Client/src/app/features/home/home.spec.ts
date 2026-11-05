@@ -5,13 +5,15 @@ import { of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES } from '../../models/api';
 import { CreateRoomRequest } from '../../models/room';
 import { Home, extractRoomId } from './home';
+import { RoomSettingsDialog, RoomSettingsDialogData } from './room-settings-dialog';
 
-const REQUEST: CreateRoomRequest = {
-  useFunRoomName: true,
+const REMEMBERED: CreateRoomRequest = {
+  useFunRoomName: false,
   configuration: { cardSet: 'linear', countdownSeconds: 7, showFireworks: false, maxParticipants: 9 },
 };
 
@@ -34,10 +36,10 @@ describe('Home', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    localStorage.clear();
     [me.get, me.update, rooms.create, dialog.open].forEach((mock) => mock.mockReset());
     me.get.mockReturnValue(throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'x' }])));
     me.update.mockReturnValue(of({ guid: 'g', name: 'Ann', personType: 'dev' }));
-    dialog.open.mockReturnValue({ afterClosed: () => of(REQUEST) });
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -78,7 +80,7 @@ describe('Home', () => {
     expect((element.querySelector('input') as HTMLInputElement).value).toBe('Zoe');
   });
 
-  it('saves the person, creates the room with the chosen settings and opens it', async () => {
+  it('saves the person, creates the room with the default settings and opens it', async () => {
     rooms.create.mockReturnValue(of({ id: 'new-room' }));
     const { fixture, element } = await render();
 
@@ -87,23 +89,72 @@ describe('Home', () => {
     await fixture.whenStable();
 
     expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
-    expect(rooms.create).toHaveBeenCalledWith(REQUEST);
+    expect(rooms.create).toHaveBeenCalledWith({
+      useFunRoomName: true,
+      configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
+    });
     expect(navigate).toHaveBeenCalledWith(['/room', 'new-room']);
   });
 
-  it('does nothing when the settings dialog is cancelled', async () => {
-    dialog.open.mockReturnValue({ afterClosed: () => of(undefined) });
+  it('creates the room with the remembered settings straight away, without a dialog', async () => {
+    const defaults = TestBed.inject(RoomDefaultsService);
+    defaults.saveConfiguration(REMEMBERED.configuration);
+    defaults.saveUseFunRoomName(REMEMBERED.useFunRoomName);
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
     const { fixture, element } = await render();
 
     type(element, 'Your name', 'Ann');
     submit(element, 0);
     await fixture.whenStable();
 
-    expect(rooms.create).not.toHaveBeenCalled();
-    expect(me.update).not.toHaveBeenCalled();
+    expect(rooms.create).toHaveBeenCalledWith(REMEMBERED);
+    expect(element.querySelector('mat-dialog-container')).toBeNull();
   });
 
-  it.each(['', 'A', 'x'.repeat(21)])('rejects the name %j before opening the dialog', async (name) => {
+  it('opens the settings dialog before creating, prefilled with the remembered settings', async () => {
+    TestBed.inject(RoomDefaultsService).saveConfiguration(REMEMBERED.configuration);
+    const { element } = await render();
+
+    const button = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Room settings'));
+    button?.click();
+
+    expect(dialog.open).toHaveBeenCalledWith(RoomSettingsDialog, { data: expect.anything() });
+    const data = dialog.open.mock.calls[0][1].data as RoomSettingsDialogData;
+    expect(data.configuration).toEqual(REMEMBERED.configuration);
+    expect(data.candidates).toEqual([]);
+    expect(rooms.create).not.toHaveBeenCalled();
+  });
+
+  it('saving the dialog changes the settings the next room is created with', async () => {
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
+    const { fixture, element } = await render();
+    const button = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Room settings'));
+    button?.click();
+
+    await (dialog.open.mock.calls[0][1].data as RoomSettingsDialogData).save(REMEMBERED.configuration);
+    type(element, 'Your name', 'Ann');
+    submit(element, 0);
+    await fixture.whenStable();
+
+    expect(rooms.create).toHaveBeenCalledWith(expect.objectContaining({ configuration: REMEMBERED.configuration }));
+  });
+
+  it('remembers the fun room name choice for the next visit', async () => {
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
+    const { fixture, element } = await render();
+    const checkbox = element.querySelector('#use-fun-room-name') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+
+    checkbox.click();
+    type(element, 'Your name', 'Ann');
+    submit(element, 0);
+    await fixture.whenStable();
+
+    expect(rooms.create).toHaveBeenCalledWith(expect.objectContaining({ useFunRoomName: false }));
+    expect(TestBed.inject(RoomDefaultsService).load().useFunRoomName).toBe(false);
+  });
+
+  it.each(['', 'A', 'x'.repeat(21)])('rejects the name %j without creating a room', async (name) => {
     const { fixture, element } = await render();
 
     type(element, 'Your name', name);
@@ -111,7 +162,7 @@ describe('Home', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(dialog.open).not.toHaveBeenCalled();
+    expect(rooms.create).not.toHaveBeenCalled();
     expect(element.querySelector('.field-error')?.textContent).toContain('2 to 20');
   });
 
@@ -134,7 +185,7 @@ describe('Home', () => {
     const { fixture, element } = await render();
 
     type(element, 'Your name', 'Ann');
-    type(element, 'Room Name', 'https://host/room/room-9');
+    type(element, 'Room Name:', 'https://host/room/room-9');
     submit(element, 1);
     await fixture.whenStable();
 

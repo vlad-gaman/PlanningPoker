@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomsService } from '../../core/rooms.service';
 import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
-import { RoomSettingsDialog } from './room-settings-dialog';
+import { RoomSettingsDialog, RoomSettingsDialogData } from './room-settings-dialog';
 
 /** Accepts a bare room id or a pasted room link and returns the room id. */
 export function extractRoomId(input: string): string {
@@ -27,6 +28,7 @@ export function extractRoomId(input: string): string {
 export class Home implements OnInit, OnDestroy {
   private readonly meService = inject(MeService);
   private readonly roomsService = inject(RoomsService);
+  private readonly roomDefaults = inject(RoomDefaultsService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly builder = inject(FormBuilder);
@@ -35,6 +37,7 @@ export class Home implements OnInit, OnDestroy {
   protected readonly error = signal<string | null>(null);
 
   protected readonly form = createPersonForm(this.builder);
+  protected readonly useFunRoomName = new FormControl(this.roomDefaults.load().useFunRoomName, { nonNullable: true });
   protected readonly joinForm = this.builder.nonNullable.group({
     room: ['', Validators.required],
   });
@@ -56,15 +59,25 @@ export class Home implements OnInit, OnDestroy {
     if (!this.validName()) {
       return;
     }
-    const request = await firstValueFrom(this.dialog.open(RoomSettingsDialog).afterClosed());
-    if (!request) {
-      return;
-    }
+    const useFunRoomName = this.useFunRoomName.value;
+    this.roomDefaults.saveUseFunRoomName(useFunRoomName);
     await this.run(async () => {
       await firstValueFrom(this.meService.update(this.form.getRawValue()));
-      const room = await firstValueFrom(this.roomsService.create(request));
+      const { configuration } = this.roomDefaults.load();
+      const room = await firstValueFrom(this.roomsService.create({ useFunRoomName, configuration }));
       await this.router.navigate(['/room', room.id]);
     });
+  }
+
+  /** Edits the remembered settings new rooms are created with; there is no room to hand over yet. */
+  protected editSettings(): void {
+    const data: RoomSettingsDialogData = {
+      configuration: this.roomDefaults.load().configuration,
+      candidates: [],
+      save: async (configuration) => this.roomDefaults.saveConfiguration(configuration),
+      transfer: async () => undefined,
+    };
+    this.dialog.open(RoomSettingsDialog, { data });
   }
 
   protected async joinRoom(): Promise<void> {

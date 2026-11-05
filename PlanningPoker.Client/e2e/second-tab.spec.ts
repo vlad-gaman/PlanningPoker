@@ -1,14 +1,13 @@
 import { Page, expect, test } from '@playwright/test';
+import { seedRoomDefaults } from './room-defaults';
 
 const GUID_ROOM_PATH = /\/room\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 async function createRoom(page: Page, name: string): Promise<string> {
+  await seedRoomDefaults(page, {});
   await page.goto('/');
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create room' }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Use fun room name').uncheck();
-  await dialog.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(GUID_ROOM_PATH);
   return page.url();
 }

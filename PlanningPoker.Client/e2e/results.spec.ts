@@ -1,4 +1,5 @@
 import { Browser, BrowserContext, Page, expect, test } from '@playwright/test';
+import { seedRoomDefaults } from './room-defaults';
 
 const GUID_ROOM_PATH = /\/room\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -19,19 +20,10 @@ async function newPerson(browser: Browser): Promise<Person> {
 
 /** Creates a room with a two second countdown and returns its link. */
 async function createRoom(page: Page, name: string, options: RoomOptions = {}): Promise<string> {
+  await seedRoomDefaults(page, { countdownSeconds: 2, cardSet: options.cardSet, showFireworks: options.fireworks });
   await page.goto('/');
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create room' }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Use fun room name').uncheck();
-  await dialog.getByLabel('Countdown Duration').fill('2');
-  if (options.cardSet) {
-    await dialog.getByLabel('Card Set').selectOption({ label: options.cardSet });
-  }
-  if (options.fireworks === false) {
-    await dialog.getByLabel('Show fireworks').uncheck();
-  }
-  await dialog.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(GUID_ROOM_PATH);
   return page.url();
 }
@@ -131,7 +123,7 @@ test('a room with fireworks turned off shows none on consensus', async ({ browse
 test('a fist of five room charts the cards as images without text labels', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
-  const roomUrl = await createRoom(ann.page, 'Ann', { cardSet: 'Fist of Five' });
+  const roomUrl = await createRoom(ann.page, 'Ann', { cardSet: 'fist-of-five' });
   await join(bob.page, roomUrl, 'Bob');
 
   await ann.page.getByRole('radio', { name: '2', exact: true }).check({ force: true });

@@ -21,6 +21,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES, Person, PersonType } from '../../models/person';
@@ -58,6 +59,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly router = inject(Router);
   private readonly flash = inject(FlashMessageService);
   private readonly dialog = inject(MatDialog);
+  private readonly roomDefaults = inject(RoomDefaultsService);
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly columns = ['name', 'role', 'mark'];
@@ -162,7 +164,10 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     const data: RoomSettingsDialogData = {
       configuration,
       candidates: this.store.people().filter((person) => person.guid !== this.myGuid()),
-      save: (updated) => this.store.updateConfiguration(updated),
+      save: async (updated) => {
+        await this.store.updateConfiguration(updated);
+        this.roomDefaults.saveConfiguration(updated);
+      },
       transfer: (guid) => this.store.transferOwnership(guid),
     };
     this.dialog.open(RoomSettingsDialog, { data });
