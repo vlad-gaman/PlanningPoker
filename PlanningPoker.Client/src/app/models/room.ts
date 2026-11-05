@@ -70,6 +70,7 @@ export interface JoinRoomResponse {
   people: Person[];
   voteStatus: VoteStatus;
   cards: CardOption[];
+  myMark: string | null;
   ownerGuid: string;
   configuration: RoomConfiguration;
 }

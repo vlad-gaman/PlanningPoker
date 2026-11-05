@@ -160,7 +160,7 @@ public class RoomMappersTests
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
         var status = new VoteStatus { Votes = new Dictionary<Guid, string>() };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], status, [], personAdded: true);
+        var result = new JoinRoomResultMapper().Map(room, person, [person], status, [], personAdded: true, myMark: "5");
 
         Assert.Same(room, result.Room);
         Assert.Same(person, result.Person);
@@ -168,6 +168,7 @@ public class RoomMappersTests
         Assert.Equal([person], result.People);
         Assert.True(result.PersonAdded);
         Assert.True(result.ResetCountdown);
+        Assert.Equal("5", result.MyMark);
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class RoomMappersTests
         var room = new Room { Id = "r", VotingEnabled = true, Configuration = Configuration };
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, [], personAdded: false);
+        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, [], personAdded: false, myMark: null);
 
         Assert.False(result.PersonAdded);
     }

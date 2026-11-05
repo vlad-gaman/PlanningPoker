@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
+import { RoomTabLock } from '../../core/room-tab-lock';
 import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
 import { Person, PersonType } from '../../models/person';
@@ -25,6 +26,7 @@ import {
 export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
 /** The mark the server sends for a vote that is not revealed yet. */
 export const HIDDEN_MARK = 'hide';
+export const ROOM_OPENED_ELSEWHERE_MESSAGE = 'This room was opened in another tab, so it is no longer shown here.';
 export const ROOM_DISPOSED_MESSAGE = 'The room was closed because everyone left.';
 
 /** True when the server says the room cannot be joined because it does not exist (any more). */
@@ -41,6 +43,8 @@ export class RoomStore {
   private readonly hub = inject(RoomHubClient);
   private readonly router = inject(Router);
   private readonly flash = inject(FlashMessageService);
+  private readonly tabLock = inject(RoomTabLock);
+  private stopWatchingTabs: (() => void) | null = null;
 
   private readonly peopleState = signal<Person[]>([]);
   private readonly ownerState = signal<string | null>(null);
@@ -97,6 +101,12 @@ export class RoomStore {
     }
     this.bind();
     await this.joinRoom(gen);
+    if (gen !== this.generation) {
+      return;
+    }
+    this.stopWatchingTabs?.();
+    this.stopWatchingTabs = this.tabLock.onTaken(roomId, () => void this.giveUpToAnotherTab(gen));
+    this.tabLock.claim(roomId);
   }
 
   async leave(): Promise<void> {
@@ -140,6 +150,8 @@ export class RoomStore {
   /** Drops the hub connection and clears the room state; leaving the page triggers this too. */
   async close(): Promise<void> {
     this.generation++;
+    this.stopWatchingTabs?.();
+    this.stopWatchingTabs = null;
     this.open = false;
     this.bound = false;
     this.buffered = null;
@@ -217,6 +229,7 @@ export class RoomStore {
     this.ownerState.set(response.ownerGuid);
     this.applyVoteStatus(response.voteStatus);
     this.cardsState.set(response.cards);
+    this.myMarkState.set(response.myMark ?? null);
     this.configurationState.set(response.configuration);
     for (const change of queued) {
       if (gen !== this.generation) {
@@ -237,6 +250,15 @@ export class RoomStore {
     } catch (error) {
       await this.abandon(error, gen);
     }
+  }
+
+  /** Another tab opened this room: this one stops showing it and goes home. */
+  private async giveUpToAnotherTab(gen: number): Promise<void> {
+    if (gen !== this.generation) {
+      return;
+    }
+    this.flash.show(ROOM_OPENED_ELSEWHERE_MESSAGE);
+    await this.leave();
   }
 
   /** Explains why the room cannot be used any more and leaves it. */

@@ -6,7 +6,7 @@ namespace PlanningPoker.Service.Mappers;
 
 public class JoinRoomResultMapper : IJoinRoomResultMapper
 {
-    public JoinRoomResult Map(Room room, Person person, IReadOnlyList<Person> people, VoteStatus voteStatus, IReadOnlyList<CardOption> cards, bool personAdded)
+    public JoinRoomResult Map(Room room, Person person, IReadOnlyList<Person> people, VoteStatus voteStatus, IReadOnlyList<CardOption> cards, bool personAdded, string? myMark)
     {
         return new JoinRoomResult
         {
@@ -16,6 +16,7 @@ public class JoinRoomResultMapper : IJoinRoomResultMapper
             VoteStatus = voteStatus,
             Cards = cards,
             PersonAdded = personAdded,
+            MyMark = myMark,
             ResetCountdown = room.VotingEnabled && person.PersonType != PersonTypes.Observer
         };
     }
