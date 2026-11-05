@@ -5,6 +5,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
 import {
@@ -545,6 +546,20 @@ describe('Room', () => {
       const data = dialog.open.mock.calls[0][1].data;
       expect(data.configuration).toEqual(JOIN_RESPONSE.configuration);
       expect(data.candidates).toEqual([BOB]);
+    });
+
+    it('remembers the saved settings as the defaults for new rooms', async () => {
+      localStorage.clear();
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+      const settings = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Settings'));
+      settings?.click();
+      const updated = { ...JOIN_RESPONSE.configuration, countdownSeconds: 11 };
+
+      await dialog.open.mock.calls[0][1].data.save(updated);
+      await settle(fixture);
+
+      expect(TestBed.inject(RoomDefaultsService).load().configuration).toEqual(updated);
     });
 
     it('hides Settings from a member who is not the owner', async () => {
