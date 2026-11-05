@@ -1,12 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { errorMessage } from '../../core/api-request-error';
 import { Person } from '../../models/person';
 import { RoomsService } from '../../core/rooms.service';
@@ -30,15 +25,7 @@ export interface RoomSettingsDialogData {
 
 @Component({
   selector: 'app-room-settings-dialog',
-  imports: [
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-  ],
+  imports: [ReactiveFormsModule, MatDialogModule],
   templateUrl: './room-settings-dialog.html',
   styleUrl: './room-settings-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

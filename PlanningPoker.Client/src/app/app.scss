@@ -21,6 +21,7 @@ main {
   gap: 0.5rem;
   max-width: 1140px;
   margin: 0 auto;
+  padding: 0 0.75rem;
 }
 
 .navbar {
@@ -32,14 +33,25 @@ main {
 .footer {
   background: var(--footer-bg);
   border-top: 1px solid var(--border-color);
-  color: var(--text-color);
+  color: var(--muted-color);
+
+  a {
+    color: var(--muted-color);
+  }
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 400;
+  text-decoration: none;
+  color: var(--text-color);
+
+  &:hover {
+    color: var(--text-color);
+  }
 }
 
 .footer-links {

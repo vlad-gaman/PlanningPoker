@@ -4,6 +4,13 @@
 
 h1 {
   text-align: center;
+  font-weight: 500;
+  // Bootstrap's heading scale: fluid below 1200px, fixed above.
+  font-size: calc(1.325rem + 0.9vw);
+
+  @media (min-width: 1200px) {
+    font-size: 2rem;
+  }
 }
 
 section {
@@ -16,6 +23,12 @@ section {
 
 h2 {
   margin-top: 0;
+  font-weight: 500;
+  font-size: calc(1.275rem + 0.3vw);
+
+  @media (min-width: 1200px) {
+    font-size: 1.5rem;
+  }
 }
 
 ul {

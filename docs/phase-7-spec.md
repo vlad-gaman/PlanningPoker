@@ -31,7 +31,7 @@ Applied per screen and state, in light and dark, desktop and phone.
 - **Motion:** what the old app had is restored and counts: chart animation, hover, card selection, fireworks timing.
 - **Phone:** same stacking and wrapping at 375px and the same 768px breakpoint behaviour.
 
-**Accepted differences** (kept; each is recorded in the checklist as an accepted-difference note, and none is reverted): one participant table with a Role column instead of three tables; Material dialogs for create and room settings, and a full-screen dialog on phones; name entry inside the room route; "Planning Poker" name and the copyright year from the clock; native theme select; marks ordered by card set; no global dark-mode image filter; no navbar collapse toggler; the Libraries section on credits. Behaviour changes from slices 1 to 5 are outside the bar. What exactly each accepted item covers (route, structure or look) is settled in section 8, questions 2 and 3.
+**Accepted differences** (kept; each is recorded in the checklist as an accepted-difference note, and none is reverted): one participant table with a Role column instead of three tables; Material dialogs for create and room settings, and a full-screen dialog on phones; name entry inside the room route; "Planning Poker" name and the copyright year from the clock; native theme select; marks ordered by card set; no global dark-mode image filter; no navbar collapse toggler; the Libraries section on credits; **the role control stays a select (home, join) and a radio group (room) instead of the old Dev/Tester/Observer toggle buttons** (owner decision, section 8 question 3). Behaviour changes from slices 1 to 5 are outside the bar. In-route name entry and "Leave room" are accepted as route and behaviour only; their look matches the old join screen and buttons (section 8, question 2).
 
 ## 3. Where things live
 
@@ -57,7 +57,7 @@ Each slice ends with the owner ticking that slice's rows in `docs/parity-checkli
 | **6c Room and results** | The room in all its states, results, charts, motion. | 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 20 |
 | **6d Shell, credits and phone** | Header, footer, credits, the 768px breakpoint, the phone pass. | 18, 23; header and footer on every screen |
 
-Rows 1 to 23 are the inventory's screens and states. The probe so far covered rows 1, 2, 4, 6, 7, 9, 12, 14, 18, 21, 22 and 23 (the home, create dialog, join, lobby, voting, revealed, room-settings dialog, credits, both themes, both sizes). **Not yet probed** (11 rows): 3 (join action, validation messages), 5 (loading), 8 (countdown), 10 (fireworks), 11 (observer), 13 (non-owner), 15 (transfer), 16 (role change), 17 (leave), 19 (error and not-found), 20 (connection status). 6a extends the script to them; each is checked in the slice that owns the row.
+Rows 1 to 23 are the inventory's screens and states. The probe so far covered rows 1, 2, 4, 6, 7, 9, 12, 14, 18, 21, 22 and 23 (the home, create dialog, join, lobby, voting, revealed, room-settings dialog, credits, both themes, both sizes). **Probed by 6a** (8 more states): 3 (`home-join-error`), 8, 10, 11, 13, 15, 16 and 19 (`room-not-found`). **Not reachable by the script** (3 rows): 5 (loading: the old app has none), 17 (leave: the old app has none), 20 (reconnecting: going offline did not trigger the old pill); they are owner checks. Each row is checked in the slice that owns it.
 
 ## 5. Gaps (old -> new, from the comparison run)
 
@@ -69,19 +69,19 @@ Measured on the current new app against `razor-final`, desktop 1280x800 and phon
 - Footer: the "|" separator grey (108,117,125) -> (33,37,41); the "Credits" link grey -> blue; dark mode (77,171,247).
 - Dark mode: dialog and button background (45,45,45) -> (26,26,26); table row stripes inverted ((26,26,26) -> (45,45,45)); primary button text and background differ.
 - Content width: content left edge x=82 -> x=70 at 1280px.
-- Tooling: reference shots, the script with an `npm run parity` command, the checklist file, every unprobed row added to the script.
+- Tooling: reference shots, the script with an `npm run parity` command, the checklist file, every reachable unprobed row added to the script.
 
 **6b Home and dialogs**
 - Home: centred form rows ("Your Name:" + input + Dev/Tester/Observer toggles; "⚙️ More Settings" + muted hint; "Create room"; "Room Name:" + input; "Join room") -> h1, two outlined floating-label fields, Role select, blue pill "Create room", divider, outlined pill "Join room".
-- Role control: three toggle buttons (Dev selected blue) -> Role select. No heading on the old home.
-- Join screen: "Room: id" row, name field, toggles, "Join room" and "Use Different Name" -> h1 "Room id", "Enter your name to join this room.", Role select, "Join room" (reading in question 2).
+- Home heading: none on the old home -> h1 "Planning Poker" (the name is accepted, the heading is a gap). The Role select stays (accepted).
+- Join screen: "Room: id" row, name field, toggles, "Join room" and "Use Different Name" -> h1 "Room id", "Enter your name to join this room.", Role select, "Join room". The look matches the old join screen; the Role select and the in-route form stay (question 2).
 - Create-settings dialog: labels above plain bordered inputs, hints ("Set to 0 for instant reveal", "Caution! It may generate weird names!!!"), `×` close, "Apply Settings" and "Cancel" outlined, 8px radius -> 28px radius, floating labels, no hints, no `×`, fireworks and fun-name order swapped, "Create room" and "Cancel" text buttons (reading in question 1).
 - Room-settings dialog: the same plus "Transfer ownership:" -> "New owner" and "Save settings".
 
 **6c Room and results**
 - Title: "Room: id" 16px centred label -> "Room id" 2rem bold h1, left.
 - Cards: 64x84px, 10px radius, 1px grey border, 16px, centred, one row at 1280px, greyed after reveal -> 66x50px, 0 radius, grey fill, 20px, left-aligned, wrapping.
-- Action row: centred "Clear votes / Show votes / ⚙️ Settings" with the role toggles in the same row, 4px radius -> left-aligned pill buttons, the role radio group on its own row (reading in question 2: "Leave room").
+- Action row: centred "Clear votes / Show votes / ⚙️ Settings" with 4px radius -> left-aligned pill buttons. The role radio group stays (accepted); "Leave room" stays and is styled like the old buttons (question 2).
 - Table text: 16px, left, 8px padding, light row lines, no header -> 14px, 16px horizontal padding, Name/Role/Vote header (the single table itself is accepted).
 - Charts: titles 16px/400 centred -> 600, left, bordered cards; averages centred -> left.
 - Chart animation on -> off (`animation: false`). Restored; `chart-config.ts` and its unit test change.
@@ -112,15 +112,15 @@ Measured on the current new app against `razor-final`, desktop 1280x800 and phon
 5. No REST, hub or Swagger change; `ng lint`, `ng test` and Playwright pass.
 6. The prototype branch is not merged.
 
-## 8. Open questions for review
+## 8. Decisions on the review questions
 
-Each has a recommendation; the spec above follows it unless the owner says otherwise.
+The owner reviewed the eight questions on 2026-11-02 and accepted every recommendation except question 3.
 
-1. **Dialog styling.** The Material dialogs are an accepted difference. Is the *look* inside them accepted too (labels, hints, fonts, button styling, field style)? **Recommendation: no.** Match typography, colours, hints text and button styles to the old dialog (the dialog keeps its Material shape and floating-label fields). Alternative: accept the whole dialog as built.
-2. **In-route name entry and "Leave room".** Slice 1 made these deliberate differences. Is each accepted as a *route/behaviour* only (so its look still matches the old join screen and toolbar) or as a *look*? **Recommendation: accepted as route/behaviour; the look matches the old join screen ("Room: id", centred rows, toggles, "Use Different Name" stays out, as it needs no new behaviour) and "Leave room" is styled like the old buttons.** Alternative: accept the current look of both.
-3. **Role toggles and select.** The old app shows Dev / Tester / Observer as toggle buttons on home, join and in the room toolbar; the new one uses a select and a radio group. Not on the accepted list. **Recommendation: restore the toggle look** in all three places, keeping the form controls and behaviour.
-4. **Where the checklist, references and script live** (section 3). **Recommendation: as listed.** Alternative: keep the reference shots outside the repo (smaller repo, but they are lost with the machine and a clean clone cannot run the check).
-5. **Font stack.** **Recommendation: the old `system-ui` stack everywhere, no webfont.** Alternative: ship Roboto and accept the difference.
-6. **Page height bar of 5%.** The revealed room is +22% on phone today because of the table and chart cards. **Recommendation: keep 5%**, and let the owner accept a row with a note where the accepted single table is the cause.
-7. **When to regenerate references.** **Recommendation: never after the first commit**, except if `razor-final` is retagged. Old app is frozen.
-8. **Prototype branch.** Keep `prototype/styling-approach` after 6a to 6d? **Recommendation: yes until the cutover, then delete.**
+1. **Dialog look: not accepted.** Match the old typography, colours, hint texts and button styles inside the dialogs; the dialogs keep their Material shape and floating-label fields.
+2. **In-route name entry and "Leave room": accepted as route and behaviour only.** The look matches the old join screen and the old buttons.
+3. **Role control: keep the current behaviour and look** (select on home and join, radio group in the room). The old Dev/Tester/Observer toggle buttons are not restored; this is an accepted difference.
+4. **Files:** `docs/parity-checklist.md`, `docs/parity/reference/`, `PlanningPoker.Client/parity/`, run with `npm run parity` (section 3).
+5. **Font stack:** the old `system-ui` stack everywhere, no webfont.
+6. **Page height bar:** 5%; the owner may accept a row with a note where the accepted single table is the cause.
+7. **Reference shots:** regenerated only if `razor-final` is retagged.
+8. **Prototype branch:** `prototype/styling-approach` stays until the cutover, then is deleted.

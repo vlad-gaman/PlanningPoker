@@ -1,9 +1,13 @@
 @use '@angular/material' as mat;
 
+// The old Razor UI's Bootstrap font stack; no webfont, so Material controls and the page render the same face.
+$font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+
 :root {
   --bg-color: #ffffff;
   --text-color: #212529;
   --border-color: #e5e5e5;
+  --muted-color: #6c757d;
   --card-bg: #ffffff;
   --card-hover-bg: rgba(0, 0, 0, 0.075);
   --card-selected-bg: rgba(0, 0, 0, 0.3);
@@ -25,6 +29,7 @@
   --bg-color: #1a1a1a;
   --text-color: #e9ecef;
   --border-color: #404040;
+  --muted-color: #6c757d;
   --card-bg: #2d2d2d;
   --card-hover-bg: rgba(255, 255, 255, 0.1);
   --card-selected-bg: rgba(255, 255, 255, 0.3);
@@ -46,10 +51,48 @@ html {
   @include mat.theme(
     (
       color: mat.$azure-palette,
-      typography: Roboto,
+      typography: (
+        plain-family: $font-stack,
+        brand-family: $font-stack,
+        bold-weight: 700,
+        medium-weight: 500,
+        regular-weight: 400,
+      ),
       density: 0,
     )
   );
+
+  // Buttons look like the old Bootstrap ones: 16px/400 text, 4px radius, 1px border, white (dark #2d2d2d) fill.
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 4px,
+      filled-container-height: 38px,
+      filled-horizontal-padding: 12px,
+      filled-container-color: var(--card-bg),
+      filled-label-text-color: var(--text-color),
+      filled-hover-state-layer-opacity: 0.075,
+      outlined-container-shape: 4px,
+      outlined-container-height: 38px,
+      outlined-horizontal-padding: 12px,
+      outlined-label-text-color: var(--text-color),
+      outlined-outline-color: var(--border-color),
+      text-container-shape: 4px,
+      text-container-height: 38px,
+      text-horizontal-padding: 12px,
+      text-label-text-color: var(--text-color),
+    )
+  );
+
+  @include mat.dialog-overrides((container-color: var(--card-bg), container-shape: 8px));
+
+  // Text is 16px like the old page (Material defaults to 14px for labels and table cells).
+  --mat-sys-label-large-size: 1rem;
+  --mat-sys-label-large-weight: 400;
+  --mat-sys-body-large-size: 1rem;
+  --mat-sys-body-medium-size: 1rem;
+
+  // Table rows sit on the page colour, like the old table.
+  --mat-table-background-color: var(--bg-color);
 
   // Material reads these system tokens; point them at the site's variables so both stay in sync.
   --mat-sys-primary: var(--primary-color);
@@ -61,11 +104,20 @@ html {
   --mat-sys-outline-variant: var(--border-color);
 }
 
+// The old page's root font size: 14px on a phone, 16px from the 768px breakpoint up (all rem sizes follow).
+html {
+  font-size: 14px;
+
+  @media (min-width: 768px) {
+    font-size: 16px;
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg-color);
   color: var(--text-color);
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-family: $font-stack;
 }
 
 a {
@@ -84,4 +136,136 @@ a {
 
 .form-error {
   color: var(--mat-sys-error);
+}
+
+// The old footer text and link are muted grey in both themes; `.mat-mdc-unelevated-button` and the text button carry the old 1px border.
+.mat-mdc-unelevated-button:not(:disabled),
+.mat-mdc-button:not(:disabled) {
+  border: 1px solid var(--border-color);
+}
+
+// A wide font lets a form-field label overlap the middle of its control; clicks must reach the control underneath.
+.mat-mdc-form-field .mdc-notched-outline .mat-mdc-floating-label.mdc-floating-label {
+  pointer-events: none;
+}
+
+// Plain controls of the old Razor UI (Bootstrap 5 forms and buttons, the colours from the site variables).
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.plain-input {
+  box-sizing: border-box;
+  height: 28px;
+  width: 114px;
+  margin: 0.25rem;
+  padding: 1px 2px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+}
+
+.plain-button {
+  margin: 0.25rem;
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--card-hover-bg);
+  }
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  line-height: 1.5;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--card-hover-bg);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: default;
+  }
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  border-radius: 3.2px;
+  font-size: 0.875rem;
+}
+
+.form-control {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  line-height: 1.5;
+
+  &:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+  }
+}
+
+.form-check {
+  margin-bottom: 10px;
+  padding-left: 24px;
+}
+
+.form-check-input {
+  appearance: none;
+  float: left;
+  width: 16px;
+  height: 16px;
+  margin: 4px 0 0 -24px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg) center / contain no-repeat;
+
+  &:checked {
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+  }
+}
+
+.hint {
+  color: var(--muted-color);
+  font-size: 0.875rem;
+}
+
+.field-error {
+  color: var(--mat-sys-error);
+  font-size: 0.875rem;
+}
+
+// The old settings panel dimmed the page by half.
+.cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.5);
 }

@@ -16,6 +16,7 @@ public class JoinRoomResponseMapper(
             People = result.People.Select(personMapper.Map).ToList(),
             VoteStatus = voteStatusMapper.Map(result.VoteStatus),
             Cards = result.Cards.Select(cardMapper.Map).ToList(),
+            MyMark = result.MyMark,
             OwnerGuid = result.Room.OwnerGuid,
             Configuration = configurationMapper.Map(result.Room.Configuration)
         };

@@ -1,6 +1,65 @@
-.settings {
+:host {
+  display: block;
+  width: 400px;
+  max-width: 100%;
+  color: var(--text-color);
+}
+
+.settings-header {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 18rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+
+  h2 {
+    margin: 0;
+    padding: 0;
+    // Bootstrap's heading scale: fluid below 1200px, fixed above.
+    font-size: calc(1.275rem + 0.3vw);
+
+    @media (min-width: 1200px) {
+      font-size: 1.5rem;
+    }
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--text-color);
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.settings-content {
+  padding: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+
+  > label {
+    display: block;
+    margin-bottom: 5px;
+  }
+}
+
+.hint {
+  opacity: 0.7;
+
+  &.block {
+    display: block;
+  }
+}
+
+.transfer {
+  margin-top: 0.5rem;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
 }

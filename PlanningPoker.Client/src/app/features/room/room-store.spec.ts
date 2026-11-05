@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
+import { RoomTabLock } from '../../core/room-tab-lock';
 import { ApiRequestError } from '../../core/api-request-error';
 import { HUB_EVENTS } from '../../models/hub-events';
 import {
@@ -13,17 +14,32 @@ import {
   fakeHub,
   revealed,
 } from '../../testing/fake-hub.testing';
-import { ROOM_DISPOSED_MESSAGE, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
+import { ROOM_DISPOSED_MESSAGE, ROOM_OPENED_ELSEWHERE_MESSAGE, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 describe('RoomStore', () => {
   let hub: ReturnType<typeof fakeHub>;
   let store: RoomStore;
   let navigate: ReturnType<typeof vi.spyOn>;
+  let taken: (() => void) | null;
+  const tabLock = { claim: vi.fn(), onTaken: vi.fn() };
 
   beforeEach(async () => {
     hub = fakeHub(JOIN_RESPONSE);
+    taken = null;
+    tabLock.claim.mockClear();
+    tabLock.onTaken.mockImplementation((_roomId: string, callback: () => void) => {
+      taken = callback;
+      return () => {
+        taken = null;
+      };
+    });
     TestBed.configureTestingModule({
-      providers: [RoomStore, provideRouter([]), { provide: RoomHubClient, useValue: hub }],
+      providers: [
+        RoomStore,
+        provideRouter([]),
+        { provide: RoomHubClient, useValue: hub },
+        { provide: RoomTabLock, useValue: tabLock },
+      ],
     });
     store = TestBed.inject(RoomStore);
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -36,6 +52,34 @@ describe('RoomStore', () => {
     expect(store.people()).toEqual([ANN]);
     expect(store.ownerGuid()).toBe(ANN.guid);
     expect(store.configuration()?.cardSet).toBe('linear');
+  });
+
+  it('shows the pick of a person who already voted in another tab', async () => {
+    const second = TestBed.inject(RoomStore);
+    hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, myMark: '5' });
+
+    await second.join('room-1');
+
+    expect(second.myMark()).toBe('5');
+  });
+
+  it('claims the room for this tab once joined', () => {
+    expect(tabLock.claim).toHaveBeenCalledWith('room-1');
+    expect(tabLock.onTaken).toHaveBeenCalledWith('room-1', expect.any(Function));
+  });
+
+  it('leaves for the home page when another tab takes the room', async () => {
+    taken!();
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(hub.disconnect).toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_OPENED_ELSEWHERE_MESSAGE);
+  });
+
+  it('stops listening for other tabs after the room is closed', async () => {
+    await store.close();
+
+    expect(taken).toBeNull();
   });
 
   it('adds a person who joined, together with a masked vote', () => {

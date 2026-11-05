@@ -9,8 +9,7 @@ async function newPerson(browser: Browser): Promise<{ context: BrowserContext; p
 }
 
 async function chooseRole(page: Page, role: string): Promise<void> {
-  await page.getByRole('combobox', { name: 'Role' }).click();
-  await page.getByRole('option', { name: role }).click();
+  await page.getByLabel('Role').selectOption({ label: role });
 }
 
 async function createRoom(page: Page, name: string, options: { funName: boolean }): Promise<string> {
@@ -19,7 +18,7 @@ async function createRoom(page: Page, name: string, options: { funName: boolean 
   await page.getByRole('button', { name: 'Create room' }).click();
   const dialog = page.getByRole('dialog');
   if (!options.funName) {
-    await dialog.getByLabel('Use a fun room name').uncheck();
+    await dialog.getByLabel('Use fun room name').uncheck();
   }
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(options.funName ? FUN_ROOM_PATH : GUID_ROOM_PATH);
@@ -64,7 +63,7 @@ test('people joining by link and from the home page show up for everyone', async
   await cat.page.goto('/');
   await cat.page.getByLabel('Your name').fill('Cat');
   await chooseRole(cat.page, 'Observer');
-  await cat.page.getByLabel('Room name or link').fill(roomUrl);
+  await cat.page.getByLabel('Room Name').fill(roomUrl);
   await cat.page.getByRole('button', { name: 'Join room' }).click();
   await expect(rows(cat.page)).toHaveCount(3);
   await expect(rows(ann.page)).toHaveCount(3);

@@ -52,6 +52,19 @@ public class RoomServiceVotingTests
     }
 
     [Fact]
+    public void Join_AnotherConnectionOfAPersonWhoVoted_ReturnsTheirOwnMark()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+
+        var second = _service.Join(people[0], "c-second", roomId);
+        var other = _service.Join(people[1], "c-other", roomId);
+
+        Assert.Equal("5", second.Data!.MyMark);
+        Assert.Null(other.Data!.MyMark);
+    }
+
+    [Fact]
     public void Vote_StoresTheMarkAndReportsItMasked()
     {
         var (roomId, people) = RoomWith(5, TwoDevs);

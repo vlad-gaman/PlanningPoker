@@ -1,0 +1,350 @@
+[
+ {
+  "key": "room-settings-desktop-light",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-settings-desktop-dark",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-settings-phone-light",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-settings-phone-dark",
+  "text": "transfer ownership",
+  "prop": "color",
+  "note": "Disabled until a new owner is chosen; the old button is always enabled (slice 4 behaviour)."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "observer",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-desktop-light",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-desktop-dark",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-phone-light",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-role-change-phone-dark",
+  "text": "tester",
+  "prop": "color",
+  "note": "The old role toggle shows its selected button in white on blue; the role control stays a radio group (phase 7 spec section 8, question 3)."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "0",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "1",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "2",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "3",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "5",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "8",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "13",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "½",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "?",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-light",
+  "text": "☕",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-nonowner-desktop-light",
+  "text": "8",
+  "prop": "bg",
+  "note": "Hover state: the pointer rests on this card in the new run only."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "0",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "1",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "2",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "3",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "5",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "8",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "13",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "½",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "?",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-desktop-dark",
+  "text": "☕",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-nonowner-desktop-dark",
+  "text": "8",
+  "prop": "bg",
+  "note": "Hover state: the pointer rests on this card in the new run only."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "0",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "1",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "2",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "3",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "5",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "8",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "13",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "½",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "?",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-light",
+  "text": "☕",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-nonowner-phone-light",
+  "text": "8",
+  "prop": "bg",
+  "note": "Hover state: the pointer rests on this card in the new run only."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "0",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "1",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "2",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "3",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "5",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "8",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "13",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "½",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "?",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-observer-phone-dark",
+  "text": "☕",
+  "prop": "bg",
+  "note": "The new client greys the cards for an observer, who cannot vote; the old page leaves them looking active."
+ },
+ {
+  "key": "room-nonowner-phone-dark",
+  "text": "8",
+  "prop": "bg",
+  "note": "Hover state: the pointer rests on this card in the new run only."
+ },
+ {
+  "key": "room-nonowner-phone-light",
+  "text": "1",
+  "prop": "bg",
+  "note": "The pointer rests on this card after the script's last click, so it shows the hover fill; the cards are otherwise equal."
+ },
+ {
+  "key": "room-nonowner-phone-dark",
+  "text": "1",
+  "prop": "bg",
+  "note": "The pointer rests on this card after the script's last click, so it shows the hover fill; the cards are otherwise equal."
+ }
+]

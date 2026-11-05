@@ -22,7 +22,8 @@ public class RoomResponseMappersTests
             Person = Bob,
             People = [Ann, Bob],
             Cards = [new CardOption { Value = "1" }, new CardOption { Value = "coffee", Display = "Coffee" }],
-            VoteStatus = new VoteStatus { Votes = votes ?? [], HasEveryoneVoted = true }
+            VoteStatus = new VoteStatus { Votes = votes ?? [], HasEveryoneVoted = true },
+            MyMark = "coffee"
         };
     }
 
@@ -96,6 +97,7 @@ public class RoomResponseMappersTests
 
         Assert.Equal(["Ann", "Bob"], response.People.Select(person => person.Name));
         Assert.Equal(Ann.Guid, response.OwnerGuid);
+        Assert.Equal("coffee", response.MyMark);
         Assert.True(response.VoteStatus.HasEveryoneVoted);
         Assert.Equal("linear", response.Configuration.CardSet);
         Assert.Equal(["1", "coffee"], response.Cards.Select(card => card.Value));

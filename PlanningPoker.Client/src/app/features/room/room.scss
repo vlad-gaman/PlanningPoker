@@ -1,49 +1,62 @@
 .room {
-  max-width: 64rem;
+  max-width: 1140px;
+}
+
+// The old page centres the title, the action row and the cards above two equal columns (people | results).
+.top {
+  text-align: center;
 }
 
 .layout {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
   align-items: flex-start;
 }
 
-.main {
+.main,
+.side {
   flex: 1 1 24rem;
-  max-width: 40rem;
   min-width: 0;
-}
-
-app-results {
-  flex: 1 1 18rem;
-  min-width: 0;
+  text-align: center;
 }
 
 .name-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-width: 28rem;
+  text-align: center;
 }
 
+h1 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 400;
+  text-align: center;
+}
+
+// Old table: 16px left-aligned text, 8px cell padding, 41px rows.
 .people {
+  --mat-table-row-item-container-height: 41px;
+  --mat-table-header-container-height: 41px;
+  --mat-table-row-item-label-text-size: 1rem;
+  --mat-table-header-headline-size: 1rem;
+  --mat-table-row-item-outline-color: var(--border-color);
+
   width: 100%;
+  text-align: left;
   margin-bottom: 1rem;
-  background: var(--card-bg);
+  background: var(--bg-color);
   color: var(--text-color);
 }
 
 .countdown {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--primary-color);
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .mark {
@@ -68,9 +81,50 @@ app-results {
   background: #e9ecef;
 }
 
+// The old role toggles: small bordered buttons, the selected one blue. The radio itself stays for keyboard use.
 .role {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+
+  label {
+    position: relative;
+    padding: 2px 4px;
+    border: 1px solid var(--card-border);
+    border-radius: 2px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: var(--card-hover-bg);
+    }
+
+    &:has(input:checked) {
+      border-color: var(--primary-color);
+      background: var(--primary-color);
+      color: #fff;
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+}
+
+.people td,
+.people th {
+  padding: 8px;
+  text-align: left;
 }
