@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
@@ -9,6 +10,7 @@ import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES } from '../../models/api';
 import { CreateRoomRequest } from '../../models/room';
 import { Home, extractRoomId } from './home';
+import { RoomSettingsDialog, RoomSettingsDialogData } from './room-settings-dialog';
 
 const REMEMBERED: CreateRoomRequest = {
   useFunRoomName: false,
@@ -30,11 +32,12 @@ describe('extractRoomId', () => {
 describe('Home', () => {
   const me = { get: vi.fn(), update: vi.fn() };
   const rooms = { create: vi.fn() };
+  const dialog = { open: vi.fn() };
   let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     localStorage.clear();
-    [me.get, me.update, rooms.create].forEach((mock) => mock.mockReset());
+    [me.get, me.update, rooms.create, dialog.open].forEach((mock) => mock.mockReset());
     me.get.mockReturnValue(throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'x' }])));
     me.update.mockReturnValue(of({ guid: 'g', name: 'Ann', personType: 'dev' }));
     TestBed.configureTestingModule({
@@ -42,6 +45,7 @@ describe('Home', () => {
         provideRouter([]),
         { provide: MeService, useValue: me },
         { provide: RoomsService, useValue: rooms },
+        { provide: MatDialog, useValue: dialog },
       ],
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -105,6 +109,34 @@ describe('Home', () => {
 
     expect(rooms.create).toHaveBeenCalledWith(REMEMBERED);
     expect(element.querySelector('mat-dialog-container')).toBeNull();
+  });
+
+  it('opens the settings dialog before creating, prefilled with the remembered settings', async () => {
+    TestBed.inject(RoomDefaultsService).saveConfiguration(REMEMBERED.configuration);
+    const { element } = await render();
+
+    const button = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Room settings'));
+    button?.click();
+
+    expect(dialog.open).toHaveBeenCalledWith(RoomSettingsDialog, { data: expect.anything() });
+    const data = dialog.open.mock.calls[0][1].data as RoomSettingsDialogData;
+    expect(data.configuration).toEqual(REMEMBERED.configuration);
+    expect(data.candidates).toEqual([]);
+    expect(rooms.create).not.toHaveBeenCalled();
+  });
+
+  it('saving the dialog changes the settings the next room is created with', async () => {
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
+    const { fixture, element } = await render();
+    const button = Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.includes('Room settings'));
+    button?.click();
+
+    await (dialog.open.mock.calls[0][1].data as RoomSettingsDialogData).save(REMEMBERED.configuration);
+    type(element, 'Your name', 'Ann');
+    submit(element, 0);
+    await fixture.whenStable();
+
+    expect(rooms.create).toHaveBeenCalledWith(expect.objectContaining({ configuration: REMEMBERED.configuration }));
   });
 
   it('remembers the fun room name choice for the next visit', async () => {
