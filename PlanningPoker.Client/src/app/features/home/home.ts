@@ -13,7 +13,8 @@ import { MeService } from '../../core/me.service';
 import { RoomsService } from '../../core/rooms.service';
 import { PERSON_TYPES } from '../../models/person';
 import { createPersonForm } from '../shared/person-form';
-import { RoomSettingsDialog } from './room-settings-dialog';
+import { CreateRoomRequest, DEFAULT_ROOM_CONFIGURATION } from '../../models/room';
+import { RoomDraftDialogData, RoomSettingsDialog } from './room-settings-dialog';
 
 /** Accepts a bare room id or a pasted room link and returns the room id. */
 export function extractRoomId(input: string): string {
@@ -39,6 +40,12 @@ export class Home implements OnInit, OnDestroy {
   protected readonly personTypes = PERSON_TYPES;
   protected readonly error = signal<string | null>(null);
 
+  /** Settings for the room to be created; changed through the Room settings button. */
+  protected readonly draft = signal<CreateRoomRequest>({
+    useFunRoomName: true,
+    configuration: DEFAULT_ROOM_CONFIGURATION,
+  });
+
   protected readonly form = createPersonForm(this.builder);
   protected readonly joinForm = this.builder.nonNullable.group({
     room: ['', Validators.required],
@@ -61,15 +68,19 @@ export class Home implements OnInit, OnDestroy {
     if (!this.validName()) {
       return;
     }
-    const request = await firstValueFrom(this.dialog.open(RoomSettingsDialog).afterClosed());
-    if (!request) {
-      return;
-    }
     await this.run(async () => {
       await firstValueFrom(this.meService.update(this.form.getRawValue()));
-      const room = await firstValueFrom(this.roomsService.create(request));
+      const room = await firstValueFrom(this.roomsService.create(this.draft()));
       await this.router.navigate(['/room', room.id]);
     });
+  }
+
+  protected async editSettings(): Promise<void> {
+    const data: RoomDraftDialogData = { draft: this.draft() };
+    const request = await firstValueFrom(this.dialog.open(RoomSettingsDialog, { data }).afterClosed());
+    if (request) {
+      this.draft.set(request);
+    }
   }
 
   protected async joinRoom(): Promise<void> {

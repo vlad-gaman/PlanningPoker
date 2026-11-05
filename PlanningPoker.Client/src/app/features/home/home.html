@@ -21,7 +21,10 @@
         }
       </mat-select>
     </mat-form-field>
-    <button mat-flat-button type="submit">Create room</button>
+    <div class="actions">
+      <button mat-stroked-button type="button" (click)="editSettings()">Room settings</button>
+      <button mat-flat-button type="submit">Create room</button>
+    </div>
   </form>
 
   <form class="join" [formGroup]="joinForm" (ngSubmit)="joinRoom()">

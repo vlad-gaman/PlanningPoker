@@ -14,7 +14,6 @@ import {
   COUNTDOWN_MAX_SECONDS,
   COUNTDOWN_MIN_SECONDS,
   CreateRoomRequest,
-  DEFAULT_ROOM_CONFIGURATION,
   MAX_PARTICIPANTS_MIN,
   RoomConfiguration,
 } from '../../models/room';
@@ -26,6 +25,11 @@ export interface RoomSettingsDialogData {
   candidates: Person[];
   save: (configuration: RoomConfiguration) => Promise<void>;
   transfer: (personGuid: string) => Promise<void>;
+}
+
+/** Opens the dialog before a room exists: prefilled from the current draft, returned as the next draft. */
+export interface RoomDraftDialogData {
+  draft: CreateRoomRequest;
 }
 
 @Component({
@@ -46,7 +50,11 @@ export interface RoomSettingsDialogData {
 export class RoomSettingsDialog {
   private readonly dialogRef = inject<MatDialogRef<RoomSettingsDialog, CreateRoomRequest>>(MatDialogRef);
 
-  protected readonly data = inject<RoomSettingsDialogData | null>(MAT_DIALOG_DATA, { optional: true });
+  private readonly dialogData = inject<RoomSettingsDialogData | RoomDraftDialogData>(MAT_DIALOG_DATA);
+
+  /** Set when editing a room that exists; null when drafting settings for a new room. */
+  protected readonly data = 'save' in this.dialogData ? this.dialogData : null;
+  private readonly initial = this.data?.configuration ?? (this.dialogData as RoomDraftDialogData).draft.configuration;
   protected readonly error = signal<string | null>(null);
   protected readonly transferTarget = signal<string | null>(null);
 
@@ -54,17 +62,14 @@ export class RoomSettingsDialog {
   protected readonly countdownRange = { min: COUNTDOWN_MIN_SECONDS, max: COUNTDOWN_MAX_SECONDS };
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    cardSet: (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).cardSet,
+    cardSet: this.initial.cardSet,
     countdownSeconds: [
-      (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).countdownSeconds,
+      this.initial.countdownSeconds,
       [Validators.required, Validators.min(COUNTDOWN_MIN_SECONDS), Validators.max(COUNTDOWN_MAX_SECONDS)],
     ],
-    showFireworks: (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).showFireworks,
-    maxParticipants: [
-      (this.data?.configuration ?? DEFAULT_ROOM_CONFIGURATION).maxParticipants,
-      [Validators.required, Validators.min(MAX_PARTICIPANTS_MIN)],
-    ],
-    useFunRoomName: true,
+    showFireworks: this.initial.showFireworks,
+    maxParticipants: [this.initial.maxParticipants, [Validators.required, Validators.min(MAX_PARTICIPANTS_MIN)]],
+    useFunRoomName: (this.dialogData as Partial<RoomDraftDialogData>).draft?.useFunRoomName ?? true,
   });
 
   protected async submit(): Promise<void> {

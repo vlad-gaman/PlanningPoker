@@ -7,7 +7,7 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES } from '../../models/api';
-import { CreateRoomRequest } from '../../models/room';
+import { CreateRoomRequest, DEFAULT_ROOM_CONFIGURATION } from '../../models/room';
 import { Home, extractRoomId } from './home';
 
 const REQUEST: CreateRoomRequest = {
@@ -76,7 +76,13 @@ describe('Home', () => {
     expect((element.querySelector('input') as HTMLInputElement).value).toBe('Zoe');
   });
 
-  it('saves the person, creates the room with the chosen settings and opens it', async () => {
+  function settingsButton(element: HTMLElement): HTMLButtonElement {
+    return Array.from(element.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Room settings'),
+    ) as HTMLButtonElement;
+  }
+
+  it('creates the room with default settings without opening the dialog', async () => {
     rooms.create.mockReturnValue(of({ id: 'new-room' }));
     const { fixture, element } = await render();
 
@@ -84,24 +90,54 @@ describe('Home', () => {
     submit(element, 0);
     await fixture.whenStable();
 
+    expect(dialog.open).not.toHaveBeenCalled();
     expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
-    expect(rooms.create).toHaveBeenCalledWith(REQUEST);
+    expect(rooms.create).toHaveBeenCalledWith({ useFunRoomName: true, configuration: DEFAULT_ROOM_CONFIGURATION });
     expect(navigate).toHaveBeenCalledWith(['/room', 'new-room']);
   });
 
-  it('does nothing when the settings dialog is cancelled', async () => {
-    dialog.open.mockReturnValue({ afterClosed: () => of(undefined) });
+  it('creates the room with the settings chosen beforehand', async () => {
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
     const { fixture, element } = await render();
 
+    settingsButton(element).click();
+    await fixture.whenStable();
     type(element, 'Your name', 'Ann');
     submit(element, 0);
     await fixture.whenStable();
 
-    expect(rooms.create).not.toHaveBeenCalled();
-    expect(me.update).not.toHaveBeenCalled();
+    expect(dialog.open.mock.calls[0][1]).toEqual({
+      data: { draft: { useFunRoomName: true, configuration: DEFAULT_ROOM_CONFIGURATION } },
+    });
+    expect(rooms.create).toHaveBeenCalledWith(REQUEST);
   });
 
-  it.each(['', 'A', 'x'.repeat(21)])('rejects the name %j before opening the dialog', async (name) => {
+  it('reopens the settings dialog with the previous choices', async () => {
+    const { fixture, element } = await render();
+
+    settingsButton(element).click();
+    await fixture.whenStable();
+    settingsButton(element).click();
+    await fixture.whenStable();
+
+    expect(dialog.open.mock.calls[1][1]).toEqual({ data: { draft: REQUEST } });
+  });
+
+  it('keeps the settings when the dialog is cancelled', async () => {
+    dialog.open.mockReturnValue({ afterClosed: () => of(undefined) });
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
+    const { fixture, element } = await render();
+
+    settingsButton(element).click();
+    await fixture.whenStable();
+    type(element, 'Your name', 'Ann');
+    submit(element, 0);
+    await fixture.whenStable();
+
+    expect(rooms.create).toHaveBeenCalledWith({ useFunRoomName: true, configuration: DEFAULT_ROOM_CONFIGURATION });
+  });
+
+  it.each(['', 'A', 'x'.repeat(21)])('rejects the name %j before creating', async (name) => {
     const { fixture, element } = await render();
 
     type(element, 'Your name', name);
@@ -109,7 +145,7 @@ describe('Home', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(dialog.open).not.toHaveBeenCalled();
+    expect(rooms.create).not.toHaveBeenCalled();
     expect(element.querySelector('mat-error')?.textContent).toContain('2 to 20');
   });
 

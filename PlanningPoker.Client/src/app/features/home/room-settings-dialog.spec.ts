@@ -6,6 +6,31 @@ import { RoomsService } from '../../core/rooms.service';
 import { JOIN_RESPONSE, BOB } from '../../testing/fake-hub.testing';
 import { RoomSettingsDialog, RoomSettingsDialogData } from './room-settings-dialog';
 
+describe('RoomSettingsDialog drafting a new room', () => {
+  const close = vi.fn();
+  const draft = {
+    useFunRoomName: false,
+    configuration: { cardSet: 'linear', countdownSeconds: 7, showFireworks: false, maxParticipants: 9 },
+  };
+
+  it('prefills from the draft and returns the edited draft', async () => {
+    close.mockReset();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: MatDialogRef, useValue: { close } },
+        { provide: MAT_DIALOG_DATA, useValue: { draft } },
+        { provide: RoomsService, useValue: { cardSets: () => of([]) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(RoomSettingsDialog);
+    fixture.detectChanges();
+
+    await (fixture.componentInstance as unknown as { submit(): Promise<void> }).submit();
+
+    expect(close).toHaveBeenCalledWith(draft);
+  });
+});
+
 describe('RoomSettingsDialog in a room', () => {
   const close = vi.fn();
   const data: RoomSettingsDialogData = {
