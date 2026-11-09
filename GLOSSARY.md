@@ -15,3 +15,11 @@ _Avoid_: Flip, show-down
 **Round timer**:
 The time elapsed since the room's last reveal, clear or creation. Casting or changing a vote does not reset it.
 _Avoid_: Vote timer, idle timer, activity timer
+
+**Voter**:
+A person who can vote in a round: a developer or a tester.
+_Avoid_: Player, participant
+
+**Observer**:
+A person in the room who cannot vote. Observers are listed after all voters in the participants table.
+_Avoid_: Spectator, viewer

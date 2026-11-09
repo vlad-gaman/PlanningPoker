@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
@@ -7,6 +7,7 @@ import { RoomTabLock } from '../../core/room-tab-lock';
 import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
 import { Person, PersonType } from '../../models/person';
+import { orderPeople } from './order-people';
 import {
   CardOption,
   CountdownEvent,
@@ -79,6 +80,8 @@ export class RoomStore {
   private buffered: (() => void)[] | null = null;
 
   readonly people = this.peopleState.asReadonly();
+  /** `people` with observers after voters, for the participants table only. */
+  readonly orderedPeople = computed(() => orderPeople(this.peopleState()));
   readonly ownerGuid = this.ownerState.asReadonly();
   /** Marks are masked as "hide" until votes are revealed. */
   readonly votes = this.votesState.asReadonly();
