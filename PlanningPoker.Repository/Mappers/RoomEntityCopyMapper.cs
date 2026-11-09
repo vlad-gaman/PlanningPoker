@@ -20,6 +20,7 @@ public class RoomEntityCopyMapper(IRoomConfigurationEntityCopyMapper configurati
             CountdownRemaining = source.CountdownRemaining,
             IsDisposed = source.IsDisposed,
             RoundStartedAt = source.RoundStartedAt,
+            CreatedAt = source.CreatedAt,
             Configuration = configurationMapper.Map(source.Configuration)
         };
     }

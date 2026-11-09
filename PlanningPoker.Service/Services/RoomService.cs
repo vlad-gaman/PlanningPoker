@@ -172,6 +172,7 @@ public class RoomService(
                 return (Found: false, RoomId: string.Empty, Person: person);
             }
 
+            entity.LastSeenAt = time.GetUtcNow();
             return (Found: true, RoomId: roomId, Person: person);
         }, out var index);
         if (!indexed)

@@ -22,11 +22,13 @@ public class PersonMappersTests
     {
         var guid = Guid.NewGuid();
 
-        var entity = new PersonEntityMapper().Map(guid, "Ann", "obs");
+        var now = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var entity = new PersonEntityMapper(new Microsoft.Extensions.Time.Testing.FakeTimeProvider(now)).Map(guid, "Ann", "obs");
 
         Assert.Equal(guid, entity.Guid);
         Assert.Equal("Ann", entity.Name);
         Assert.Equal("obs", entity.PersonType);
         Assert.Empty(entity.Connections);
+        Assert.Equal(now, entity.LastSeenAt);
     }
 }

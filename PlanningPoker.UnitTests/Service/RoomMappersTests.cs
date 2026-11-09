@@ -19,6 +19,7 @@ public class RoomMappersTests
         var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper(), new Microsoft.Extensions.Time.Testing.FakeTimeProvider(now)).Map("room", owner, Configuration);
 
         Assert.Equal(now, entity.RoundStartedAt);
+        Assert.Equal(now, entity.CreatedAt);
         Assert.Equal("room", entity.Id);
         Assert.Equal(owner, entity.OwnerGuid);
         Assert.Empty(entity.MemberGuids);
