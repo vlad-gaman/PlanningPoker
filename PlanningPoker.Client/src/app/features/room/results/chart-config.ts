@@ -6,12 +6,20 @@ export interface ChartColors {
   primary: string;
   highest: string;
   text: string;
+  /** The x-axis baseline. */
+  border: string;
 }
 
 /** Height reserved under the axis for a card image label. */
 export const IMAGE_LABEL_SIZE = 24;
 const IMAGE_LABEL_GAP = 4;
 const LABEL_FONT_SIZE = 16;
+const VALUE_FONT_SIZE = 14;
+const VALUE_LABEL_GAP = 4;
+/** Room above the tallest bar for its percentage label. */
+export const VALUE_LABEL_PADDING = 20;
+export const MAX_BAR_THICKNESS = 48;
+export const BAR_RADIUS = 4;
 
 /** The chart colours as the current theme defines them, so a theme change only needs a re-read. */
 export function readChartColors(element: Element): ChartColors {
@@ -20,6 +28,7 @@ export function readChartColors(element: Element): ChartColors {
     primary: style.getPropertyValue('--chart-color-primary').trim(),
     highest: style.getPropertyValue('--chart-color-success').trim(),
     text: style.getPropertyValue('--text-color').trim(),
+    border: style.getPropertyValue('--border-color').trim(),
   };
 }
 
@@ -87,6 +96,26 @@ function imageLabels(sources: (string | null)[], color: string, redraw: () => vo
   };
 }
 
+/** Draws "{percentage}%" above each bar, as the API sends the value. */
+function percentLabels(color: string): Plugin<'bar'> {
+  return {
+    id: 'percentLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const values = chart.data.datasets[0]?.data ?? [];
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = `${VALUE_FONT_SIZE}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      chart.getDatasetMeta(0).data.forEach((bar, index) => {
+        ctx.fillText(`${values[index]}%`, bar.x, bar.y - VALUE_LABEL_GAP);
+      });
+      ctx.restore();
+    },
+  };
+}
+
 /**
  * The bar chart of one group: a bar per cast mark, in card-set order, with the share as a percentage. The single
  * highest mark gets its own colour. `redraw` is called when a card image finishes loading.
@@ -114,6 +143,8 @@ export function buildChartConfig(
           backgroundColor: group.marks.map((share) =>
             share.mark === group.highestMark ? colors.highest : colors.primary,
           ),
+          maxBarThickness: MAX_BAR_THICKNESS,
+          borderRadius: BAR_RADIUS,
         },
       ],
     },
@@ -121,11 +152,14 @@ export function buildChartConfig(
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      layout: { padding: { bottom: hasImages ? IMAGE_LABEL_SIZE + IMAGE_LABEL_GAP : 0 } },
+      layout: {
+        padding: { top: VALUE_LABEL_PADDING, bottom: hasImages ? IMAGE_LABEL_SIZE + IMAGE_LABEL_GAP : 0 },
+      },
       scales: {
         x: {
           ticks: { color: colors.text, font: { size: LABEL_FONT_SIZE } },
           grid: { display: false },
+          border: { display: true, color: colors.border },
         },
         y: { min: 0, max: 100, display: false },
       },
@@ -134,6 +168,6 @@ export function buildChartConfig(
         tooltip: { callbacks: { label: (item) => `${item.parsed.y}%` } },
       },
     },
-    plugins: [imageLabels(sources, colors.text, redraw)],
+    plugins: [imageLabels(sources, colors.text, redraw), percentLabels(colors.text)],
   };
 }

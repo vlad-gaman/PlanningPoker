@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { ThemeService } from '../../../core/theme.service';
 import { CardOption, GroupStatistics } from '../../../models/room';
+import { cardImage } from '../card-picker/card-picker';
 import { buildChartConfig, chartSummary, readChartColors } from './chart-config';
 import { ChartFactory, ChartHandle } from './chart-factory';
 
@@ -26,7 +27,7 @@ export class ResultsChart implements OnDestroy {
   readonly group = input.required<GroupStatistics>();
   readonly cards = input.required<CardOption[]>();
 
-  private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly factory = inject(ChartFactory);
   private readonly theme = inject(ThemeService);
   private chart: ChartHandle | null = null;
@@ -35,13 +36,28 @@ export class ResultsChart implements OnDestroy {
   /** Blank when no mark is numeric; a real zero still shows. */
   protected readonly average = computed(() => this.group().averageMark?.toString() ?? '');
 
+  protected readonly empty = computed(() => this.group().marks.length === 0);
+  /** What the strictly highest mark shows as; null on a tie or without votes. An image card shows its mark. */
+  protected readonly mostVotes = computed(() => {
+    const mark = this.group().highestMark;
+    if (mark === null) {
+      return null;
+    }
+    const card = this.cards().find((option) => option.value === mark);
+    return card?.display && !cardImage(card) ? card.display : mark;
+  });
+
   constructor() {
     effect(() => {
       const group = this.group();
       const cards = this.cards();
       this.theme.effective();
-      const element = this.canvas().nativeElement;
+      const element = this.canvas()?.nativeElement;
       this.chart?.destroy();
+      this.chart = null;
+      if (!element || group.marks.length === 0) {
+        return;
+      }
       this.chart = this.factory.create(
         element,
         buildChartConfig(group, cards, readChartColors(element), () => this.chart?.draw()),

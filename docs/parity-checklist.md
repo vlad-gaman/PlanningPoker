@@ -97,6 +97,10 @@ Home, join, both dialogs and the notices now match the old look on desktop (0.8%
 - The role control stays a radio group, restyled as the old toggle buttons.
 - There is no connection badge in the new client, so rows 5 and 20 need nothing; row 17 (Leave room) uses the standard button style.
 
+## Issue #43 note
+
+The room-revealed rows (desktop and phone, light and dark) differ on purpose: #43 intentional redesign of the vote graphs (percentage labels above rounded bars, an x-axis baseline, a darker light-mode bar blue, shorter charts, semibold titles, a "Most votes" line and a "No votes" note for empty groups). The title weight is recorded in `PlanningPoker.Client/parity/accepted.json`; the room-revealed rows are expected to fail the 5% height check (the charts are shorter), which is accepted.
+
 ## Not reachable by the script
 
 Inventory rows (`docs/research/ui-inventory.md` on branch `research/ui-inventory`) with no state to capture. Each is an owner check in the slice that owns it.
