@@ -22,6 +22,30 @@ public class PersonRepository : IPersonRepository
         return _people.TryRemove(guid, out _);
     }
 
+    public IReadOnlyCollection<Guid> Guids()
+    {
+        return [.. _people.Keys];
+    }
+
+    public bool RemoveIf(Guid guid, Func<PersonEntity, bool> shouldRemove)
+    {
+        if (!_people.TryGetValue(guid, out var person))
+        {
+            return false;
+        }
+
+        lock (person)
+        {
+            if (person.IsRemoved || !shouldRemove(person))
+            {
+                return false;
+            }
+
+            person.IsRemoved = true;
+            return _people.TryRemove(guid, out _);
+        }
+    }
+
     public bool Update<T>(Guid guid, Func<PersonEntity, T> mutate, out T? result)
     {
         if (!_people.TryGetValue(guid, out var person))
@@ -32,6 +56,12 @@ public class PersonRepository : IPersonRepository
 
         lock (person)
         {
+            if (person.IsRemoved)
+            {
+                result = default;
+                return false;
+            }
+
             result = mutate(person);
             return true;
         }

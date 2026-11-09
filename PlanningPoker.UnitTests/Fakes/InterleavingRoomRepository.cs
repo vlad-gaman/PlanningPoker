@@ -27,6 +27,8 @@ public sealed class InterleavingRoomRepository(IRoomRepository inner) : IRoomRep
 
     public bool Remove(string roomId) => inner.Remove(roomId);
 
+    public IReadOnlyCollection<string> Ids() => inner.Ids();
+
     public bool Update<T>(string roomId, Func<RoomEntity, T> mutate, out T? result)
     {
         var found = inner.Update(roomId, mutate, out result);

@@ -219,6 +219,44 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public void Exit_RemovingAConnection_StampsLastSeenAtWithNow()
+    {
+        var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
+        var service = RoomServiceFactory.Create(_rooms, _people, null, time);
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(AddPerson("Creator"));
+        service.Join(guest, "c-guest", roomId);
+        time.Advance(TimeSpan.FromHours(3));
+
+        service.Exit(guest, "c-guest");
+
+        Assert.Equal(time.GetUtcNow(), _people.Get(guest)!.LastSeenAt);
+    }
+
+    [Fact]
+    public void Exit_UnknownConnection_LeavesLastSeenAtAlone()
+    {
+        var guest = AddPerson("Guest");
+        var before = _people.Get(guest)!.LastSeenAt;
+
+        CreateService().Exit(guest, "never-joined");
+
+        Assert.Equal(before, _people.Get(guest)!.LastSeenAt);
+    }
+
+    [Fact]
+    public void Join_DoesNotStampLastSeenAt()
+    {
+        var guest = AddPerson("Guest");
+        var before = _people.Get(guest)!.LastSeenAt;
+        var roomId = NewRoom(AddPerson("Creator"));
+
+        CreateService().Join(guest, "c-guest", roomId);
+
+        Assert.Equal(before, _people.Get(guest)!.LastSeenAt);
+    }
+
+    [Fact]
     public void Join_RacingFirstJoins_ExactlyOneBecomesOwnerAndItIsAMember()
     {
         var creator = AddPerson("Creator");

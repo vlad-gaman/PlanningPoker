@@ -91,6 +91,26 @@ public class RoomRepositoryTests
     }
 
     [Fact]
+    public void Ids_ReturnsSnapshotOfStoredRoomIds()
+    {
+        var repository = NewRepository();
+        repository.TryAdd(NewRoom("a"));
+        repository.TryAdd(NewRoom("b"));
+
+        var ids = repository.Ids();
+        repository.Remove("a");
+
+        Assert.Equal(["a", "b"], ids.Order());
+        Assert.Equal(["b"], repository.Ids());
+    }
+
+    [Fact]
+    public void Ids_EmptyRepository_ReturnsEmpty()
+    {
+        Assert.Empty(NewRepository().Ids());
+    }
+
+    [Fact]
     public void Update_ConcurrentCallers_AreAtomic()
     {
         var repository = NewRepository();

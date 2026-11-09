@@ -10,6 +10,9 @@ public interface IRoomRepository
 
     bool Remove(string roomId);
 
+    /// <summary>A snapshot of the stored room ids.</summary>
+    IReadOnlyCollection<string> Ids();
+
     /// <summary>The only way to mutate a room. Runs under a per-room lock; returns false when the room does not exist.</summary>
     bool Update<T>(string roomId, Func<RoomEntity, T> mutate, out T? result);
 }

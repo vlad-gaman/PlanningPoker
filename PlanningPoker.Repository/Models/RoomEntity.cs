@@ -45,5 +45,8 @@ public class RoomEntity
     /// </summary>
     public DateTimeOffset RoundStartedAt { get; set; }
 
+    /// <summary>When the room was created, in UTC. Never changes; the sweep uses it to find rooms nobody ever joined.</summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
     public RoomConfigurationEntity Configuration { get; set; } = new();
 }

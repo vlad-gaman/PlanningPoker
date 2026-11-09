@@ -55,11 +55,11 @@ Target framework .NET 10 (see section 0). Each layer registers its own classes i
 
 Entities hold GUID references only; no shared object graph.
 
-- `PersonEntity`: `Guid`, `Name`, `PersonType` (`dev` | `test` | `obs`), `Connections` (connection id -> room id). This is an index that tells an exit which room to ask; it does not decide membership.
-- `RoomEntity`: `Id` (string), `OwnerGuid`, `MemberGuids`, `MemberConnections` (member GUID -> open connection ids in this room), `Votes` (person GUID -> mark), `VotingEnabled`, `IsDisposed` (set when the last member leaves; a disposed room takes no members), `Configuration` (card set, countdown seconds, show fireworks, max participants).
-- `IPersonRepository` (sync): `Get` (returns the live entity, so only `Update` may mutate it), `TryAdd`, `Remove`, `Update<T>(personGuid, Func<PersonEntity, T>)` under a per-person lock.
-- `IRoomRepository` (sync): `Get` (snapshot copy), `TryAdd`, `Remove`, `Update<T>(roomId, Func<RoomEntity, T>)`. `Update` is the only way to mutate a room and runs under a per-room lock so compound operations are atomic. Every membership decision (admission, leaving, disposal, ownership transfer) is made inside a room `Update`. The person and room locks are never nested.
-- Both are singletons registered against their interfaces. No eviction, TTL or sweeper (tracked separately in [#12](https://github.com/vlad-gaman/PlanningPoker/issues/12)).
+- `PersonEntity`: `Guid`, `Name`, `PersonType` (`dev` | `test` | `obs`), `Connections` (connection id -> room id), `LastSeenAt`, `IsRemoved` (set by the sweep). This is an index that tells an exit which room to ask; it does not decide membership.
+- `RoomEntity`: `Id` (string), `OwnerGuid`, `MemberGuids`, `MemberConnections` (member GUID -> open connection ids in this room), `Votes` (person GUID -> mark), `CreatedAt`, `VotingEnabled`, `IsDisposed` (set when the last member leaves; a disposed room takes no members), `Configuration` (card set, countdown seconds, show fireworks, max participants).
+- `IPersonRepository` (sync): `Get` (returns the live entity, so only `Update` may mutate it), `TryAdd`, `Remove`, `Guids`, `RemoveIf`, `Update<T>(personGuid, Func<PersonEntity, T>)` under a per-person lock.
+- `IRoomRepository` (sync): `Get` (snapshot copy), `TryAdd`, `Remove`, `Ids`, `Update<T>(roomId, Func<RoomEntity, T>)`. `Update` is the only way to mutate a room and runs under a per-room lock so compound operations are atomic. Every membership decision (admission, leaving, disposal, ownership transfer) is made inside a room `Update`. The person and room locks are never nested.
+- Both are singletons registered against their interfaces. Abandoned rooms and people are removed by a periodic sweep (`ISweepService`, run by a hosted `SweepBackgroundService`; 24 h TTL, every 10 min, see [#12](https://github.com/vlad-gaman/PlanningPoker/issues/12)). `PersonEntity` carries `LastSeenAt` and `RoomEntity` carries `CreatedAt` for it; `IRoomRepository.Ids()`, `IPersonRepository.Guids()` and the atomic `IPersonRepository.RemoveIf` support it.
 - Voting countdown timers are *not* in the repository: a Service-layer singleton `IRoomTimerService` (used from slice 2 onward). There is no health-check timer.
 
 ### 1.4 Frontend pieces (`PlanningPoker.Client`)

@@ -46,6 +46,76 @@ public class PersonRepositoryTests
     }
 
     [Fact]
+    public void Guids_ReturnsSnapshotOfStoredGuids()
+    {
+        var repository = new PersonRepository();
+        var first = NewPerson();
+        var second = NewPerson();
+        repository.TryAdd(first);
+        repository.TryAdd(second);
+
+        var guids = repository.Guids();
+        repository.Remove(first.Guid);
+
+        Assert.Equal(2, guids.Count);
+        Assert.Contains(first.Guid, guids);
+        Assert.Equal([second.Guid], repository.Guids());
+    }
+
+    [Fact]
+    public void Guids_EmptyRepository_ReturnsEmpty()
+    {
+        Assert.Empty(new PersonRepository().Guids());
+    }
+
+    [Fact]
+    public void RemoveIf_Unknown_ReturnsFalse()
+    {
+        Assert.False(new PersonRepository().RemoveIf(Guid.NewGuid(), _ => true));
+    }
+
+    [Fact]
+    public void RemoveIf_PredicateFalse_KeepsThePerson()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Assert.False(repository.RemoveIf(person.Guid, _ => false));
+        Assert.False(person.IsRemoved);
+        Assert.NotNull(repository.Get(person.Guid));
+    }
+
+    [Fact]
+    public void RemoveIf_PredicateTrue_RemovesFlagsAndBlocksLaterUpdate()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Assert.True(repository.RemoveIf(person.Guid, _ => true));
+
+        Assert.True(person.IsRemoved);
+        Assert.Null(repository.Get(person.Guid));
+        Assert.False(repository.Update(person.Guid, entity => entity.Name = "Late", out _));
+        Assert.Equal("Ann", person.Name);
+    }
+
+    [Fact]
+    public void RemoveIf_RunsPredicateUnderThePersonLock_SoItSeesAnUpdateThatWonTheLock()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+        repository.Update(person.Guid, entity => entity.Connections["c1"] = "room", out _);
+
+        var removed = repository.RemoveIf(person.Guid, entity => entity.Connections.Count == 0);
+
+        Assert.False(removed);
+        Assert.NotNull(repository.Get(person.Guid));
+    }
+
+    [Fact]
     public void Update_Unknown_ReturnsFalse()
     {
         var found = new PersonRepository().Update(Guid.NewGuid(), _ => 1, out var result);

@@ -17,6 +17,19 @@ public sealed class InterleavingPersonRepository(IPersonRepository inner) : IPer
 
     public bool Remove(Guid guid) => inner.Remove(guid);
 
+    public IReadOnlyCollection<Guid> Guids() => inner.Guids();
+
+    /// <summary>Runs once, right before the next RemoveIf reaches the inner repository, so a test can change the person between the sweep's snapshot and its removal.</summary>
+    public Action? BeforeNextRemoveIf { get; set; }
+
+    public bool RemoveIf(Guid guid, Func<PersonEntity, bool> shouldRemove)
+    {
+        var hook = BeforeNextRemoveIf;
+        BeforeNextRemoveIf = null;
+        hook?.Invoke();
+        return inner.RemoveIf(guid, shouldRemove);
+    }
+
     public bool Update<T>(Guid guid, Func<PersonEntity, T> mutate, out T? result)
     {
         var found = inner.Update(guid, mutate, out result);

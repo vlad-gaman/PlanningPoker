@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Service.Mappers;
+using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.Service.Validations;
 
@@ -31,6 +33,9 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IRoomService, RoomService>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IRoomTimerService, RoomTimerService>();
+        services.AddOptions<SweepOptions>().BindConfiguration(SweepConstants.ConfigurationSection);
+        services.AddSingleton<ISweepService, SweepService>();
+        services.AddHostedService<SweepBackgroundService>();
         return services;
     }
 }

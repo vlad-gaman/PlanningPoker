@@ -6,7 +6,7 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Services;
 
-public class PersonService(IPersonRepository repository, IPersonMapper personMapper, IPersonEntityMapper entityMapper) : IPersonService
+public class PersonService(IPersonRepository repository, IPersonMapper personMapper, IPersonEntityMapper entityMapper, TimeProvider time) : IPersonService
 {
     public ServiceResponse<Person> Get(Guid? guid)
     {
@@ -26,6 +26,7 @@ public class PersonService(IPersonRepository repository, IPersonMapper personMap
             {
                 existing.Name = trimmedName;
                 existing.PersonType = personType;
+                existing.LastSeenAt = time.GetUtcNow();
                 return personMapper.Map(existing);
             }, out var updated))
         {

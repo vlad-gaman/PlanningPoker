@@ -31,6 +31,11 @@ public class RoomRepository(IRoomEntityCopyMapper mapper) : IRoomRepository
         return _rooms.TryRemove(roomId, out _);
     }
 
+    public IReadOnlyCollection<string> Ids()
+    {
+        return [.. _rooms.Keys];
+    }
+
     public bool Update<T>(string roomId, Func<RoomEntity, T> mutate, out T? result)
     {
         if (!_rooms.TryGetValue(roomId, out var room))

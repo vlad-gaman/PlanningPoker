@@ -16,6 +16,10 @@ _Avoid_: Flip, show-down
 The time elapsed since the room's last reveal, clear or creation. Casting or changing a vote does not reset it.
 _Avoid_: Vote timer, idle timer, activity timer
 
+**Abandoned**:
+A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and was created more than the abandon time ago. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. This has nothing to do with the round timer, which only measures the current round.
+_Avoid_: Idle, stale, expired, timed out
+
 **Voter**:
 A person who can vote in a round: a developer, a tester or an SRE.
 _Avoid_: Player, participant

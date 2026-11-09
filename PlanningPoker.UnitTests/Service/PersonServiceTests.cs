@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
@@ -9,11 +10,12 @@ namespace PlanningPoker.UnitTests.Service;
 public class PersonServiceTests
 {
     private readonly PersonRepository _repository = new();
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
     private readonly PersonService _service;
 
     public PersonServiceTests()
     {
-        _service = new PersonService(_repository, new PersonMapper(), new PersonEntityMapper());
+        _service = new PersonService(_repository, new PersonMapper(), new PersonEntityMapper(_time), _time);
     }
 
     [Fact]
@@ -77,5 +79,36 @@ public class PersonServiceTests
         Assert.Equal(created.Guid, updated.Guid);
         Assert.Equal("Bob", _repository.Get(created.Guid)!.Name);
         Assert.Equal("obs", _repository.Get(created.Guid)!.PersonType);
+    }
+
+    [Fact]
+    public void Upsert_NewPerson_StampsLastSeenAtWithNow()
+    {
+        var created = _service.Upsert(null, "Ann", "dev").Data!;
+
+        Assert.Equal(_time.GetUtcNow(), _repository.Get(created.Guid)!.LastSeenAt);
+    }
+
+    [Fact]
+    public void Upsert_ExistingPerson_RestampsLastSeenAt()
+    {
+        var created = _service.Upsert(null, "Ann", "dev").Data!;
+        _time.Advance(TimeSpan.FromHours(5));
+
+        _service.Upsert(created.Guid, "Ann", "dev");
+
+        Assert.Equal(_time.GetUtcNow(), _repository.Get(created.Guid)!.LastSeenAt);
+    }
+
+    [Fact]
+    public void Get_DoesNotStampLastSeenAt()
+    {
+        var created = _service.Upsert(null, "Ann", "dev").Data!;
+        var stamped = _repository.Get(created.Guid)!.LastSeenAt;
+        _time.Advance(TimeSpan.FromHours(5));
+
+        _service.Get(created.Guid);
+
+        Assert.Equal(stamped, _repository.Get(created.Guid)!.LastSeenAt);
     }
 }
