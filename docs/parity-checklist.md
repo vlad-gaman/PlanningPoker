@@ -86,6 +86,7 @@ Home, join, both dialogs and the notices now match the old look on desktop (0.8%
 - "Use fun room name?" starts checked in the new dialog (old: unchecked).
 - The home page keeps a visually hidden `h1` "Planning Poker" for screen readers; the old page had none.
 - Role stays a select (owner decision), now a native select next to the name; the old Dev/Tester/Observer toggles are not restored.
+- The role options and the people table gain an "SRE" role, and the results gain a fourth chart, "SRE votes" (always shown, like Testers). The Razor app has neither (accepted difference, issue #42).
 - The join step shows a one-line sentence "Enter your name to join this room." and has no "Use Different Name" button.
 - Phone rows differ only by the 14px root font below 768px (slice 6d). Room desktop rows are done in 6c.
 

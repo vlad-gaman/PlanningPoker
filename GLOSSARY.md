@@ -17,9 +17,13 @@ The time elapsed since the room's last reveal, clear or creation. Casting or cha
 _Avoid_: Vote timer, idle timer, activity timer
 
 **Voter**:
-A person who can vote in a round: a developer or a tester.
+A person who can vote in a round: a developer, a tester or an SRE.
 _Avoid_: Player, participant
 
 **Observer**:
 A person in the room who cannot vote. Observers are listed after all voters in the participants table.
 _Avoid_: Spectator, viewer
+
+**Role**:
+What a person is in the room: Developer, Tester, SRE or Observer. Only Observer does not vote. Developer, Tester and SRE votes count in the All statistics, and each of those roles also has its own breakdown chart.
+_Avoid_: Person type, position

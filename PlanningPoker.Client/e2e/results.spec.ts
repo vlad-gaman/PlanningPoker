@@ -51,7 +51,7 @@ async function closeAll(people: Person[]): Promise<void> {
   await Promise.all(people.map(({ context }) => context.close()));
 }
 
-test('different votes reveal three charts with the averages, and Clear votes removes them', async ({
+test('different votes reveal four charts with the averages, and Clear votes removes them', async ({
   browser,
 }) => {
   const ann = await newPerson(browser);
@@ -64,13 +64,14 @@ test('different votes reveal three charts with the averages, and Clear votes rem
   await pick(bob.page, '5');
 
   for (const { page } of [ann, bob]) {
-    await expect(charts(page)).toHaveCount(3);
+    await expect(charts(page)).toHaveCount(4);
     await expect(page.locator('app-results figcaption')).toHaveText([
       'All votes',
       'Developers votes',
       'Testers votes',
+      'SRE votes',
     ]);
-    await expect(averages(page)).toHaveText(['4', '3', '5']);
+    await expect(averages(page)).toHaveText(['4', '3', '5', '']);
     await expect(page.locator('app-results canvas').first()).toHaveAttribute(
       'aria-label',
       'All votes: 3 50%, 5 50%',
@@ -85,6 +86,29 @@ test('different votes reveal three charts with the averages, and Clear votes rem
   await closeAll([ann, bob]);
 });
 
+test('an SRE vote gets its own chart and counts in the All average', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob', 'SRE');
+
+  await pick(ann.page, '3');
+  await pick(bob.page, '5');
+
+  for (const { page } of [ann, bob]) {
+    await expect(charts(page)).toHaveCount(4);
+    await expect(page.locator('app-results figcaption')).toHaveText([
+      'All votes',
+      'Developers votes',
+      'Testers votes',
+      'SRE votes',
+    ]);
+    await expect(averages(page)).toHaveText(['4', '3', '', '5']);
+  }
+
+  await closeAll([ann, bob]);
+});
+
 test('a consensus launches the fireworks, and Clear votes removes them', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
@@ -94,7 +118,7 @@ test('a consensus launches the fireworks, and Clear votes removes them', async (
   await pick(ann.page, '5');
   await pick(bob.page, '5');
 
-  await expect(charts(ann.page)).toHaveCount(3);
+  await expect(charts(ann.page)).toHaveCount(4);
   await expect(fireworks(ann.page)).toHaveCount(1);
   await expect(fireworks(bob.page)).toHaveCount(1);
 
@@ -114,7 +138,7 @@ test('a room with fireworks turned off shows none on consensus', async ({ browse
   await pick(ann.page, '5');
   await pick(bob.page, '5');
 
-  await expect(charts(ann.page)).toHaveCount(3);
+  await expect(charts(ann.page)).toHaveCount(4);
   await expect(fireworks(ann.page)).toHaveCount(0);
 
   await closeAll([ann, bob]);
@@ -129,13 +153,13 @@ test('a fist of five room charts the cards as images without text labels', async
   await ann.page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
   await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
 
-  await expect(charts(ann.page)).toHaveCount(3);
+  await expect(charts(ann.page)).toHaveCount(4);
   // The labels are images drawn on the canvas, so the page offers the marks only through the chart's text alternative.
   await expect(ann.page.locator('app-results canvas').first()).toHaveAttribute(
     'aria-label',
     'All votes: 2 50%, 4 50%',
   );
-  await expect(averages(ann.page)).toHaveText(['3', '3', '']);
+  await expect(averages(ann.page)).toHaveText(['3', '3', '', '']);
 
   await closeAll([ann, bob]);
 });
@@ -152,8 +176,8 @@ test('a late joiner sees the same charts and no fireworks', async ({ browser }) 
 
   await join(cat.page, roomUrl, 'Cat');
 
-  await expect(charts(cat.page)).toHaveCount(3);
-  await expect(averages(cat.page)).toHaveText(['5', '5', '']);
+  await expect(charts(cat.page)).toHaveCount(4);
+  await expect(averages(cat.page)).toHaveText(['5', '5', '', '']);
   await expect(fireworks(cat.page)).toHaveCount(0);
 
   await closeAll([ann, bob, cat]);
@@ -172,7 +196,7 @@ test('the results look right in dark mode and on a phone without sideways scroll
   await pick(ann.page, '3');
   await pick(bob.page, '8');
 
-  await expect(charts(ann.page)).toHaveCount(3);
+  await expect(charts(ann.page)).toHaveCount(4);
   await expect(ann.page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const overflow = await ann.page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -225,7 +249,7 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
 
     await page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
     await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
-    await expect(charts(page)).toHaveCount(3);
+    await expect(charts(page)).toHaveCount(4);
 
     // (a) The picker and the vote column are recoloured by a mask over the text colour, with no backing tile.
     const textColor = await page.evaluate(() => getComputedStyle(document.body).color);
@@ -276,7 +300,7 @@ test('the chart label images change colour when the theme changes while results 
   await join(bob.page, roomUrl, 'Bob');
   await ann.page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
   await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
-  await expect(charts(ann.page)).toHaveCount(3);
+  await expect(charts(ann.page)).toHaveCount(4);
 
   await ann.page.getByLabel('Theme').selectOption('light');
   await expect.poll(async () => (await labelStripBrightness(ann.page)) ?? 255).toBeLessThan(80);

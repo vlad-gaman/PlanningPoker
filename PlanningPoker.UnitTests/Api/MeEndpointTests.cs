@@ -69,6 +69,22 @@ public class MeEndpointTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Put_WithTheSreRole_RoundTripsIt()
+    {
+        var put = await _client.SendAsync(Put(new { name = "Ann", personType = "sre" }));
+
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        var data = (await put.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        Assert.Equal("sre", data.GetProperty("personType").GetString());
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("Cookie", CookieValue(put));
+        var get = await _client.SendAsync(request);
+        var got = (await get.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        Assert.Equal("sre", got.GetProperty("personType").GetString());
+    }
+
+    [Fact]
     public async Task Get_AfterPut_ReturnsSamePerson()
     {
         var put = await _client.SendAsync(Put(new { name = "Ann", personType = "test" }));

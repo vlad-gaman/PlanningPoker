@@ -1,4 +1,4 @@
-export type PersonType = 'dev' | 'test' | 'obs';
+export type PersonType = 'dev' | 'test' | 'sre' | 'obs';
 
 export interface Person {
   guid: string;
@@ -17,5 +17,6 @@ export const NAME_MAX_LENGTH = 20;
 export const PERSON_TYPES: { value: PersonType; label: string }[] = [
   { value: 'dev', label: 'Developer' },
   { value: 'test', label: 'Tester' },
+  { value: 'sre', label: 'SRE' },
   { value: 'obs', label: 'Observer' },
 ];

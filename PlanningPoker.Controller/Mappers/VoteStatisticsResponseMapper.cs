@@ -12,6 +12,7 @@ public class VoteStatisticsResponseMapper(IGroupStatisticsResponseMapper groupMa
             All = groupMapper.Map(statistics.All),
             Developers = groupMapper.Map(statistics.Developers),
             Testers = groupMapper.Map(statistics.Testers),
+            Sres = groupMapper.Map(statistics.Sres),
             Consensus = statistics.Consensus
         };
     }

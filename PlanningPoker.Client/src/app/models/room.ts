@@ -51,6 +51,7 @@ export interface VoteStatistics {
   all: GroupStatistics;
   developers: GroupStatistics;
   testers: GroupStatistics;
+  sres: GroupStatistics;
   /** At least two votes, all the same mark, and everyone had voted. */
   consensus: boolean;
 }

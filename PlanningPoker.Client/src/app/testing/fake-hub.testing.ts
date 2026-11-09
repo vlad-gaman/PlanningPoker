@@ -58,6 +58,7 @@ export const STATISTICS = {
   },
   developers: { marks: [{ mark: '1', percentage: 100 }], highestMark: '1', averageMark: 1 },
   testers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
+  sres: { marks: [], highestMark: null, averageMark: null },
   consensus: false,
 };
 
@@ -65,6 +66,7 @@ export const CONSENSUS_STATISTICS = {
   all: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
   developers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
   testers: { marks: [], highestMark: null, averageMark: null },
+  sres: { marks: [], highestMark: null, averageMark: null },
   consensus: true,
 };
 
