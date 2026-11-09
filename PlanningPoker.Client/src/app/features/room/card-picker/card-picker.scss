@@ -63,12 +63,12 @@
   img {
     height: 40px;
     width: 40px;
+    // The fist-of-five images are black line art: the PNG is the mask and the fill is the theme's text colour. The
+    // image itself is pushed out of its box so only the recoloured mask shows.
+    background-color: var(--text-color);
+    -webkit-mask: var(--mark-mask) center / contain no-repeat;
+    mask: var(--mark-mask) center / contain no-repeat;
+    object-fit: none;
+    object-position: 9999px 0;
   }
-}
-
-// The fist-of-five images are dark line art: give them a light backing so they stay readable in dark mode.
-:host-context([data-theme='dark']) .card img {
-  padding: 2px;
-  border-radius: 4px;
-  background: #e9ecef;
 }

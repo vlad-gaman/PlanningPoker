@@ -32,9 +32,25 @@ export function chartSummary(title: string, group: GroupStatistics): string {
   return `${title}: ${shares}`;
 }
 
-/** Draws the card images that stand in for the text label of a bar. */
-function imageLabels(sources: (string | null)[], redraw: () => void): Plugin<'bar'> {
+/** Redraws a black line-art image in one colour: the colour is filled over the image and only its shape is kept. */
+function tint(image: HTMLImageElement, color: string): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext('2d');
+  if (context) {
+    context.drawImage(image, 0, 0);
+    context.globalCompositeOperation = 'source-in';
+    context.fillStyle = color;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  return canvas;
+}
+
+/** Draws the card images that stand in for the text label of a bar, tinted with the theme's text colour. */
+function imageLabels(sources: (string | null)[], color: string, redraw: () => void): Plugin<'bar'> {
   const cache = new Map<string, HTMLImageElement>();
+  const tinted = new Map<string, HTMLCanvasElement>();
   return {
     id: 'cardImageLabels',
     afterDraw(chart) {
@@ -52,8 +68,14 @@ function imageLabels(sources: (string | null)[], redraw: () => void): Plugin<'ba
         }
         if (image.complete && image.naturalWidth > 0) {
           const x = scale.getPixelForTick(index) - IMAGE_LABEL_SIZE / 2;
+          const key = `${source}|${color}`;
+          let label = tinted.get(key);
+          if (!label) {
+            label = tint(image, color);
+            tinted.set(key, label);
+          }
           chart.ctx.drawImage(
-            image,
+            label,
             x,
             scale.top + IMAGE_LABEL_GAP,
             IMAGE_LABEL_SIZE,
@@ -112,6 +134,6 @@ export function buildChartConfig(
         tooltip: { callbacks: { label: (item) => `${item.parsed.y}%` } },
       },
     },
-    plugins: [imageLabels(sources, redraw)],
+    plugins: [imageLabels(sources, colors.text, redraw)],
   };
 }

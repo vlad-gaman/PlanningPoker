@@ -10,7 +10,7 @@
         (change)="markSelected.emit(card.value)"
       />
       @if (image(card); as src) {
-        <img [src]="src" [alt]="card.value" />
+        <img [src]="src" [alt]="card.value" [style.--mark-mask]="'url(' + src + ')'" />
       } @else {
         <span>{{ card.display ?? card.value }}</span>
       }

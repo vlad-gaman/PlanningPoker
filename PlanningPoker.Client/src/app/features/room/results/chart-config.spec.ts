@@ -118,6 +118,59 @@ describe('buildChartConfig', () => {
     expect(x.ticks.color).toBe(COLORS.text);
     expect(x.ticks.font.size).toBe(16);
   });
+
+  describe('image labels', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it('tints the label images with the theme text colour before drawing them', () => {
+      class LoadedImage {
+        complete = true;
+        naturalWidth = 8;
+        naturalHeight = 8;
+        onload: (() => void) | null = null;
+        src = '';
+      }
+      vi.stubGlobal('Image', LoadedImage);
+      const tintContext = {
+        drawImage: vi.fn(),
+        fillRect: vi.fn(),
+        globalCompositeOperation: 'source-over',
+        fillStyle: '',
+        operationAtFill: '',
+        colorAtFill: '',
+      };
+      tintContext.fillRect.mockImplementation(() => {
+        tintContext.operationAtFill = tintContext.globalCompositeOperation;
+        tintContext.colorAtFill = tintContext.fillStyle;
+      });
+      const tintCanvas = { width: 0, height: 0, getContext: () => tintContext };
+      vi.spyOn(document, 'createElement').mockReturnValue(tintCanvas as unknown as HTMLElement);
+      const drawn = vi.fn();
+      const config = buildChartConfig(
+        group({ marks: [{ mark: 'two', percentage: 100 }] }),
+        CARDS,
+        { ...COLORS, text: '#f8f9fa' },
+      );
+      const plugin = config.plugins?.[0];
+      const chart = {
+        scales: { x: { top: 0, getPixelForTick: () => 50 } },
+        ctx: { drawImage: drawn },
+      };
+
+      plugin?.afterDraw?.(chart as never, { cancelable: true } as never, {});
+      plugin?.afterDraw?.(chart as never, { cancelable: true } as never, {});
+
+      expect(tintContext.operationAtFill).toBe('source-in');
+      expect(tintContext.colorAtFill).toBe('#f8f9fa');
+      expect(drawn).toHaveBeenCalledTimes(2);
+      expect(drawn.mock.calls[0][0]).toBe(tintCanvas);
+      // The tinted copy is made once per image and colour, then reused.
+      expect(tintContext.fillRect).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe('chartSummary', () => {

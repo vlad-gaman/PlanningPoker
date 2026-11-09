@@ -67,18 +67,19 @@ h1 {
   img {
     height: 1.5rem;
     width: 1.5rem;
+    // The fist-of-five images are black line art: the PNG is the mask and the fill is the theme's text colour. The
+    // image itself is pushed out of its box so only the recoloured mask shows.
+    background-color: var(--text-color);
+    -webkit-mask: var(--mark-mask) center / contain no-repeat;
+    mask: var(--mark-mask) center / contain no-repeat;
+    object-fit: none;
+    object-position: 9999px 0;
   }
 }
 
 .owner {
   color: var(--primary-color);
   font-size: 0.85em;
-}
-
-:host-context([data-theme='dark']) .mark img {
-  padding: 1px;
-  border-radius: 3px;
-  background: #e9ecef;
 }
 
 // The old role toggles: small bordered buttons, the selected one blue. The radio itself stays for keyboard use.
