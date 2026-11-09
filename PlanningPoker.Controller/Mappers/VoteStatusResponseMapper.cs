@@ -13,6 +13,7 @@ public class VoteStatusResponseMapper(IVoteStatisticsResponseMapper statisticsMa
             HasEveryoneVoted = voteStatus.HasEveryoneVoted,
             VotingFinished = voteStatus.VotingFinished,
             Countdown = voteStatus.Countdown,
+            RoundStartedAt = voteStatus.RoundStartedAt,
             Statistics = voteStatus.Statistics is null ? null : statisticsMapper.Map(voteStatus.Statistics)
         };
     }

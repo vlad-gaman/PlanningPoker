@@ -34,7 +34,8 @@ public class RoomEventPublisherTests
             new VoteCastEventMapper(),
             ResponseMappers.VoteStatus(),
             new PersonTypeChangedEventMapper(PersonMapper, ResponseMappers.VoteStatus()),
-            new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus()));
+            new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus()),
+            new VotesClearedEventMapper());
     }
 
     [Fact]
@@ -218,11 +219,14 @@ public class RoomEventPublisherTests
     [Fact]
     public async Task PublishVotesCleared_SendsToTheWholeRoom()
     {
-        await _publisher.PublishVotesClearedAsync("room");
+        var roundStartedAt = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+        await _publisher.PublishVotesClearedAsync(new ClearVotesResult { RoomId = "room", RoundStartedAt = roundStartedAt });
 
         var sent = Assert.Single(_hub.Clients.Sent);
         Assert.Equal(HubEvents.VotesCleared, sent.Method);
         Assert.Equal(RoomGroup, sent.Target);
+        Assert.Equal(roundStartedAt, Assert.IsType<VotesClearedEvent>(sent.Payload).RoundStartedAt);
     }
 
     [Fact]

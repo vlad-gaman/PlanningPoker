@@ -194,7 +194,7 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
         await using var room = await factory.CreateTestRoomAsync();
         await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
         var cleared = new TaskCompletionSource();
-        room.Guest.On("VotesCleared", () => cleared.TrySetResult());
+        room.Guest.On<JsonElement>("VotesCleared", _ => cleared.TrySetResult());
 
         await room.Owner.InvokeAsync<JsonElement>("ClearVotes");
         await cleared.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -307,7 +307,7 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
         await using var room = await factory.CreateTestRoomAsync();
         await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
         var cleared = new TaskCompletionSource();
-        room.Guest.On("VotesCleared", () => cleared.TrySetResult());
+        room.Guest.On<JsonElement>("VotesCleared", _ => cleared.TrySetResult());
 
         await room.Owner.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings("t-shirt-sizes"));
         await cleared.Task.WaitAsync(TimeSpan.FromSeconds(10));

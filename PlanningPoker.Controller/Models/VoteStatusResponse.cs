@@ -12,6 +12,9 @@ public class VoteStatusResponse
     /// <summary>Seconds left while a countdown runs; null otherwise.</summary>
     public int? Countdown { get; init; }
 
+    /// <summary>When the current round began, in UTC. Clients count the round timer up from it.</summary>
+    public DateTimeOffset RoundStartedAt { get; init; }
+
     /// <summary>The statistics of the revealed votes; null while voting is open.</summary>
     public VoteStatisticsResponse? Statistics { get; init; }
 }

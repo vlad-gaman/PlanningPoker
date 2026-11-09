@@ -33,7 +33,7 @@ public sealed class FakeRoomService : IRoomService
 
     public ServiceResponse<VoteResult> VoteResult { get; set; } = ServiceResponse<VoteResult>.Failure();
 
-    public ServiceResponse<string> ClearResult { get; set; } = ServiceResponse<string>.Failure();
+    public ServiceResponse<ClearVotesResult> ClearResult { get; set; } = ServiceResponse<ClearVotesResult>.Failure();
 
     public ServiceResponse<RevealResult> RevealResult { get; set; } = ServiceResponse<RevealResult>.Failure();
 
@@ -49,7 +49,7 @@ public sealed class FakeRoomService : IRoomService
         return VoteResult;
     }
 
-    public ServiceResponse<string> ClearVotes(Guid personGuid, string connectionId)
+    public ServiceResponse<ClearVotesResult> ClearVotes(Guid personGuid, string connectionId)
     {
         ClearCalls.Add((personGuid, connectionId));
         return ClearResult;

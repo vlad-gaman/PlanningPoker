@@ -17,7 +17,8 @@ public class RoomEventPublisher(
     IVoteCastEventMapper voteCastEventMapper,
     IVoteStatusResponseMapper voteStatusResponseMapper,
     IPersonTypeChangedEventMapper personTypeChangedEventMapper,
-    IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier
+    IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper,
+    IVotesClearedEventMapper votesClearedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
@@ -77,7 +78,7 @@ public class RoomEventPublisher(
         await group.SendAsync(HubEvents.RoomConfigurationUpdated, roomConfigurationUpdatedEventMapper.Map(result));
         if (result.VotesCleared)
         {
-            await group.SendAsync(HubEvents.VotesCleared);
+            await group.SendAsync(HubEvents.VotesCleared, votesClearedEventMapper.Map(result.VoteStatus.RoundStartedAt));
         }
     }
 
@@ -88,9 +89,9 @@ public class RoomEventPublisher(
             : Task.CompletedTask;
     }
 
-    public Task PublishVotesClearedAsync(string roomId)
+    public Task PublishVotesClearedAsync(ClearVotesResult result)
     {
-        return hub.Clients.Group(roomId).SendAsync(HubEvents.VotesCleared);
+        return hub.Clients.Group(result.RoomId).SendAsync(HubEvents.VotesCleared, votesClearedEventMapper.Map(result.RoundStartedAt));
     }
 
     public Task PublishVotesShownAsync(string roomId, VoteStatus status)

@@ -305,6 +305,20 @@ describe('Room', () => {
       expect(element.querySelector('.countdown')).toBeNull();
     });
 
+    it('shows the round timer for everyone, and keeps it through the reveal and the countdown', async () => {
+      const { fixture, element } = await render();
+      const timer = () => element.querySelector('app-round-timer [role="timer"]');
+      expect(timer()?.textContent).toContain('Round time');
+
+      hub.emit(HUB_EVENTS.CountdownUpdate, { countdown: 3, reset: false });
+      await settle(fixture);
+      expect(timer()).not.toBeNull();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      await settle(fixture);
+      expect(timer()).not.toBeNull();
+    });
+
     it('votes with the picked card', async () => {
       const { fixture, element } = await render();
 
@@ -394,7 +408,7 @@ describe('Room', () => {
       await settle(fixture);
       expect(element.querySelectorAll('app-results-chart').length).toBe(3);
 
-      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: '2026-01-01T12:10:00+00:00' });
       await settle(fixture);
       expect(element.querySelector('app-results')).toBeNull();
     });
@@ -452,7 +466,7 @@ describe('Room', () => {
       hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
       await settle(fixture);
 
-      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: '2026-01-01T12:10:00+00:00' });
       await settle(fixture);
 
       expect(fireworks.dispose).toHaveBeenCalled();
@@ -473,7 +487,7 @@ describe('Room', () => {
       const { fixture } = await render();
       hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
       await settle(fixture);
-      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: '2026-01-01T12:10:00+00:00' });
       await settle(fixture);
 
       hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));

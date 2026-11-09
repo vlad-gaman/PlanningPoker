@@ -24,8 +24,8 @@ public interface IRoomService
     /// </summary>
     ServiceResponse<VoteResult> Vote(Guid personGuid, string connectionId, string mark);
 
-    /// <summary>Drops all votes, reopens voting and cancels any countdown. Returns the room id.</summary>
-    ServiceResponse<string> ClearVotes(Guid personGuid, string connectionId);
+    /// <summary>Drops all votes, reopens voting, cancels any countdown and restarts the round timer.</summary>
+    ServiceResponse<ClearVotesResult> ClearVotes(Guid personGuid, string connectionId);
 
     /// <summary>Reveals the votes at once. Success with a null <see cref="RevealResult.VoteStatus"/> means they were already revealed.</summary>
     ServiceResponse<RevealResult> ForceShowVotes(Guid personGuid, string connectionId);

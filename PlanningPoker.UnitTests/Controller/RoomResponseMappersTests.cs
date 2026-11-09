@@ -89,6 +89,16 @@ public class RoomResponseMappersTests
     }
 
     [Fact]
+    public void VoteStatusResponseMapper_CopiesTheRoundStart()
+    {
+        var roundStartedAt = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+        var response = ResponseMappers.VoteStatus().Map(new VoteStatus { Votes = new Dictionary<Guid, string>(), RoundStartedAt = roundStartedAt });
+
+        Assert.Equal(roundStartedAt, response.RoundStartedAt);
+    }
+
+    [Fact]
     public void JoinRoomResponseMapper_MapsPeopleOwnerStatusAndConfiguration()
     {
         var mapper = new JoinRoomResponseMapper(PersonMapper, ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper());

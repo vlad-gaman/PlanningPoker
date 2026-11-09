@@ -12,7 +12,7 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
 
     public List<VoteResult> VoteCasts { get; } = [];
 
-    public List<string> Cleared { get; } = [];
+    public List<ClearVotesResult> Cleared { get; } = [];
 
     public List<(string RoomId, VoteStatus Status)> Shown { get; } = [];
 
@@ -54,9 +54,9 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
         return Task.CompletedTask;
     }
 
-    public Task PublishVotesClearedAsync(string roomId)
+    public Task PublishVotesClearedAsync(ClearVotesResult result)
     {
-        Cleared.Add(roomId);
+        Cleared.Add(result);
         return Task.CompletedTask;
     }
 

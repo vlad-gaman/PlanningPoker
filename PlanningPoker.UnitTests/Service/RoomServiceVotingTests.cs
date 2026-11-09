@@ -288,7 +288,7 @@ public class RoomServiceVotingTests
 
         var response = _service.ClearVotes(people[0], "c1");
 
-        Assert.Equal(roomId, response.Data);
+        Assert.Equal(roomId, response.Data!.RoomId);
         var room = _rooms.Get(roomId)!;
         Assert.Empty(room.Votes);
         Assert.True(room.VotingEnabled);

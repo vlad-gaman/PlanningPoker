@@ -9,13 +9,13 @@ namespace PlanningPoker.UnitTests.Service;
 /// <summary>Builds a <see cref="RoomService"/> over real mappers and the given repositories.</summary>
 public static class RoomServiceFactory
 {
-    public static RoomService Create(IRoomRepository rooms, IPersonRepository people, IRoomNameGenerator? generator = null)
+    public static RoomService Create(IRoomRepository rooms, IPersonRepository people, IRoomNameGenerator? generator = null, TimeProvider? time = null)
     {
         return new RoomService(
             rooms,
             people,
             generator ?? new StubRoomNameGenerator("unused"),
-            new RoomEntityMapper(new RoomConfigurationEntityMapper()),
+            new RoomEntityMapper(new RoomConfigurationEntityMapper(), time ?? TimeProvider.System),
             new RoomMapper(new RoomConfigurationMapper()),
             new PersonMapper(),
             VoteStatusMappers.Create(),
@@ -27,6 +27,7 @@ public static class RoomServiceFactory
             new VoteMarkValidation(new CardSetService()),
             new RoomConfigurationEntityMapper(),
             new RoomConfigurationMapper(),
-            new CardSetService());
+            new CardSetService(),
+            time ?? TimeProvider.System);
     }
 }

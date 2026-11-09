@@ -16,6 +16,7 @@ public class RoomEntityCopyMapperTests
             VotingEnabled = true,
             IsDisposed = true,
             Revision = 4,
+            RoundStartedAt = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero),
             CountdownRevision = 3,
             CountdownRemaining = 2,
             MemberGuids = [owner],
@@ -27,6 +28,7 @@ public class RoomEntityCopyMapperTests
         var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(source);
 
         Assert.Equal("room", copy.Id);
+        Assert.Equal(source.RoundStartedAt, copy.RoundStartedAt);
         Assert.Equal(owner, copy.OwnerGuid);
         Assert.True(copy.VotingEnabled);
         Assert.True(copy.IsDisposed);

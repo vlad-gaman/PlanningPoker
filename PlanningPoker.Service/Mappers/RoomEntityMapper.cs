@@ -3,7 +3,7 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Mappers;
 
-public class RoomEntityMapper(IRoomConfigurationEntityMapper configurationMapper) : IRoomEntityMapper
+public class RoomEntityMapper(IRoomConfigurationEntityMapper configurationMapper, TimeProvider time) : IRoomEntityMapper
 {
     public RoomEntity Map(string id, Guid ownerGuid, RoomConfiguration configuration)
     {
@@ -14,6 +14,7 @@ public class RoomEntityMapper(IRoomConfigurationEntityMapper configurationMapper
             OwnerGuid = ownerGuid,
             MemberGuids = [ownerGuid],
             VotingEnabled = true,
+            RoundStartedAt = time.GetUtcNow(),
             Configuration = configurationMapper.Map(configuration)
         };
     }
