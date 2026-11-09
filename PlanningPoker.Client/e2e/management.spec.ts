@@ -22,9 +22,10 @@ async function createRoom(page: Page, name: string): Promise<string> {
   return page.url();
 }
 
-async function join(page: Page, roomUrl: string, name: string): Promise<void> {
+async function join(page: Page, roomUrl: string, name: string, roleLabel?: string): Promise<void> {
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
+  if (roleLabel) await page.getByLabel('Role').selectOption({ label: roleLabel });
   await page.getByRole('button', { name: 'Join room' }).click();
   await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();
 }
@@ -82,4 +83,31 @@ test('transferring ownership moves the Settings button to the new owner', async 
   await expect(row(bob.page, 'Bob')).toContainText('(owner)');
 
   await Promise.all([ann.context.close(), bob.context.close()]);
+});
+
+test('observers are listed after voters, and a role change moves the row on every client', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const cid = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob', 'Observer');
+  await join(cid.page, roomUrl, 'Cid', 'Developer');
+
+  const rows = (page: Page) => page.locator('tr[mat-row]');
+  for (const page of [ann.page, bob.page]) {
+    await expect(rows(page)).toHaveCount(3);
+    await expect(rows(page).nth(0)).toContainText('Ann');
+    await expect(rows(page).nth(1)).toContainText('Cid');
+    await expect(rows(page).nth(2)).toContainText('Bob');
+  }
+
+  await role(bob.page, 'Developer').check();
+
+  for (const page of [ann.page, bob.page]) {
+    await expect(rows(page).nth(0)).toContainText('Ann');
+    await expect(rows(page).nth(1)).toContainText('Bob');
+    await expect(rows(page).nth(2)).toContainText('Cid');
+  }
+
+  await Promise.all([ann.context.close(), bob.context.close(), cid.context.close()]);
 });
