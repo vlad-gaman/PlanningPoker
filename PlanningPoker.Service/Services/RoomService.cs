@@ -29,7 +29,8 @@ public class RoomService(
     VoteMarkValidation voteMarkValidation,
     IRoomConfigurationEntityMapper configurationEntityMapper,
     IRoomConfigurationMapper configurationMapper,
-    ICardSetService cardSets) : IRoomService
+    ICardSetService cardSets,
+    TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
     {
@@ -301,17 +302,21 @@ public class RoomService(
         return ServiceResponse<VoteResult>.Success(new VoteResult { RoomId = roomId, PersonGuid = personGuid, VoteStatus = status, FollowUp = followUp });
     }
 
-    public ServiceResponse<string> ClearVotes(Guid personGuid, string connectionId)
+    public ServiceResponse<ClearVotesResult> ClearVotes(Guid personGuid, string connectionId)
     {
+        var roundStartedAt = time.GetUtcNow();
         var cleared = InRoom(personGuid, connectionId, room =>
         {
             room.Votes.Clear();
             room.Revealed = null;
             room.VotingEnabled = true;
+            room.RoundStartedAt = roundStartedAt;
             room.Revision++;
             return true;
         });
-        return cleared.IsSuccess ? ServiceResponse<string>.Success(cleared.Data!.RoomId) : ServiceResponse<string>.Failure(cleared);
+        return cleared.IsSuccess
+            ? ServiceResponse<ClearVotesResult>.Success(new ClearVotesResult { RoomId = cleared.Data!.RoomId, RoundStartedAt = roundStartedAt })
+            : ServiceResponse<ClearVotesResult>.Failure(cleared);
     }
 
     public ServiceResponse<RevealResult> ForceShowVotes(Guid personGuid, string connectionId)
@@ -343,6 +348,7 @@ public class RoomService(
 
             room.Revealed = frozen;
             room.VotingEnabled = false;
+            room.RoundStartedAt = time.GetUtcNow();
             room.Revision++;
             return (Outcome: (Member: true, Changed: true), NeedsTypes: false);
         }, out var outcome);
@@ -581,6 +587,7 @@ public class RoomService(
             room.CountdownRemaining = 0;
             room.Revealed = frozen;
             room.VotingEnabled = false;
+            room.RoundStartedAt = time.GetUtcNow();
             room.Revision++;
             return (Outcome: (Outcome: TickOutcome.Revealed, Remaining: 0), NeedsTypes: false);
         }, out var tick);
@@ -680,6 +687,7 @@ public class RoomService(
 
                 room.Revealed = frozen;
                 room.VotingEnabled = false;
+                room.RoundStartedAt = time.GetUtcNow();
                 room.Revision++;
             }
             else

@@ -18,6 +18,9 @@ export function fakeHub(joinResponse: unknown = undefined) {
 export const ANN = { guid: 'g-ann', name: 'Ann', personType: 'dev' } as const;
 export const BOB = { guid: 'g-bob', name: 'Bob', personType: 'test' } as const;
 
+/** When the round of JOIN_RESPONSE began. */
+export const ROUND_STARTED_AT = '2026-01-01T12:00:00+00:00';
+
 export const JOIN_RESPONSE = {
   people: [ANN],
   voteStatus: {
@@ -25,6 +28,7 @@ export const JOIN_RESPONSE = {
     hasEveryoneVoted: false,
     votingFinished: false,
     countdown: null,
+    roundStartedAt: ROUND_STARTED_AT,
     statistics: null,
   },
   cards: [
@@ -65,5 +69,5 @@ export const CONSENSUS_STATISTICS = {
 };
 
 export function revealed(statistics: unknown) {
-  return { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null, statistics };
+  return { votes: {}, hasEveryoneVoted: true, votingFinished: true, countdown: null, roundStartedAt: '2026-01-01T12:05:00+00:00', statistics };
 }

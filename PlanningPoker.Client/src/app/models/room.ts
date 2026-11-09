@@ -62,6 +62,8 @@ export interface VoteStatus {
   votingFinished: boolean;
   /** Seconds left before the votes are revealed; null when no countdown runs. */
   countdown: number | null;
+  /** When the current round began, in UTC (ISO 8601). */
+  roundStartedAt: string;
   /** Present once the votes are revealed, until they are cleared. */
   statistics: VoteStatistics | null;
 }
@@ -88,6 +90,11 @@ export interface VoteCastEvent {
 export interface CountdownEvent {
   countdown: number;
   reset: boolean;
+}
+
+export interface VotesClearedEvent {
+  /** When the round that the clear started began, in UTC (ISO 8601). */
+  roundStartedAt: string;
 }
 
 export interface PersonExitedEvent {

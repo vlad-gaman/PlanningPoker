@@ -13,6 +13,9 @@ public class VoteStatus
     /// <summary>Seconds left while a countdown runs; null otherwise.</summary>
     public int? Countdown { get; init; }
 
+    /// <summary>When the current round began, in UTC: the room's creation, or its last reveal or clear.</summary>
+    public DateTimeOffset RoundStartedAt { get; init; }
+
     /// <summary>Derived from the votes frozen at the reveal; null while voting is open.</summary>
     public VoteStatistics? Statistics { get; init; }
 }

@@ -15,8 +15,10 @@ public class RoomMappersTests
     {
         var owner = Guid.NewGuid();
 
-        var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper()).Map("room", owner, Configuration);
+        var now = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper(), new Microsoft.Extensions.Time.Testing.FakeTimeProvider(now)).Map("room", owner, Configuration);
 
+        Assert.Equal(now, entity.RoundStartedAt);
         Assert.Equal("room", entity.Id);
         Assert.Equal(owner, entity.OwnerGuid);
         Assert.Equal([owner], entity.MemberGuids);
@@ -31,7 +33,7 @@ public class RoomMappersTests
     public void RoomMapper_CopiesRoomFieldsAndDelegatesConfiguration()
     {
         var owner = Guid.NewGuid();
-        var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper()).Map("room", owner, Configuration);
+        var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper(), TimeProvider.System).Map("room", owner, Configuration);
         entity.VotingEnabled = true;
 
         var room = new RoomMapper(new RoomConfigurationMapper()).Map(entity);

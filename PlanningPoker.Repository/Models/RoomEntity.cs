@@ -39,5 +39,11 @@ public class RoomEntity
     /// <summary>Set when the last member leaves. A disposed room accepts no new members.</summary>
     public bool IsDisposed { get; set; }
 
+    /// <summary>
+    /// When the current round began, in UTC: set at creation and reset by every reveal and clear. Votes, joins, exits, person
+    /// type changes and settings changes leave it alone.
+    /// </summary>
+    public DateTimeOffset RoundStartedAt { get; set; }
+
     public RoomConfigurationEntity Configuration { get; set; } = new();
 }

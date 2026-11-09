@@ -80,6 +80,9 @@
           </table>
         </div>
         <div class="side">
+          @if (store.roundStartedAt(); as startedAt) {
+            <app-round-timer [startedAt]="startedAt" />
+          }
           @if (store.countdown(); as seconds) {
             <p class="countdown" role="status">Showing results in {{ seconds }}!</p>
           }

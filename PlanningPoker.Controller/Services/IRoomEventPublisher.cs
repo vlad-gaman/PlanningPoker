@@ -17,8 +17,8 @@ public interface IRoomEventPublisher
     /// <summary>Tells the whole room, the voter included, that a vote was cast, with the masked vote status.</summary>
     Task PublishVoteCastAsync(VoteResult result);
 
-    /// <summary>Tells the whole room that the votes were cleared.</summary>
-    Task PublishVotesClearedAsync(string roomId);
+    /// <summary>Tells the whole room that the votes were cleared, with when the new round began.</summary>
+    Task PublishVotesClearedAsync(ClearVotesResult result);
 
     /// <summary>Tells the whole room that the votes were revealed.</summary>
     Task PublishVotesShownAsync(string roomId, VoteStatus status);

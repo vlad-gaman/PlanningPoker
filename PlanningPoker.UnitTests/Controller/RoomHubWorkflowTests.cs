@@ -454,15 +454,19 @@ public class RoomHubWorkflowTests
         Assert.Empty(_timer.Started);
     }
 
+    private static readonly DateTimeOffset RoundStart = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
     [Fact]
     public async Task ClearVotes_Success_PublishesClearedForTheRoom()
     {
-        _rooms.ClearResult = ServiceResponse<string>.Success("room");
+        _rooms.ClearResult = ServiceResponse<ClearVotesResult>.Success(new ClearVotesResult { RoomId = "room", RoundStartedAt = RoundStart });
 
         var response = await NewHub(Ann).ClearVotes();
 
         Assert.Null(response.Errors);
-        Assert.Equal("room", Assert.Single(_publisher.Cleared));
+        var cleared = Assert.Single(_publisher.Cleared);
+        Assert.Equal("room", cleared.RoomId);
+        Assert.Equal(RoundStart, cleared.RoundStartedAt);
     }
 
     [Fact]
@@ -477,7 +481,7 @@ public class RoomHubWorkflowTests
     [Fact]
     public async Task ClearVotes_ServiceFailure_PublishesNothing()
     {
-        _rooms.ClearResult = ServiceResponse<string>.Failure(ServiceError.NotInRoom());
+        _rooms.ClearResult = ServiceResponse<ClearVotesResult>.Failure(ServiceError.NotInRoom());
 
         var response = await NewHub(Ann).ClearVotes();
 

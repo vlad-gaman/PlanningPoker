@@ -31,6 +31,7 @@ import { createPersonForm } from '../shared/person-form';
 import { CardPicker, cardImage } from './card-picker/card-picker';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
 import { Results } from './results/results';
+import { RoundTimer } from './round-timer/round-timer';
 import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 type Phase = 'loading' | 'name' | 'joined';
@@ -43,6 +44,7 @@ type Phase = 'loading' | 'name' | 'joined';
     Results,
     ReactiveFormsModule,
     PersonFields,
+    RoundTimer,
     MatButtonModule,
     MatTableModule,
   ],

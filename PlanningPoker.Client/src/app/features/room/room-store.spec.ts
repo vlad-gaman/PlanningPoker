@@ -10,11 +10,14 @@ import {
   BOB,
   CONSENSUS_STATISTICS,
   JOIN_RESPONSE,
+  ROUND_STARTED_AT,
   STATISTICS,
   fakeHub,
   revealed,
 } from '../../testing/fake-hub.testing';
 import { ROOM_DISPOSED_MESSAGE, ROOM_OPENED_ELSEWHERE_MESSAGE, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
+
+const CLEARED_AT = '2026-01-01T12:10:00+00:00';
 
 describe('RoomStore', () => {
   let hub: ReturnType<typeof fakeHub>;
@@ -52,6 +55,34 @@ describe('RoomStore', () => {
     expect(store.people()).toEqual([ANN]);
     expect(store.ownerGuid()).toBe(ANN.guid);
     expect(store.configuration()?.cardSet).toBe('linear');
+  });
+
+  it('takes the round start from the join snapshot', () => {
+    expect(store.roundStartedAt()).toBe(Date.parse(ROUND_STARTED_AT));
+  });
+
+  it('keeps the round start when a vote is cast, and restarts it on reveal and on clear', async () => {
+    await store.vote('5');
+    hub.emit(HUB_EVENTS.VoteStatusUpdate, { ...JOIN_RESPONSE.voteStatus, votes: { [ANN.guid]: 'hide' } });
+    expect(store.roundStartedAt()).toBe(Date.parse(ROUND_STARTED_AT));
+
+    hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+    expect(store.roundStartedAt()).toBe(Date.parse('2026-01-01T12:05:00+00:00'));
+
+    hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
+    expect(store.roundStartedAt()).toBe(Date.parse(CLEARED_AT));
+  });
+
+  it('has no round start when the stamp is missing or unreadable', () => {
+    hub.emit(HUB_EVENTS.VoteStatusUpdate, { ...JOIN_RESPONSE.voteStatus, roundStartedAt: 'nonsense' });
+
+    expect(store.roundStartedAt()).toBeNull();
+  });
+
+  it('forgets the round start on close', async () => {
+    await store.close();
+
+    expect(store.roundStartedAt()).toBeNull();
   });
 
   it('shows the pick of a person who already voted in another tab', async () => {
@@ -436,7 +467,7 @@ describe('RoomStore', () => {
         statistics: null,
       });
 
-      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
 
       expect(store.votes()).toEqual({});
       expect(store.votingFinished()).toBe(false);
@@ -524,7 +555,7 @@ describe('RoomStore', () => {
 
     it('counts every live reveal', () => {
       hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
-      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
       hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
 
       expect(store.revealCount()).toBe(2);
@@ -557,7 +588,7 @@ describe('RoomStore', () => {
     it('clears the statistics when the votes are cleared', () => {
       hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
 
-      hub.emit(HUB_EVENTS.VotesCleared, undefined);
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
 
       expect(store.statistics()).toBeNull();
     });

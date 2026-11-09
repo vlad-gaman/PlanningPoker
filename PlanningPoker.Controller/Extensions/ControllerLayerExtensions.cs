@@ -47,6 +47,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IRoomDisposedEventMapper, RoomDisposedEventMapper>();
         services.AddSingleton<IRoomCountdownEventMapper, RoomCountdownEventMapper>();
         services.AddSingleton<IVoteCastEventMapper, VoteCastEventMapper>();
+        services.AddSingleton<IVotesClearedEventMapper, VotesClearedEventMapper>();
         services.AddSingleton<IPersonTypeChangedEventMapper, PersonTypeChangedEventMapper>();
         services.AddSingleton<IRoomConfigurationUpdatedEventMapper, RoomConfigurationUpdatedEventMapper>();
         services.AddSingleton<ICardResponseMapper, CardResponseMapper>();

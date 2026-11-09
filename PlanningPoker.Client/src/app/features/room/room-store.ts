@@ -21,6 +21,7 @@ import {
   VoteCastEvent,
   VoteStatistics,
   VoteStatus,
+  VotesClearedEvent,
 } from '../../models/room';
 
 export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
@@ -28,6 +29,12 @@ export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
 export const HIDDEN_MARK = 'hide';
 export const ROOM_OPENED_ELSEWHERE_MESSAGE = 'This room was opened in another tab, so it is no longer shown here.';
 export const ROOM_DISPOSED_MESSAGE = 'The room was closed because everyone left.';
+
+/** Milliseconds since the epoch for the server's ISO stamp; null when it is missing or unreadable. */
+function parseStamp(stamp: string | undefined): number | null {
+  const milliseconds = stamp ? Date.parse(stamp) : Number.NaN;
+  return Number.isNaN(milliseconds) ? null : milliseconds;
+}
 
 /** True when the server says the room cannot be joined because it does not exist (any more). */
 export function isRoomGone(error: unknown): boolean {
@@ -57,6 +64,7 @@ export class RoomStore {
   private readonly myMarkState = signal<string | null>(null);
   private readonly statisticsState = signal<VoteStatistics | null>(null);
   private readonly revealCountState = signal(0);
+  private readonly roundStartedAtState = signal<number | null>(null);
 
   private roomId = '';
   private bound = false;
@@ -85,6 +93,8 @@ export class RoomStore {
   readonly myMark = this.myMarkState.asReadonly();
   /** The statistics of the revealed votes; null while voting is open. */
   readonly statistics = this.statisticsState.asReadonly();
+  /** When the current round began, as milliseconds since the epoch; null before the join snapshot. */
+  readonly roundStartedAt = this.roundStartedAtState.asReadonly();
   /**
    * Counts the reveals that arrived as a live VotesShown event. A join snapshot of an already revealed room does not
    * count, so the fireworks only follow a reveal the user watched happen.
@@ -167,6 +177,7 @@ export class RoomStore {
       hasEveryoneVoted: false,
       votingFinished: false,
       countdown: null,
+      roundStartedAt: '',
       statistics: null,
     });
   }
@@ -193,7 +204,7 @@ export class RoomStore {
     this.hub.on(HUB_EVENTS.VotesShown, (status: VoteStatus) => this.apply(() => this.votesShown(status)));
     this.hub.on(HUB_EVENTS.CountdownUpdate, (event: CountdownEvent) => this.apply(() => this.countdownUpdate(event)));
     this.hub.on(HUB_EVENTS.CountdownReset, () => this.apply(() => this.countdownState.set(null)));
-    this.hub.on(HUB_EVENTS.VotesCleared, () => this.apply(() => this.votesCleared()));
+    this.hub.on(HUB_EVENTS.VotesCleared, (event: VotesClearedEvent) => this.apply(() => this.votesCleared(event)));
     this.hub.onReconnected(() => void this.rejoin());
   }
 
@@ -288,6 +299,7 @@ export class RoomStore {
     this.everyoneVotedState.set(status.hasEveryoneVoted);
     this.votingFinishedState.set(status.votingFinished);
     this.countdownState.set(status.countdown);
+    this.roundStartedAtState.set(parseStamp(status.roundStartedAt));
     this.statisticsState.set(status.statistics);
   }
 
@@ -308,13 +320,14 @@ export class RoomStore {
     }
   }
 
-  private votesCleared(): void {
+  private votesCleared(event: VotesClearedEvent): void {
     this.myMarkState.set(null);
     this.applyVoteStatus({
       votes: {},
       hasEveryoneVoted: false,
       votingFinished: false,
       countdown: null,
+      roundStartedAt: event.roundStartedAt,
       statistics: null,
     });
   }

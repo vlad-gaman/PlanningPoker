@@ -17,6 +17,7 @@ public class VoteStatusMapper(IVoteStatisticsMapper statisticsMapper, ICardSetSe
                 : voters.Where(voter => room.Votes.ContainsKey(voter.Guid)).ToDictionary(voter => voter.Guid, voter => room.Votes[voter.Guid]),
             HasEveryoneVoted = voters.Count > 0 && voters.All(voter => room.Votes.ContainsKey(voter.Guid)),
             VotingFinished = !room.VotingEnabled,
+            RoundStartedAt = room.RoundStartedAt,
             Countdown = room.VotingEnabled && room.CountdownRunning ? room.CountdownRemaining : null,
             Statistics = room.VotingEnabled || room.Revealed is null ? null : statisticsMapper.Map(room.Revealed, CardOrder(room))
         };
