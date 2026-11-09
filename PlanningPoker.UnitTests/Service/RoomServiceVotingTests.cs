@@ -103,6 +103,21 @@ public class RoomServiceVotingTests
     }
 
     [Fact]
+    public void Vote_LoneVoterInRoomTheCreatorNeverJoined_HasEveryoneVotedAndStartsTheCountdown()
+    {
+        var creator = AddPerson();
+        var guest = AddPerson();
+        var roomId = _service.Create(creator, Settings(5)).Data!.Id;
+        _service.Join(guest, "c1", roomId);
+
+        var response = _service.Vote(guest, "c1", "5");
+
+        Assert.True(response.Data!.VoteStatus.HasEveryoneVoted);
+        Assert.Equal(5, response.Data.FollowUp.Countdown!.Seconds);
+        Assert.True(_rooms.Get(roomId)!.CountdownRunning);
+    }
+
+    [Fact]
     public void Vote_LastVoter_StartsTheCountdownAtTheRevisionOfTheRoom()
     {
         var (roomId, people) = RoomWith(5, TwoDevs);

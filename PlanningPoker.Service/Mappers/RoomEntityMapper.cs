@@ -7,12 +7,12 @@ public class RoomEntityMapper(IRoomConfigurationEntityMapper configurationMapper
 {
     public RoomEntity Map(string id, Guid ownerGuid, RoomConfiguration configuration)
     {
-        // The creator is a member with no connection yet. Rooms that nobody ever joins are not evicted in slice 1 (see the spec's eviction item).
+        // The creator owns the room but is not a member until their first successful join; the first person admitted to a memberless room becomes owner. A room nobody ever joins is not evicted here.
         return new RoomEntity
         {
             Id = id,
             OwnerGuid = ownerGuid,
-            MemberGuids = [ownerGuid],
+            MemberGuids = [],
             VotingEnabled = true,
             RoundStartedAt = time.GetUtcNow(),
             Configuration = configurationMapper.Map(configuration)

@@ -48,7 +48,7 @@ public class RoomServiceTests
     }
 
     [Fact]
-    public void Create_WithoutFunName_UsesGuidIdAndMakesCreatorOwnerAndFirstMember()
+    public void Create_WithoutFunName_UsesGuidIdAndMakesCreatorOwnerWithNoMembersYet()
     {
         var owner = AddPerson();
 
@@ -58,7 +58,7 @@ public class RoomServiceTests
         Assert.True(Guid.TryParse(response.Data!.Id, out _));
         var stored = _rooms.Get(response.Data.Id)!;
         Assert.Equal(owner, stored.OwnerGuid);
-        Assert.Equal([owner], stored.MemberGuids);
+        Assert.Empty(stored.MemberGuids);
         Assert.Equal("linear", stored.Configuration.CardSet);
         Assert.Equal(7, stored.Configuration.CountdownSeconds);
     }
@@ -146,6 +146,7 @@ public class RoomServiceTests
         var owner = AddPerson("Owner");
         var guest = AddPerson("Guest", PersonTypes.Tester);
         var room = CreateService().Create(owner, Settings()).Data!;
+        CreateService().Join(owner, "conn-owner", room.Id);
 
         var response = CreateService().Join(guest, "conn-guest", room.Id);
 
@@ -157,6 +158,82 @@ public class RoomServiceTests
         Assert.Empty(response.Data.VoteStatus.Votes);
         Assert.Equal(room.Id, Assert.Single(ConnectionsOf(guest), pair => pair.Key == "conn-guest").Value);
         Assert.Equal(["conn-guest"], _rooms.Get(room.Id)!.MemberConnections[guest]);
+    }
+
+    [Fact]
+    public void Join_CreatorFirst_IsOwnerAndPersonAdded()
+    {
+        var owner = AddPerson("Owner");
+        var roomId = NewRoom(owner);
+
+        var response = CreateService().Join(owner, "c1", roomId);
+
+        Assert.True(response.Data!.PersonAdded);
+        Assert.Equal(owner, response.Data.Room.OwnerGuid);
+        Assert.Equal(owner, _rooms.Get(roomId)!.OwnerGuid);
+    }
+
+    [Fact]
+    public void Join_SomeoneElseFirst_BecomesOwnerAndIsAloneInTheList()
+    {
+        var creator = AddPerson("Creator");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(creator);
+
+        var response = CreateService().Join(guest, "c-guest", roomId);
+
+        Assert.Equal(guest, response.Data!.Room.OwnerGuid);
+        Assert.Equal(guest, Assert.Single(response.Data.People).Guid);
+        Assert.Equal(guest, _rooms.Get(roomId)!.OwnerGuid);
+        Assert.Equal([guest], _rooms.Get(roomId)!.MemberGuids);
+    }
+
+    [Fact]
+    public void Join_CreatorArrivingLate_JoinsAsRegularMemberAndDoesNotRegainOwnership()
+    {
+        var creator = AddPerson("Creator");
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(creator);
+        CreateService().Join(guest, "c-guest", roomId);
+
+        var response = CreateService().Join(creator, "c-creator", roomId);
+
+        Assert.True(response.Data!.PersonAdded);
+        Assert.Equal(guest, response.Data.Room.OwnerGuid);
+        Assert.Equal(guest, _rooms.Get(roomId)!.OwnerGuid);
+        Assert.Equal([guest, creator], _rooms.Get(roomId)!.MemberGuids);
+    }
+
+    [Fact]
+    public void Exit_FirstJoinerOfNeverJoinedRoomLeaves_DisposesAndRemovesTheRoom()
+    {
+        var guest = AddPerson("Guest");
+        var roomId = NewRoom(AddPerson("Creator"));
+        CreateService().Join(guest, "c-guest", roomId);
+
+        var response = CreateService().Exit(guest, "c-guest");
+
+        Assert.True(response.Data!.RoomDisposed);
+        Assert.Null(response.Data.NewOwner);
+        Assert.Null(_rooms.Get(roomId));
+    }
+
+    [Fact]
+    public void Join_RacingFirstJoins_ExactlyOneBecomesOwnerAndItIsAMember()
+    {
+        var creator = AddPerson("Creator");
+        var first = AddPerson("First");
+        var second = AddPerson("Second");
+        var roomId = NewRoom(creator);
+        var interleaving = new InterleavingPersonRepository(_people);
+        // Runs between the first join's person step and its room step: the second person is admitted first.
+        interleaving.AfterNextUpdate = () => CreateService().Join(second, "c-second", roomId);
+
+        CreateService(people: interleaving).Join(first, "c-first", roomId);
+
+        var stored = _rooms.Get(roomId)!;
+        Assert.Equal(second, stored.OwnerGuid);
+        Assert.Equal([second, first], stored.MemberGuids);
     }
 
     [Fact]
@@ -384,8 +461,12 @@ public class RoomServiceTests
     public void Exit_TwoTabsInDifferentRooms_LeavesOnlyTheRoomOfThatTab()
     {
         var guest = AddPerson("Guest");
-        var firstRoom = NewRoom(AddPerson("Owner A"));
-        var secondRoom = NewRoom(AddPerson("Owner B"));
+        var ownerA = AddPerson("Owner A");
+        var ownerB = AddPerson("Owner B");
+        var firstRoom = NewRoom(ownerA);
+        var secondRoom = NewRoom(ownerB);
+        CreateService().Join(ownerA, "owner-a", firstRoom);
+        CreateService().Join(ownerB, "owner-b", secondRoom);
         CreateService().Join(guest, "tab-1", firstRoom);
         CreateService().Join(guest, "tab-2", secondRoom);
 
