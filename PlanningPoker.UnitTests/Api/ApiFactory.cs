@@ -15,11 +15,13 @@ public class ApiFactory : WebApplicationFactory<Program>
         File.WriteAllText(Path.Combine(WebRoot, "index.html"), "<html><body>spa-index</body></html>");
     }
 
+    protected virtual string EnvironmentName => Environments.Production;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Outside Development the static web assets manifest is ignored, so a wwwroot left in the API project by a
         // client build cannot shadow the test web root.
-        builder.UseEnvironment(Environments.Production);
+        builder.UseEnvironment(EnvironmentName);
         builder.UseSetting(WebHostDefaults.WebRootKey, WebRoot);
     }
 

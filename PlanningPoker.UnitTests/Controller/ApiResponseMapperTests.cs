@@ -14,6 +14,7 @@ public class ApiResponseMapperTests
     [InlineData(ErrorCodes.ValidationFailed, 400)]
     [InlineData(ErrorCodes.UnsupportedMediaType, 415)]
     [InlineData(ErrorCodes.NoSession, 401)]
+    [InlineData(ErrorCodes.Unauthorized, 401)]
     [InlineData(ErrorCodes.NotFound, 404)]
     public void GetStatusCode_UsesStatusTable(string code, int expected)
     {
