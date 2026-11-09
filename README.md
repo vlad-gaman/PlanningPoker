@@ -15,6 +15,7 @@ A **real-time collaborative Planning Poker application** used by software develo
 - [Configuration & Customization](#configuration--customization)
 - [Technical Architecture](#technical-architecture)
 - [Performance & Scalability](#performance--scalability)
+- [Monitoring](#monitoring)
 - [Getting Started](#getting-started)
 - [API Endpoints](#api-endpoints)
 
@@ -204,6 +205,30 @@ This application enables software development teams to conduct efficient, collab
 - **Automatic Cleanup** - Remove inactive users and rooms
 - **Error Logging** - Console-based debugging and error tracking
 - **Performance Metrics** - Timer-based performance monitoring
+
+## Monitoring
+
+The app exposes Prometheus text at `GET /metrics`, for Grafana Cloud to scrape. It is not in Swagger: it is not JSON and not under `/api`.
+
+### Scrape token
+- Set `Metrics__ScrapeToken` (the `Metrics:ScrapeToken` setting) in the App Service configuration and mark it as a **deployment slot setting**, so staging and production each keep their own. Never put it in an `appsettings*.json` file.
+- Generate a 32-byte random token, for example `openssl rand -base64 32`, or in PowerShell `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`.
+- Requests must send `Authorization: Bearer <token>`. Anything else gets `401` with `WWW-Authenticate: Bearer`.
+
+### Grafana Cloud
+Add a **Metrics Endpoint** scrape job with the URL `https://<host>/metrics`, **Bearer** authentication with the token, and a **1 minute** scrape interval. Use one job per environment, each with its own token: `planningpoker-staging` for staging and `planningpoker-prod` for production (added at the production cutover).
+
+### App metrics
+Prometheus names are the meter names with dots turned into underscores:
+- `planningpoker_rooms_in_memory` - gauge: rooms currently held in memory.
+- `planningpoker_people_in_memory` - gauge: people currently held in memory.
+- `planningpoker_rooms_created_total` - counter: rooms created.
+- `planningpoker_votes_cast_total{card_set}` - counter: votes cast (a changed vote counts again; rejected votes do not), by card set.
+
+The scrape also carries the ASP.NET Core, SignalR and .NET runtime metrics, for example `http_server_request_duration_seconds` and `signalr_server_active_connections`.
+
+### Development
+With no token configured, `/metrics` is open in the Development environment. With a token configured it is enforced. In any other environment with no token, every request gets `401` and a warning is logged at startup.
 
 ## Getting Started
 

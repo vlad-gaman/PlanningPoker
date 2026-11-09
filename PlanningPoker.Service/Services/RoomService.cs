@@ -30,6 +30,7 @@ public class RoomService(
     IRoomConfigurationEntityMapper configurationEntityMapper,
     IRoomConfigurationMapper configurationMapper,
     ICardSetService cardSets,
+    IPlanningPokerMetrics metrics,
     TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
@@ -40,6 +41,7 @@ public class RoomService(
             var entity = roomEntityMapper.Map(id, ownerGuid, settings.Configuration);
             if (rooms.TryAdd(entity))
             {
+                metrics.RoomCreated();
                 return ServiceResponse<Room>.Success(roomMapper.Map(entity));
             }
         }
@@ -259,6 +261,7 @@ public class RoomService(
             return ServiceResponse<VoteResult>.Failure(ServiceError.ObserverCannotVote());
         }
 
+        string? cardSet = null;
         var found = rooms.Update(roomId, room =>
         {
             if (!IsMember(room, personGuid, connectionId))
@@ -278,6 +281,7 @@ public class RoomService(
             }
 
             room.Votes[personGuid] = mark;
+            cardSet = room.Configuration.CardSet;
             room.Revision++;
             return ServiceResponse.Success();
         }, out var stored);
@@ -290,6 +294,8 @@ public class RoomService(
         {
             return ServiceResponse<VoteResult>.Failure(stored);
         }
+
+        metrics.VoteCast(cardSet!);
 
         // Read after the room lock is released: member types come from their own person locks.
         var snapshot = rooms.Get(roomId);

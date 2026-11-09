@@ -4,7 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using PlanningPoker.Controller.Models;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
 using PlanningPoker.Controller.Constants;
@@ -59,6 +63,15 @@ public static class ControllerLayerExtensions
         services.AddSingleton<CreateRoomRequestValidation>();
         services.AddSingleton<PersonTypeValidation>();
         services.AddSingleton<TransferTargetValidation>();
+        services.AddOptions<MetricsOptions>().BindConfiguration(MetricsConstants.ConfigurationSection);
+        services.AddSingleton<MetricsTokenValidation>();
+        services.AddOpenTelemetry().WithMetrics(metrics =>
+        {
+            metrics.ConfigureResource(resource => resource.AddService(MetricsConstants.ServiceName));
+            metrics.AddMeter(MetricsConstants.MeterName);
+            metrics.AddMeter(MetricsConstants.BuiltInMeters.ToArray());
+            metrics.AddPrometheusExporter(options => options.ScrapeResponseCacheDurationMilliseconds = 0);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<ApiBehaviorOptions>, ApiBehaviorOptionsSetup>());
         return services;
     }
@@ -73,6 +86,17 @@ public static class ControllerLayerExtensions
 
     public static IEndpointRouteBuilder MapControllerLayer(this IEndpointRouteBuilder endpoints)
     {
+        // Created here so the gauges exist before the first request.
+        endpoints.ServiceProvider.GetRequiredService<IPlanningPokerMetrics>();
+        if (endpoints.ServiceProvider.GetRequiredService<MetricsTokenValidation>().IsFailClosed)
+        {
+            endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ControllerLayerExtensions))
+                .LogWarning("{Setting} is not set, so {Route} answers 401 to every request.", $"{MetricsConstants.ConfigurationSection}:ScrapeToken", RoutePrefixes.Metrics);
+        }
+
+        // Prometheus text outside /api, so it is exempt from the "every REST endpoint is in Swagger" rule.
+        endpoints.MapPrometheusScrapingEndpoint(RoutePrefixes.Metrics, null, builder => builder.UseMiddleware<MetricsTokenMiddleware>(), null)
+            .DisableHttpMetrics();
         endpoints.MapControllers();
         endpoints.MapHub<RoomHub>(RoutePrefixes.RoomHub);
         endpoints.MapFallback($"{RoutePrefixes.Api}/{{**rest}}", WriteNotFound);
