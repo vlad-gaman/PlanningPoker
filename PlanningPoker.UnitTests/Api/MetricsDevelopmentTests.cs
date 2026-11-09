@@ -2,6 +2,7 @@ using System.Net;
 
 namespace PlanningPoker.UnitTests.Api;
 
+[Collection("Metrics host")]
 public class MetricsDevelopmentTests(DevelopmentMetricsApiFactory factory) : IClassFixture<DevelopmentMetricsApiFactory>
 {
     [Fact]

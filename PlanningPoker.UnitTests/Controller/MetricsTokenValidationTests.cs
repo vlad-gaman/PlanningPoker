@@ -77,6 +77,8 @@ public class MetricsTokenValidationTests
 
     [Theory]
     [InlineData(null, "Production", true)]
+    [InlineData("   ", "Production", true)]
+    [InlineData("   ", "Development", false)]
     [InlineData("", "Staging", true)]
     [InlineData(null, "Development", false)]
     [InlineData(Token, "Production", false)]

@@ -2,6 +2,7 @@ using System.Net;
 
 namespace PlanningPoker.UnitTests.Api;
 
+[Collection("Metrics host")]
 public class MetricsFailClosedTests(NoTokenMetricsApiFactory factory) : IClassFixture<NoTokenMetricsApiFactory>
 {
     [Theory]

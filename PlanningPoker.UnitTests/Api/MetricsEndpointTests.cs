@@ -8,6 +8,7 @@ using PlanningPoker.Common.Constants;
 
 namespace PlanningPoker.UnitTests.Api;
 
+[Collection("Metrics host")]
 public class MetricsEndpointTests(TokenMetricsApiFactory withToken) : IClassFixture<TokenMetricsApiFactory>
 {
     private static HttpRequestMessage Scrape(string? authorization)

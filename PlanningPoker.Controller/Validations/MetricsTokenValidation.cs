@@ -16,7 +16,7 @@ public class MetricsTokenValidation(IOptions<MetricsOptions> options, IHostEnvir
     /// <summary>True when no token is configured outside Development, so every request is refused.</summary>
     public bool IsFailClosed => !HasToken && !environment.IsDevelopment();
 
-    private bool HasToken => !string.IsNullOrEmpty(options.Value.ScrapeToken);
+    private bool HasToken => !string.IsNullOrWhiteSpace(options.Value.ScrapeToken);
 
     public ServiceResponse Validate(string? authorizationHeader)
     {
