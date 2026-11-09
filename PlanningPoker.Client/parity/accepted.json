@@ -346,5 +346,77 @@
   "text": "1",
   "prop": "bg",
   "note": "The pointer rests on this card after the script's last click, so it shows the hover fill; the cards are otherwise equal."
+ },
+ {
+  "key": "room-revealed-desktop-light",
+  "text": "all votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-desktop-light",
+  "text": "developers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-desktop-light",
+  "text": "testers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-desktop-dark",
+  "text": "all votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-desktop-dark",
+  "text": "developers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-desktop-dark",
+  "text": "testers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-phone-light",
+  "text": "all votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-phone-light",
+  "text": "developers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-phone-light",
+  "text": "testers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-phone-dark",
+  "text": "all votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-phone-dark",
+  "text": "developers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
+ },
+ {
+  "key": "room-revealed-phone-dark",
+  "text": "testers votes",
+  "prop": "weight",
+  "note": "#43 intentional redesign: chart titles are semibold (600); the old charts used a plain 16px title."
  }
 ]

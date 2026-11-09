@@ -1,7 +1,7 @@
 import { CardOption, GroupStatistics } from '../../../models/room';
 import { ChartColors, buildChartConfig, chartSummary } from './chart-config';
 
-const COLORS: ChartColors = { primary: '#007bff', highest: '#28a745', text: '#212529' };
+const COLORS: ChartColors = { primary: '#007bff', highest: '#28a745', text: '#212529', border: '#e5e5e5' };
 const CARDS: CardOption[] = [
   { value: '1', display: null },
   { value: '5', display: null },
@@ -53,7 +53,7 @@ describe('buildChartConfig', () => {
     );
 
     expect(config.data.labels).toEqual(['']);
-    expect(config.options?.layout?.padding).toEqual({ bottom: 28 });
+    expect(config.options?.layout?.padding).toEqual({ top: 20, bottom: 28 });
   });
 
   it('reserves no room when there is no image card', () => {
@@ -63,7 +63,7 @@ describe('buildChartConfig', () => {
       COLORS,
     );
 
-    expect(config.options?.layout?.padding).toEqual({ bottom: 0 });
+    expect(config.options?.layout?.padding).toEqual({ top: 20, bottom: 0 });
   });
 
   it('colours only the highest mark', () => {
@@ -119,6 +119,75 @@ describe('buildChartConfig', () => {
     expect(x.ticks.font.size).toBe(16);
   });
 
+  it('caps the bar thickness at 48 and rounds the corners by 4', () => {
+    const config = buildChartConfig(group({ marks: [{ mark: '1', percentage: 100 }] }), CARDS, COLORS);
+
+    const dataset = config.data.datasets[0] as { maxBarThickness: number; borderRadius: number };
+    expect(dataset.maxBarThickness).toBe(48);
+    expect(dataset.borderRadius).toBe(4);
+  });
+
+  it('draws the x-axis baseline in the border colour and keeps the grid hidden', () => {
+    const config = buildChartConfig(group({}), CARDS, { ...COLORS, border: '#404040' });
+
+    const x = config.options?.scales?.['x'] as {
+      border: { display: boolean; color: string };
+      grid: { display: boolean };
+    };
+    expect(x.border).toEqual({ display: true, color: '#404040' });
+    expect(x.grid.display).toBe(false);
+  });
+
+  describe('percent labels', () => {
+    it('draws "{percentage}%" above each bar, 14px in the text colour', () => {
+      const config = buildChartConfig(
+        group({
+          marks: [
+            { mark: '1', percentage: 33.3 },
+            { mark: '5', percentage: 66.7 },
+          ],
+        }),
+        CARDS,
+        { ...COLORS, text: '#f8f9fa' },
+      );
+      const plugin = config.plugins?.find((p) => p.id === 'percentLabels');
+      const ctx = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        fillText: vi.fn(),
+        font: '',
+        fillStyle: '',
+        textAlign: '',
+        textBaseline: '',
+        fontAtDraw: '',
+        colorAtDraw: '',
+      };
+      ctx.fillText.mockImplementation(() => {
+        ctx.fontAtDraw = ctx.font;
+        ctx.colorAtDraw = ctx.fillStyle;
+      });
+      const chart = {
+        ctx,
+        data: config.data,
+        getDatasetMeta: () => ({
+          data: [
+            { x: 10, y: 80 },
+            { x: 50, y: 30 },
+          ],
+        }),
+      };
+
+      plugin?.afterDatasetsDraw?.(chart as never, {} as never, {}, false);
+
+      expect(plugin).toBeDefined();
+      expect(ctx.fillText.mock.calls.map((call) => call[0])).toEqual(['33.3%', '66.7%']);
+      expect(ctx.fillText.mock.calls[0][1]).toBe(10);
+      expect(ctx.fillText.mock.calls[0][2]).toBeLessThan(80);
+      expect(ctx.fontAtDraw).toContain('14px');
+      expect(ctx.colorAtDraw).toBe('#f8f9fa');
+    });
+  });
+
   describe('image labels', () => {
     afterEach(() => {
       vi.unstubAllGlobals();
@@ -154,7 +223,7 @@ describe('buildChartConfig', () => {
         CARDS,
         { ...COLORS, text: '#f8f9fa' },
       );
-      const plugin = config.plugins?.[0];
+      const plugin = config.plugins?.find((p) => p.id === 'cardImageLabels');
       const chart = {
         scales: { x: { top: 0, getPixelForTick: () => 50 } },
         ctx: { drawImage: drawn },

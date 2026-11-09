@@ -309,3 +309,86 @@ test('the chart label images change colour when the theme changes while results 
 
   await closeAll([ann, bob]);
 });
+
+test('the highest mark is named under the average, and a tie names none', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob');
+
+  await pick(ann.page, '5');
+  await pick(bob.page, '5');
+  await expect(charts(ann.page)).toHaveCount(4);
+  await expect(charts(ann.page).first().locator('.most')).toHaveText('Most votes: 5');
+  await expect(charts(ann.page).first().locator('.most .value')).toHaveText('5');
+
+  await ann.page.getByRole('button', { name: 'Clear votes' }).click();
+  await expect(charts(ann.page)).toHaveCount(0);
+  await pick(ann.page, '3');
+  await pick(bob.page, '5');
+  await expect(charts(ann.page)).toHaveCount(4);
+  // 3 and 5 tie in All.
+  await expect(charts(ann.page).first().locator('.most')).toHaveCount(0);
+
+  await closeAll([ann, bob]);
+});
+
+test('a group without votes says "No votes" and draws no canvas', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob');
+
+  await pick(ann.page, '3');
+  await pick(bob.page, '5');
+
+  await expect(charts(ann.page)).toHaveCount(4);
+  // Testers and SRE are empty.
+  await expect(ann.page.locator('app-results .no-votes')).toHaveText(['No votes', 'No votes']);
+  await expect(ann.page.locator('app-results canvas')).toHaveCount(2);
+  await expect(charts(ann.page).nth(2).locator('canvas')).toHaveCount(0);
+  await expect(charts(ann.page).nth(3).locator('canvas')).toHaveCount(0);
+  await expect(charts(ann.page).nth(2).locator('.average .value')).toHaveText('');
+
+  await closeAll([ann, bob]);
+});
+
+test('the chart colour is #1b6ec2 in light mode and #4dabf7 in dark mode', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const chartColor = () =>
+    ann.page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--chart-color-primary').trim(),
+    );
+  await createRoom(ann.page, 'Ann');
+
+  await ann.page.getByLabel('Theme').selectOption('light');
+  await expect.poll(chartColor).toBe('#1b6ec2');
+  await ann.page.getByLabel('Theme').selectOption('dark');
+  await expect.poll(chartColor).toBe('#4dabf7');
+
+  await closeAll([ann]);
+});
+
+test('the charts are at most 176px tall on a desktop and never scroll sideways on a 375px phone', async ({
+  browser,
+}) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob');
+  await pick(ann.page, '3');
+  await pick(bob.page, '5');
+  await expect(charts(ann.page)).toHaveCount(4);
+
+  const box = ann.page.locator('app-results .canvas-box').first();
+  expect((await box.boundingBox())!.height).toBeLessThanOrEqual(176);
+
+  await ann.page.setViewportSize({ width: 375, height: 812 });
+  expect((await box.boundingBox())!.height).toBeLessThanOrEqual(176);
+  const overflow = await ann.page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  await closeAll([ann, bob]);
+});

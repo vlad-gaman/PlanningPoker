@@ -28,7 +28,9 @@ describe('Results', () => {
       (el) => (el as HTMLElement).textContent,
     );
     expect(titles).toEqual(['All votes', 'Developers votes', 'Testers votes', 'SRE votes']);
-    expect(create).toHaveBeenCalledTimes(4);
+    // The SRE group has no votes in the fixture: it shows "No votes" and draws no chart.
+    expect(create).toHaveBeenCalledTimes(3);
+    expect(fixture.nativeElement.querySelectorAll('.no-votes').length).toBe(1);
   });
 
   it('shows the average of each group', () => {

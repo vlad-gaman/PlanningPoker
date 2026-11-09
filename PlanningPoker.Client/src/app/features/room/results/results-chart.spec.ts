@@ -70,6 +70,56 @@ describe('ResultsChart', () => {
     expect(fixture.nativeElement.querySelector('.average .value').textContent).toBe('');
   });
 
+  it('shows the strictly highest mark next to the average', () => {
+    const fixture = render();
+
+    expect(fixture.nativeElement.querySelector('.most .value').textContent).toBe('5');
+    expect(fixture.nativeElement.querySelector('.most').textContent).toContain('Most votes: 5');
+  });
+
+  it('shows the display text of the highest mark', () => {
+    const fixture = TestBed.createComponent(ResultsChart);
+    fixture.componentRef.setInput('title', 'All votes');
+    fixture.componentRef.setInput('group', { ...GROUP, marks: [{ mark: 'coffee', percentage: 100 }], highestMark: 'coffee' });
+    fixture.componentRef.setInput('cards', [{ value: 'coffee', display: '☕' }]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.most .value').textContent).toBe('☕');
+  });
+
+  it('omits the highest mark on a tie', () => {
+    const fixture = render({
+      marks: [
+        { mark: '3', percentage: 50 },
+        { mark: '5', percentage: 50 },
+      ],
+      highestMark: null,
+      averageMark: 4,
+    });
+
+    expect(fixture.nativeElement.querySelector('.most')).toBeNull();
+  });
+
+  it('shows "No votes" without a canvas or chart for an empty group, keeping a blank average', () => {
+    const fixture = render({ marks: [], highestMark: null, averageMark: null });
+
+    expect(fixture.nativeElement.querySelector('.no-votes').textContent).toBe('No votes');
+    expect(fixture.nativeElement.querySelector('canvas')).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.average .value').textContent).toBe('');
+    expect(fixture.nativeElement.querySelector('.most')).toBeNull();
+  });
+
+  it('destroys the chart when the group becomes empty', () => {
+    const fixture = render();
+
+    fixture.componentRef.setInput('group', { marks: [], highestMark: null, averageMark: null });
+    fixture.detectChanges();
+
+    expect(handles[0].destroy).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
   it('replaces the chart when the statistics change', () => {
     const fixture = render();
 
