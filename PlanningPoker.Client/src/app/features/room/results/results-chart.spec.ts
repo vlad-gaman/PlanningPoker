@@ -87,6 +87,20 @@ describe('ResultsChart', () => {
     expect(fixture.nativeElement.querySelector('.most .value').textContent).toBe('☕');
   });
 
+  it('shows the mark value, not the file name, for an image card', () => {
+    const fixture = TestBed.createComponent(ResultsChart);
+    fixture.componentRef.setInput('title', 'All votes');
+    fixture.componentRef.setInput('group', {
+      marks: [{ mark: '2', percentage: 100 }],
+      highestMark: '2',
+      averageMark: 2,
+    });
+    fixture.componentRef.setInput('cards', [{ value: '2', display: 'two-finger-512x512.png' }]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.most .value').textContent).toBe('2');
+  });
+
   it('omits the highest mark on a tie', () => {
     const fixture = render({
       marks: [
