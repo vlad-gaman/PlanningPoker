@@ -120,6 +120,30 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
             TimeSpan.FromSeconds(5));
     }
 
+    [Fact]
+    public async Task JoinRoom_CreatorNeverJoined_FirstPersonInIsOwnerAndRoomGoesWhenTheyLeave()
+    {
+        var creatorCookie = await factory.MintCookie("Ann");
+        var roomId = await factory.CreateRoom(creatorCookie);
+        var bobCookie = await factory.MintCookie("Bob");
+        await using var bob = factory.Connect(bobCookie);
+        await bob.StartAsync();
+
+        var response = await bob.InvokeAsync<JsonElement>("JoinRoom", roomId);
+
+        var data = Data(response);
+        var person = Assert.Single(data.GetProperty("people").EnumerateArray());
+        Assert.Equal("Bob", person.GetProperty("name").GetString());
+        Assert.Equal(person.GetProperty("guid").GetGuid(), data.GetProperty("ownerGuid").GetGuid());
+
+        await bob.StopAsync();
+
+        var client = factory.CreateClient();
+        await TestSession.WaitUntilAsync(async () =>
+            (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode == System.Net.HttpStatusCode.NotFound,
+            TimeSpan.FromSeconds(5));
+    }
+
     private static bool HasErrors(JsonElement response)
     {
         return response.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array;

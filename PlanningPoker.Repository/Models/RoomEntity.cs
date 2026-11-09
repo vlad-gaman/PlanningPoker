@@ -9,8 +9,8 @@ public class RoomEntity
     public List<Guid> MemberGuids { get; set; } = [];
 
     /// <summary>
-    /// Open connections per member, in this room only. A member leaves when their set empties. A member
-    /// without an entry (the creator before joining) has no connection yet.
+    /// Open connections per member, in this room only. A member leaves when their set empties. Every member has at
+    /// least one connection; the creator is not a member until their first join.
     /// </summary>
     public Dictionary<Guid, HashSet<string>> MemberConnections { get; set; } = [];
 

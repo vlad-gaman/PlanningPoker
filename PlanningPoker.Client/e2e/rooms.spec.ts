@@ -155,3 +155,59 @@ test('an invalid name is rejected when joining through a link', async ({ browser
   await expect(rows(ann.page)).toHaveCount(1);
   await Promise.all([ann, bob].map(({ context }) => context.close()));
 });
+
+/** Ann gets a session and creates a room through the API, then never opens it. Returns the room's link. */
+async function createRoomWithoutOpeningIt(page: Page, name: string): Promise<string> {
+  expect((await page.request.put('/api/me', { data: { name, personType: 'dev' } })).status()).toBe(200);
+  const created = await page.request.post('/api/rooms', {
+    data: {
+      useFunRoomName: false,
+      configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
+    },
+  });
+  expect(created.status()).toBe(201);
+  const roomId = (await created.json()).data.id as string;
+  return `/room/${roomId}`;
+}
+
+test('a room whose creator never joins is owned by the first person in and disappears when they leave', async ({
+  browser,
+}) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoomWithoutOpeningIt(ann.page, 'Ann');
+  const roomId = roomUrl.split('/').pop()!;
+
+  await joinByLink(bob.page, roomUrl, 'Bob');
+
+  await expect(rows(bob.page)).toHaveCount(1);
+  await expect(rows(bob.page).first()).toContainText('Bob (owner)');
+  await expect(bob.page.getByRole('button', { name: 'Settings' })).toBeVisible();
+
+  await bob.page.getByRole('button', { name: 'Leave room' }).click();
+  await expect(bob.page).toHaveURL('/');
+  await expect
+    .poll(async () => (await bob.page.request.get(`/api/rooms/${roomId}`)).status())
+    .toBe(404);
+
+  await Promise.all([ann, bob].map(({ context }) => context.close()));
+});
+
+test('a creator who opens the room after someone else joins as a regular member', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoomWithoutOpeningIt(ann.page, 'Ann');
+  await joinByLink(bob.page, roomUrl, 'Bob');
+  await expect(rows(bob.page)).toHaveCount(1);
+
+  await ann.page.goto(roomUrl);
+  await expect(rows(ann.page)).toHaveCount(2);
+
+  await expect(rows(bob.page)).toHaveCount(2);
+  await expect(rows(bob.page).filter({ hasText: 'Bob' })).toContainText('(owner)');
+  await expect(rows(bob.page).filter({ hasText: 'Ann' })).not.toContainText('(owner)');
+  await expect(bob.page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(ann.page.getByRole('button', { name: 'Settings' })).toHaveCount(0);
+
+  await Promise.all([ann, bob].map(({ context }) => context.close()));
+});

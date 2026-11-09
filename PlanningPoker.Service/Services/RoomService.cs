@@ -101,6 +101,12 @@ public class RoomService(
             var personAdded = !room.MemberGuids.Contains(personGuid);
             if (personAdded)
             {
+                // A room whose owner is not a member (the creator has not joined yet) is owned by the first person admitted.
+                if (!room.MemberGuids.Contains(room.OwnerGuid))
+                {
+                    room.OwnerGuid = personGuid;
+                }
+
                 room.MemberGuids.Add(personGuid);
                 if (room.VotingEnabled && join.Person.PersonType != PersonTypes.Observer)
                 {

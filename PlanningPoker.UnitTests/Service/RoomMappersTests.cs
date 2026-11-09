@@ -11,7 +11,7 @@ public class RoomMappersTests
     private static readonly RoomConfiguration Configuration = new() { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 4 };
 
     [Fact]
-    public void RoomEntityMapper_BuildsRoomWithOwnerAsOnlyMemberAndDelegatesConfiguration()
+    public void RoomEntityMapper_BuildsRoomWithOwnerButNoMembersAndDelegatesConfiguration()
     {
         var owner = Guid.NewGuid();
 
@@ -21,7 +21,7 @@ public class RoomMappersTests
         Assert.Equal(now, entity.RoundStartedAt);
         Assert.Equal("room", entity.Id);
         Assert.Equal(owner, entity.OwnerGuid);
-        Assert.Equal([owner], entity.MemberGuids);
+        Assert.Empty(entity.MemberGuids);
         Assert.Empty(entity.MemberConnections);
         Assert.Empty(entity.Votes);
         Assert.True(entity.VotingEnabled);
