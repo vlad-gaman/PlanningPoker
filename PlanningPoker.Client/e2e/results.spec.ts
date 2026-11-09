@@ -181,3 +181,107 @@ test('the results look right in dark mode and on a phone without sideways scroll
 
   await closeAll([ann, bob]);
 });
+
+const FIST_THEMES = [
+  { name: 'an explicit Dark choice', stored: 'dark', scheme: 'light', theme: 'dark' },
+  { name: 'Auto with a dark system', stored: null, scheme: 'dark', theme: 'dark' },
+  { name: 'an explicit Light choice', stored: 'light', scheme: 'dark', theme: 'light' },
+  { name: 'Auto with a light system', stored: null, scheme: 'light', theme: 'light' },
+] as const;
+
+/** The average brightness of the card images drawn under a chart's axis, or null while none is drawn yet. */
+const labelStripBrightness = (page: Page) =>
+  charts(page)
+    .first()
+    .locator('canvas')
+    .evaluate((canvas: HTMLCanvasElement) => {
+      // The images sit just under the axis; the bars are coloured and the canvas is otherwise transparent, so the
+      // opaque grey pixels in the lower part of the canvas are the images.
+      const strip = Math.round(60 * (canvas.height / canvas.clientHeight));
+      const { data } = canvas.getContext('2d')!.getImageData(0, canvas.height - strip, canvas.width, strip);
+      let sum = 0;
+      let count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const grey = Math.abs(data[i] - data[i + 1]) < 8 && Math.abs(data[i + 1] - data[i + 2]) < 8;
+        if (data[i + 3] > 200 && grey) {
+          sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
+          count++;
+        }
+      }
+      return count === 0 ? null : sum / count;
+    });
+
+for (const { name, stored, scheme, theme } of FIST_THEMES) {
+  test(`fist of five images follow the ${theme} theme text colour with ${name}`, async ({ browser }) => {
+    const context = await browser.newContext({ colorScheme: scheme, viewport: { width: 360, height: 800 } });
+    const page = await context.newPage();
+    if (stored) {
+      await page.addInitScript((value) => localStorage.setItem('pp-theme', value), stored);
+    }
+    const bob = await newPerson(browser);
+    const roomUrl = await createRoom(page, 'Ann', { cardSet: 'fist-of-five' });
+    await join(bob.page, roomUrl, 'Bob');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+    await page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
+    await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
+    await expect(charts(page)).toHaveCount(3);
+
+    // (a) The picker and the vote column are recoloured by a mask over the text colour, with no backing tile.
+    const textColor = await page.evaluate(() => getComputedStyle(document.body).color);
+    for (const selector of ['label.card img', '.mark img']) {
+      const images = page.locator(selector);
+      await expect(images.first()).toBeVisible();
+      for (const image of await images.all()) {
+        const style = await image.evaluate((element) => {
+          const computed = getComputedStyle(element);
+          return {
+            background: computed.backgroundColor,
+            mask: computed.maskImage || computed.webkitMaskImage,
+            padding: computed.padding,
+          };
+        });
+        expect(style.background).toBe(textColor);
+        expect(style.mask).toContain('url(');
+        expect(style.padding).toBe('0px');
+      }
+    }
+
+    // (b) The chart's label strip holds light pixels in dark mode and dark pixels in light mode.
+    await expect.poll(() => labelStripBrightness(page)).not.toBeNull();
+    const brightness = await labelStripBrightness(page);
+    expect(brightness).not.toBeNull();
+    if (theme === 'dark') {
+      expect(brightness!).toBeGreaterThan(180);
+    } else {
+      expect(brightness!).toBeLessThan(80);
+    }
+
+    // (d) Six cards wrapping on a 360px screen never scroll sideways.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+
+    await closeAll([{ context, page }, bob]);
+  });
+}
+
+test('the chart label images change colour when the theme changes while results are showing', async ({
+  browser,
+}) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann', { cardSet: 'fist-of-five' });
+  await join(bob.page, roomUrl, 'Bob');
+  await ann.page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
+  await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
+  await expect(charts(ann.page)).toHaveCount(3);
+
+  await ann.page.getByLabel('Theme').selectOption('light');
+  await expect.poll(async () => (await labelStripBrightness(ann.page)) ?? 255).toBeLessThan(80);
+  await ann.page.getByLabel('Theme').selectOption('dark');
+  await expect.poll(async () => (await labelStripBrightness(ann.page)) ?? 0).toBeGreaterThan(180);
+
+  await closeAll([ann, bob]);
+});

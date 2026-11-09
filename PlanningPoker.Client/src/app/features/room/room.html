@@ -68,7 +68,7 @@
                 <span class="mark">
                   @let mark = markOf(person);
                   @if (mark.image; as src) {
-                    <img [src]="src" [alt]="mark.alt" />
+                    <img [src]="src" [alt]="mark.alt" [style.--mark-mask]="'url(' + src + ')'" />
                   } @else {
                     {{ mark.text }}
                   }
