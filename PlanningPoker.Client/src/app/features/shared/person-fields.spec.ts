@@ -16,7 +16,7 @@ describe('PersonFields', () => {
 
   const element = () => fixture.nativeElement as HTMLElement;
 
-  it('labels the name input and lists the three roles', () => {
+  it('labels the name input and lists the four roles', () => {
     const label = element().querySelector('label') as HTMLLabelElement;
     const input = element().querySelector(`#${label.htmlFor}`) as HTMLInputElement;
     expect(label.textContent).toContain('Your Name:');
@@ -24,6 +24,7 @@ describe('PersonFields', () => {
     expect(Array.from(element().querySelectorAll('option')).map((o) => o.textContent?.trim())).toEqual([
       'Developer',
       'Tester',
+      'SRE',
       'Observer',
     ]);
   });

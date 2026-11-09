@@ -21,14 +21,14 @@ describe('Results', () => {
     return fixture;
   }
 
-  it('shows the three charts with their titles', () => {
+  it('shows the four charts with their titles', () => {
     const fixture = render();
 
     const titles = [...fixture.nativeElement.querySelectorAll('figcaption')].map(
       (el) => (el as HTMLElement).textContent,
     );
-    expect(titles).toEqual(['All votes', 'Developers votes', 'Testers votes']);
-    expect(create).toHaveBeenCalledTimes(3);
+    expect(titles).toEqual(['All votes', 'Developers votes', 'Testers votes', 'SRE votes']);
+    expect(create).toHaveBeenCalledTimes(4);
   });
 
   it('shows the average of each group', () => {
@@ -37,7 +37,7 @@ describe('Results', () => {
     const averages = [...fixture.nativeElement.querySelectorAll('.average .value')].map(
       (el) => (el as HTMLElement).textContent,
     );
-    expect(averages).toEqual(['3', '1', '5']);
+    expect(averages).toEqual(['3', '1', '5', '']);
   });
 
   it('leaves the average of an empty group blank', () => {
@@ -49,6 +49,6 @@ describe('Results', () => {
     const averages = [...fixture.nativeElement.querySelectorAll('.average .value')].map(
       (el) => (el as HTMLElement).textContent,
     );
-    expect(averages).toEqual(['5', '5', '']);
+    expect(averages).toEqual(['5', '5', '', '']);
   });
 });

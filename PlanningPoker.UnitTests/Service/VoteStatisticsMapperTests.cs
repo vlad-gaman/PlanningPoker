@@ -117,6 +117,35 @@ public class VoteStatisticsMapperTests
     }
 
     [Fact]
+    public void Map_DeveloperAndSre_AveragesEachGroupAndTheWholeRoom_AndLeavesTestersEmpty()
+    {
+        var statistics = Map(Revealed(true, (PersonTypes.Developer, "3"), (PersonTypes.Sre, "5")));
+
+        Assert.Equal(4m, statistics.All.AverageMark);
+        Assert.Equal(3m, statistics.Developers.AverageMark);
+        Assert.Equal(5m, statistics.Sres.AverageMark);
+        Assert.Equal([("5", 100m)], Shares(statistics.Sres));
+        Assert.Empty(statistics.Testers.Marks);
+    }
+
+    [Fact]
+    public void Map_SreVotes_AreLeftOutOfTheOtherGroups_AndObserversStayOut()
+    {
+        var statistics = Map(Revealed(true, (PersonTypes.Sre, "8"), (PersonTypes.Observer, "13")));
+
+        Assert.Equal([("8", 100m)], Shares(statistics.All));
+        Assert.Equal([("8", 100m)], Shares(statistics.Sres));
+        Assert.Empty(statistics.Developers.Marks);
+    }
+
+    [Fact]
+    public void Map_ADeveloperAndAnSreVotingTheSameCard_IsAConsensus()
+    {
+        Assert.True(Map(Revealed(true, (PersonTypes.Developer, "5"), (PersonTypes.Sre, "5"))).Consensus);
+        Assert.False(Map(Revealed(true, (PersonTypes.Developer, "5"), (PersonTypes.Sre, "8"))).Consensus);
+    }
+
+    [Fact]
     public void Map_AGroupWithoutVotes_IsEmpty()
     {
         var statistics = Map(Revealed(true, (PersonTypes.Developer, "5")));

@@ -8,6 +8,8 @@ public class VoteStatisticsResponse
 
     public GroupStatisticsResponse Testers { get; init; } = default!;
 
+    public GroupStatisticsResponse Sres { get; init; } = default!;
+
     /// <summary>At least two votes, all the same mark, and everyone had voted.</summary>
     public bool Consensus { get; init; }
 }

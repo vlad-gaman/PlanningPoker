@@ -8,6 +8,7 @@ public class PersonTypeAndTransferValidationTests
     [Theory]
     [InlineData("dev")]
     [InlineData("test")]
+    [InlineData("sre")]
     [InlineData("obs")]
     public void PersonType_Valid_Passes(string personType)
     {

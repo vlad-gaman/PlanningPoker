@@ -401,12 +401,12 @@ describe('Room', () => {
       expect(element.querySelector('app-fireworks')).not.toBeNull();
     });
 
-    it('shows the three charts once the votes are revealed, and removes them when cleared', async () => {
+    it('shows the four charts once the votes are revealed, and removes them when cleared', async () => {
       const { fixture, element } = await render();
 
       hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
       await settle(fixture);
-      expect(element.querySelectorAll('app-results-chart').length).toBe(3);
+      expect(element.querySelectorAll('app-results-chart').length).toBe(4);
 
       hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: '2026-01-01T12:10:00+00:00' });
       await settle(fixture);
@@ -418,7 +418,7 @@ describe('Room', () => {
 
       const { element } = await render();
 
-      expect(element.querySelectorAll('app-results-chart').length).toBe(3);
+      expect(element.querySelectorAll('app-results-chart').length).toBe(4);
     });
 
     it('launches fireworks when a live reveal ends in consensus', async () => {

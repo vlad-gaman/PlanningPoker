@@ -17,6 +17,7 @@ public class VoteStatisticsMapper : IVoteStatisticsMapper
             All = MapGroup(votes, cardOrder),
             Developers = MapGroup(votes.Where(vote => vote.PersonType == PersonTypes.Developer).ToList(), cardOrder),
             Testers = MapGroup(votes.Where(vote => vote.PersonType == PersonTypes.Tester).ToList(), cardOrder),
+            Sres = MapGroup(votes.Where(vote => vote.PersonType == PersonTypes.Sre).ToList(), cardOrder),
             Consensus = revealed.EveryoneVoted
                 && votes.Count >= StatisticsConstants.MinimumConsensusVotes
                 && votes.Select(vote => vote.Mark).Distinct().Count() == 1

@@ -34,6 +34,20 @@ const row = (page: Page, name: string) => page.locator('tr[mat-row]').filter({ h
 const role = (page: Page, label: string) => page.getByRole('radiogroup', { name: 'Your role' }).getByLabel(label);
 const settings = (page: Page) => page.getByRole('button', { name: 'Settings' });
 
+test("switching to the SRE role shows SRE in that person's row for everyone", async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob');
+
+  await role(bob.page, 'SRE').check();
+
+  await expect(row(ann.page, 'Bob')).toContainText('SRE');
+  await expect(row(bob.page, 'Bob')).toContainText('SRE');
+
+  await Promise.all([ann.context.close(), bob.context.close()]);
+});
+
 test('changing the role updates everyone, and an observer cannot vote', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
