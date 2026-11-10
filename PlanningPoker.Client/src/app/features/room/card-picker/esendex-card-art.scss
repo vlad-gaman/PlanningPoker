@@ -50,9 +50,63 @@ svg {
   opacity: 0.35;
 }
 
+// Soft contact shadow: the shared radial gradient in each drawing, fading from the shadow colour to nothing.
+.shadow {
+  fill: url(#esx-shadow);
+}
+
+.sh {
+  stop-color: var(--esendex-shadow);
+  stop-opacity: 0.4;
+}
+
+.sh-off {
+  stop-color: var(--esendex-shadow);
+  stop-opacity: 0;
+}
+
+// Gradient stops take their colours from the theme as well.
+.sl {
+  stop-color: var(--esendex-light);
+}
+
+.sg {
+  stop-color: var(--esendex-grey);
+}
+
+.sp {
+  stop-color: var(--esendex-purple);
+}
+
+.sk {
+  stop-color: var(--esendex-black);
+}
+
 .outline {
   stroke: var(--esendex-ink);
   stroke-width: 0.8;
+}
+
+// Edges of the cube: a hairline of grey between the faces (fills are set on each face).
+.edge {
+  stroke: var(--esendex-grey);
+  stroke-width: 0.5;
+  stroke-linejoin: round;
+}
+
+// The seams and outline of the glasses frames: black, rounded corners.
+.frame {
+  fill: none;
+  stroke: var(--esendex-black);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.seam {
+  fill: none;
+  stroke: var(--esendex-grey);
+  stroke-width: 0.8;
+  stroke-linecap: round;
 }
 
 .arm,

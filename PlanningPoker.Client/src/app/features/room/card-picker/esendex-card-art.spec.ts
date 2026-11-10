@@ -40,7 +40,8 @@ describe('EsendexCardArt', () => {
   }
 
   it('draws nothing for an unknown illustration', () => {
-    expect(render('esendex-unknown').children.length).toBe(0);
+    const drawn = Array.from(render('esendex-unknown').children).filter((child) => child.tagName !== 'defs');
+    expect(drawn.length).toBe(0);
   });
 });
 

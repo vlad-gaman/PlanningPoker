@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const port = 5100;
+// E2E_PORT lets a second checkout run beside another server on the default port.
+const port = Number(process.env['E2E_PORT'] ?? 5100);
 
 // Runs against the real API serving the built SPA from wwwroot (run `npm run build:api` first).
 export default defineConfig({
