@@ -577,7 +577,6 @@ public class RoomService(
         });
     }
 
-    /// <summary>The vote status of the room as it is now; null when the room is gone.</summary>
     /// <summary>
     /// Puts a parked vote back when its person rejoins an open round. A reveal, or a person who is an observer now, drops
     /// it instead: a reveal has already frozen the votes without them, and observers do not vote. Runs under the room lock.
@@ -598,6 +597,7 @@ public class RoomService(
         return true;
     }
 
+    /// <summary>The vote status of the room as it is now; null when the room is gone.</summary>
     private VoteStatus? CurrentStatus(string roomId)
     {
         var snapshot = rooms.Get(roomId);
