@@ -30,7 +30,7 @@ const INVADER = [
 
 /** The three invaders across the top of their card, with wider gaps between them. */
 const INVADER_X = [2, 35, 68];
-const INVADER_Y = 38;
+const INVADER_Y = 33;
 
 /** The thin light slit of each invader's mouth, across its row 3. */
 function mouthPath(x: number, y: number): string {
