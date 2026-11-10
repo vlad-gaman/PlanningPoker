@@ -65,6 +65,91 @@ public class RoomServiceVotingTests
     }
 
     [Fact]
+    public void Join_AfterAVoterLeftAndReturns_RestoresTheirVoteAndMark()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.Exit(people[0], "c1");
+
+        var back = _service.Join(people[0], "c1-again", roomId);
+
+        Assert.Equal("5", back.Data!.MyMark);
+        Assert.Equal("hide", back.Data.VoteStatus.Votes[people[0]]);
+        Assert.Equal("5", _rooms.Get(roomId)!.Votes[people[0]]);
+    }
+
+    [Fact]
+    public void Exit_OfAVoter_KeepsTheVoteOutOfTheRoundWhileTheyAreAway()
+    {
+        var (_, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.Exit(people[0], "c1");
+
+        var response = _service.Vote(people[1], "c2", "8");
+
+        Assert.DoesNotContain(people[0], response.Data!.VoteStatus.Votes.Keys);
+    }
+
+    [Fact]
+    public void ClearVotes_WhileAVoterIsAway_DropsTheirVote()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.Exit(people[0], "c1");
+        _service.ClearVotes(people[1], "c2");
+
+        var back = _service.Join(people[0], "c1-again", roomId);
+
+        Assert.Null(back.Data!.MyMark);
+        Assert.DoesNotContain(people[0], _rooms.Get(roomId)!.Votes.Keys);
+    }
+
+    [Fact]
+    public void Join_AfterTheRevealWhileAVoterWasAway_DoesNotRestoreTheVote()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.Exit(people[0], "c1");
+        _service.ForceShowVotes(people[1], "c2");
+
+        var back = _service.Join(people[0], "c1-again", roomId);
+
+        Assert.Null(back.Data!.MyMark);
+        Assert.DoesNotContain(people[0], back.Data.VoteStatus.Votes.Keys);
+    }
+
+    [Fact]
+    public void Join_OfAVoterWhoIsNowAnObserver_DoesNotRestoreTheVote()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.Exit(people[0], "c1");
+        _people.Update(people[0], entity =>
+        {
+            entity.PersonType = PersonTypes.Observer;
+            return true;
+        }, out _);
+
+        var back = _service.Join(people[0], "c1-again", roomId);
+
+        Assert.Null(back.Data!.MyMark);
+        Assert.DoesNotContain(people[0], _rooms.Get(roomId)!.Votes.Keys);
+    }
+
+    [Fact]
+    public void Join_RestoringAVote_DoesNotBumpTheRevision()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.Exit(people[0], "c1");
+        var revision = _rooms.Get(roomId)!.Revision;
+
+        _service.Join(people[0], "c1-again", roomId);
+
+        Assert.Equal(revision, _rooms.Get(roomId)!.Revision);
+    }
+
+    [Fact]
     public void Vote_StoresTheMarkAndReportsItMasked()
     {
         var (roomId, people) = RoomWith(5, TwoDevs);

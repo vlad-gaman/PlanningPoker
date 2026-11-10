@@ -93,6 +93,31 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
     }
 
     [Fact]
+    public async Task Reconnect_AfterTheServerDroppedTheConnection_ReturnsTheVoteWithTheJoin()
+    {
+        var ownerCookie = await factory.MintCookie("Ann");
+        var bobCookie = await factory.MintCookie("Bob");
+        var roomId = await factory.CreateRoom(ownerCookie);
+        await using var owner = factory.Connect(ownerCookie);
+        await owner.StartAsync();
+        await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        await using var bob = factory.Connect(bobCookie);
+        await bob.StartAsync();
+        await bob.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        await bob.InvokeAsync<JsonElement>("Vote", "5");
+        var exited = owner.NextEvent("PersonExited", payload => PersonName(payload) == "Bob");
+
+        // The server has run its disconnect for Bob before he comes back, as it does when a connection drops for long.
+        await bob.StopAsync();
+        await exited;
+        await using var bobAgain = factory.Connect(bobCookie);
+        await bobAgain.StartAsync();
+        var joined = await bobAgain.InvokeAsync<JsonElement>("JoinRoom", roomId);
+
+        Assert.Equal("5", Data(joined).GetProperty("myMark").GetString());
+    }
+
+    [Fact]
     public async Task Disconnect_Owner_TransfersOwnershipToRemainingMember()
     {
         await using var room = await factory.CreateTestRoomAsync();

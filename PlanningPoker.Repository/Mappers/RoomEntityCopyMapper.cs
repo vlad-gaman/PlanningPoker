@@ -13,6 +13,7 @@ public class RoomEntityCopyMapper(IRoomConfigurationEntityCopyMapper configurati
             MemberGuids = [.. source.MemberGuids],
             MemberConnections = source.MemberConnections.ToDictionary(pair => pair.Key, pair => new HashSet<string>(pair.Value)),
             Votes = new Dictionary<Guid, string>(source.Votes),
+            DepartedVotes = new Dictionary<Guid, string>(source.DepartedVotes),
             VotingEnabled = source.VotingEnabled,
             Revealed = source.Revealed is null ? null : revealedMapper.Map(source.Revealed),
             Revision = source.Revision,

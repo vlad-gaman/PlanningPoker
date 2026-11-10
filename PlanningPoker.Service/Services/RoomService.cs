@@ -110,7 +110,8 @@ public class RoomService(
                 }
 
                 room.MemberGuids.Add(personGuid);
-                if (room.VotingEnabled && join.Person.PersonType != PersonTypes.Observer)
+                var restored = RestoreDepartedVote(room, personGuid, join.Person);
+                if (room.VotingEnabled && join.Person.PersonType != PersonTypes.Observer && !restored)
                 {
                     // A new voter has not voted yet, so a running countdown no longer applies.
                     room.Revision++;
@@ -204,7 +205,12 @@ public class RoomService(
 
             room.MemberConnections.Remove(personGuid);
             room.MemberGuids.Remove(personGuid);
-            room.Votes.Remove(personGuid);
+            // The vote is parked, not dropped: a reconnect of the same person gets it back (see RestoreDepartedVote).
+            if (room.Votes.Remove(personGuid, out var mark))
+            {
+                room.DepartedVotes[personGuid] = mark;
+            }
+
             room.Revision++;
             if (room.MemberGuids.Count == 0)
             {
@@ -321,6 +327,7 @@ public class RoomService(
         var cleared = InRoom(personGuid, connectionId, room =>
         {
             room.Votes.Clear();
+            room.DepartedVotes.Clear();
             room.Revealed = null;
             room.VotingEnabled = true;
             room.RoundStartedAt = roundStartedAt;
@@ -482,6 +489,7 @@ public class RoomService(
             if (cleared)
             {
                 room.Votes.Clear();
+                room.DepartedVotes.Clear();
                 room.Revealed = null;
                 room.VotingEnabled = true;
             }
@@ -570,6 +578,26 @@ public class RoomService(
     }
 
     /// <summary>The vote status of the room as it is now; null when the room is gone.</summary>
+    /// <summary>
+    /// Puts a parked vote back when its person rejoins an open round. A reveal, or a person who is an observer now, drops
+    /// it instead: a reveal has already frozen the votes without them, and observers do not vote. Runs under the room lock.
+    /// </summary>
+    private static bool RestoreDepartedVote(RoomEntity room, Guid personGuid, Person person)
+    {
+        if (!room.DepartedVotes.Remove(personGuid, out var mark))
+        {
+            return false;
+        }
+
+        if (room.Revealed is not null || !room.VotingEnabled || person.PersonType == PersonTypes.Observer)
+        {
+            return false;
+        }
+
+        room.Votes[personGuid] = mark;
+        return true;
+    }
+
     private VoteStatus? CurrentStatus(string roomId)
     {
         var snapshot = rooms.Get(roomId);
