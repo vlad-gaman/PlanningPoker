@@ -33,6 +33,7 @@
       <text class="num" x="49" y="94" font-size="17">1</text>
     }
     @case ('esendex-2') {
+      <g transform="translate(50 66) scale(0.92) translate(-50 -66)">
       <ellipse class="shadow" cx="50" cy="88" rx="42" ry="4" />
       <path class="arm" d="M6 50 Q50 34 96 46" />
       <path class="arm" d="M38 42 Q56 48 74 62" />
@@ -40,11 +41,12 @@
       <polygon class="lens" points="55,62 87,67 91,80 58,81" />
       <polygon class="lens-deep" points="55,62 87,67 87.4,70 55,65.6" />
       <rect class="frame" x="90" y="62" width="5" height="20" rx="2" />
-      <polygon class="frame" points="8,50 44,54 50,84 10,84" />
-      <polygon class="lens" points="11,53.5 41,57 46.5,81 13,81" />
-      <polygon class="lens-deep" points="11,53.5 41,57 41.4,60.5 11,57" />
+      <rect class="frame" x="8" y="52" width="36" height="31" rx="9" />
+      <rect class="lens" x="11" y="56" width="30" height="24" rx="6" />
+      <rect class="lens-deep" x="11" y="56" width="30" height="5" rx="3" />
       <rect class="tape" x="43" y="62" width="9" height="8" />
       <text class="nump" x="47.5" y="68" font-size="5">2</text>
+      </g>
     }
     @case ('esendex-3') {
       <ellipse class="shadow" cx="50" cy="114" rx="26" ry="4" />
@@ -80,7 +82,7 @@
         </radialGradient>
       </defs>
       <g transform="translate(50 70) scale(0.7 0.78) translate(-50 -70)">
-        <ellipse class="shadow" cx="50" cy="116" rx="28" ry="4" />
+        <ellipse class="shadow" cx="50" cy="112" rx="26" ry="3.5" />
         <polygon fill="url(#esx-5-left)" points="7,49.5 50,71 50,111 7,89.5" />
         <polygon fill="url(#esx-5-right)" points="50,71 93,49.5 93,89.5 50,111" />
         <polygon class="die-top" points="50,28 93,49.5 50,71 7,49.5" />
@@ -100,7 +102,7 @@
     @case ('esendex-8') {
       <defs>
         <clipPath id="esx-8-clip">
-          <ellipse cx="50" cy="67" rx="32" ry="30" />
+          <ellipse cx="50" cy="67" rx="28" ry="26.5" />
         </clipPath>
         <radialGradient id="esx-8-streak" cx="0.5" cy="0.5" r="0.5">
           <stop class="sl" offset="0" stop-opacity="0.8" />
@@ -108,23 +110,25 @@
         </radialGradient>
       </defs>
       <ellipse class="shadow" style="opacity: 0.8" cx="52" cy="102" rx="36" ry="5" />
-      <ellipse class="glow" cx="50" cy="67" rx="37" ry="35" />
-      <ellipse class="b" cx="50" cy="67" rx="32" ry="30" />
+      <ellipse class="b" cx="50" cy="67" rx="28" ry="26.5" />
+      <ellipse class="rim-light" clip-path="url(#esx-8-clip)" cx="50" cy="67" rx="27.2" ry="25.7" />
       <path class="matte" clip-path="url(#esx-8-clip)" d="M14 80 Q50 92 86 78 L86 104 L14 104 Z" />
       <ellipse clip-path="url(#esx-8-clip)" fill="url(#esx-8-streak)" cx="37" cy="48" rx="13" ry="7" transform="rotate(-35 37 48)" />
-      <circle class="l" cx="53" cy="62" r="14.5" />
-      <circle class="eight" cx="53" cy="57.5" r="3.3" />
-      <circle class="eight" cx="53" cy="67" r="4.3" />
+      <circle class="l" cx="52" cy="61" r="12.5" />
+      <g transform="rotate(-14 52 61)">
+        <circle class="eight" cx="52" cy="56.5" r="3.6" />
+        <circle class="eight" cx="52" cy="66" r="4.6" />
+      </g>
       <text class="glyph" x="53" y="69" font-size="18" style="opacity: 0">8</text>
     }
     @case ('esendex-13') {
       <g transform="translate(50 74) scale(1 0.84) translate(-50 -74)">
         <ellipse class="shadow" cx="50" cy="121" rx="24" ry="3" />
         <path class="tail-thin" d="M70 104 Q86 102 84 92 Q82 82 90 78 Q94 75 90 68" />
-        <path class="b" d="M24 44 Q22 30 26 26 Q30 22 38 34 Z" />
-        <path class="b" d="M76 44 Q78 30 74 26 Q70 22 62 34 Z" />
-        <path class="ear-in" d="M27 41 Q26 32 29 30 Q33 31 36 37 Z" />
-        <path class="ear-in" d="M73 41 Q74 32 71 30 Q67 31 64 37 Z" />
+        <path class="b" d="M24 44 L24 22 L41 36 Z" />
+        <path class="b" d="M76 44 L76 22 L59 36 Z" />
+        <path class="ear-in" d="M27 40 L27 28 L36 36 Z" />
+        <path class="ear-in" d="M73 40 L73 28 L64 36 Z" />
         <path class="b rim-body" d="M24 56 C24 44 32 36 40 34 L60 34 C68 36 76 44 76 56 C76 66 72 72 64 74 L36 74 C28 72 24 66 24 56 Z" />
         <path class="b rim-body" d="M36 70 C29 86 25 102 24 116 Q50 122 76 116 C75 102 71 86 64 70 Z" />
         <path class="seam" d="M34 104 Q40 110 46 110 M54 110 Q60 110 66 104 M42 120 Q50 124 58 120" />
@@ -219,23 +223,26 @@
           <stop class="sl" offset="0.35" />
           <stop class="sl" offset="1" />
         </linearGradient>
+        <clipPath id="esx-c-clip">
+          <path d="M27 58 Q24 82 36 86 Q50 88 64 86 Q76 82 73 58 Z" />
+        </clipPath>
       </defs>
       <ellipse class="shadow" cx="50" cy="98" rx="44" ry="4" />
-      <ellipse class="saucer" cx="50" cy="88" rx="40" ry="8" />
+      <ellipse class="saucer" cx="50" cy="88" rx="44" ry="9" />
       <ellipse class="l" cx="50" cy="87.5" rx="34" ry="5" />
       <path class="handle-fill" d="M26 66 Q15 66 15 75 Q15 84 26 84 L26 80 Q21 80 21 75 Q21 71 26 71 Z" />
       <path fill="url(#esx-c-cup)" d="M27 58 Q24 82 36 86 Q50 88 64 86 Q76 82 73 58 Z" />
-      <path class="band" d="M25 68 Q50 77 75 68 L74.6 74.5 Q50 83 25.4 74.5 Z" />
+      <path class="band" clip-path="url(#esx-c-clip)" d="M24 68 Q50 77 76 68 L76 74.5 Q50 83 24 74.5 Z" />
       <ellipse class="l" cx="50" cy="58" rx="23" ry="5.5" />
       <ellipse class="rim-ring" cx="50" cy="58.5" rx="21" ry="4.5" />
       <ellipse class="y" cx="50" cy="58.5" rx="19" ry="3.8" />
-      <g transform="translate(6 7) rotate(-22) scale(0.9)">
+      <g transform="translate(-1 -1) rotate(-22) scale(1.3)">
         <path class="l" d="M0 0 L1 8 Q2 10 6 10 Q10 10 11 8 L12 0 Z" />
         <rect class="band" x="0.4" y="3.5" width="11.2" height="2.4" />
         <ellipse class="l" cx="6" cy="0" rx="6" ry="1.6" />
         <ellipse class="y" cx="6" cy="0.2" rx="4.6" ry="1.1" />
       </g>
-      <g transform="translate(82 120) rotate(18) scale(0.9)">
+      <g transform="translate(84 116) rotate(18) scale(1.3)">
         <path class="l" d="M0 0 L1 8 Q2 10 6 10 Q10 10 11 8 L12 0 Z" />
         <rect class="band" x="0.4" y="3.5" width="11.2" height="2.4" />
         <ellipse class="l" cx="6" cy="0" rx="6" ry="1.6" />
