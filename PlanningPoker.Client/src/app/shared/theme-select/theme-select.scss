@@ -17,8 +17,9 @@
   }
 }
 
+// Transparent so the label's hover fill shows through; an opaque select here draws a box on hover.
 select {
-  background: var(--card-bg);
+  background: transparent;
   border: none;
   color: var(--text-color);
   font: inherit;
