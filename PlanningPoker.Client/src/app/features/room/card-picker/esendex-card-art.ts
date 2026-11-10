@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /** Side of one pixel of the invader sprite in the artwork's 100 by 140 units. */
-const CELL = 2.6;
+const CELL = 2.7;
 
 /**
  * Builds one path of the lit cells of a pixel sprite, with its top-left corner at (x, y). Every cell is a closed
@@ -32,7 +32,7 @@ const INVADER = [
 ];
 
 /** The three invaders across the top of their card, closer together than the cell grid alone would space them. */
-const INVADER_X = [12, 40, 68];
+const INVADER_X = [3, 35, 67];
 const INVADER_Y = 40;
 
 /** The thin light slit of each invader's mouth, on its row 5. */

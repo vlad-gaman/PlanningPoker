@@ -140,9 +140,41 @@ svg {
   stop-color: var(--esendex-metal-deep);
 }
 
+// The thermometer tube: a dark two-tone purple, lit in the middle.
+.stube {
+  stop-color: var(--esendex-tube);
+}
+
+.stube-lit {
+  stop-color: var(--esendex-tube-lit);
+}
+
+// The ball's rim: a thin lit edge so a black ball separates from the card in the dark theme too.
+.rimmed {
+  stroke: var(--esendex-frame);
+  stroke-width: 1.2;
+  stroke-opacity: 0.6;
+}
+
+// The two thin highlight arcs on the ball.
+.arc-hi {
+  fill: none;
+  stroke: var(--esendex-light);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.tail-thin {
+  fill: none;
+  stroke: var(--esendex-black);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+}
+
 .matte {
   fill: var(--esendex-grey);
-  opacity: 0.4;
+  opacity: 0.22;
 }
 
 .crescent {
