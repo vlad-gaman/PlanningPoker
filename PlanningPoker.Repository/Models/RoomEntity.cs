@@ -16,6 +16,12 @@ public class RoomEntity
 
     public Dictionary<Guid, string> Votes { get; set; } = [];
 
+    /// <summary>
+    /// The votes of members who left while voting was open, kept so their return restores them. Only a join reads them:
+    /// they are never shown, counted or revealed. A clear drops them, and so does a join after the reveal.
+    /// </summary>
+    public Dictionary<Guid, string> DepartedVotes { get; set; } = [];
+
     /// <summary>True while votes can be cast; false once they are revealed, until they are cleared.</summary>
     public bool VotingEnabled { get; set; }
 
