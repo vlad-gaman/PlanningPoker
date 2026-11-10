@@ -1,0 +1,130 @@
+// Sized by the card it sits in; the 100 by 140 drawing scales to fill it.
+:host {
+  display: block;
+  width: 2.9em;
+  height: 4em;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+// Colours come from the theme (see styles.scss): the purple, white, grey and ink of the physical cards.
+.l {
+  fill: var(--esendex-light);
+}
+
+.p {
+  fill: var(--esendex-purple);
+}
+
+.g {
+  fill: var(--esendex-grey);
+}
+
+.b {
+  fill: var(--esendex-black);
+}
+
+.r {
+  fill: var(--esendex-red);
+}
+
+.y {
+  fill: var(--esendex-gold);
+}
+
+.n {
+  fill: var(--esendex-green);
+}
+
+.nose {
+  fill: #e88ea0;
+}
+
+.shine {
+  fill: var(--esendex-light);
+  opacity: 0.35;
+}
+
+.outline {
+  stroke: var(--esendex-ink);
+  stroke-width: 0.8;
+}
+
+.arm,
+.tail,
+.crack,
+.k-line,
+.handle-out,
+.handle-in {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.arm {
+  stroke: var(--esendex-black);
+  stroke-width: 3.5;
+}
+
+.tail {
+  stroke: var(--esendex-black);
+  stroke-width: 5;
+}
+
+.crack {
+  stroke: var(--esendex-ink);
+  stroke-width: 1.2;
+}
+
+.k-line {
+  stroke: var(--esendex-ink);
+  stroke-width: 0.8;
+}
+
+.handle-out {
+  stroke: var(--esendex-ink);
+  stroke-width: 6;
+}
+
+.handle-in {
+  stroke: var(--esendex-light);
+  stroke-width: 3;
+}
+
+// Numbers drawn on the art: light on purple or black, purple on white. The sizes are set on each text element.
+.num,
+.numk,
+.nump,
+.tick {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Arial,
+    sans-serif;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.num {
+  fill: var(--esendex-light);
+}
+
+.numk {
+  fill: var(--esendex-black);
+}
+
+.nump {
+  fill: var(--esendex-purple);
+}
+
+.tick {
+  fill: var(--esendex-ink);
+  font-weight: 400;
+  text-anchor: end;
+}

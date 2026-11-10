@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { ThemeService } from '../../../core/theme.service';
 import { CardOption, GroupStatistics } from '../../../models/room';
-import { cardImage } from '../card-picker/card-picker';
+import { cardText } from '../card-picker/card-picker';
 import { buildChartConfig, chartSummary, readChartColors } from './chart-config';
 import { ChartFactory, ChartHandle } from './chart-factory';
 
@@ -44,7 +44,7 @@ export class ResultsChart implements OnDestroy {
       return null;
     }
     const card = this.cards().find((option) => option.value === mark);
-    return card?.display && !cardImage(card) ? card.display : mark;
+    return (card && cardText(card)) || mark;
   });
 
   constructor() {

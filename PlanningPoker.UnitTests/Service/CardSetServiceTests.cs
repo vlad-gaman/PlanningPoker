@@ -5,13 +5,13 @@ namespace PlanningPoker.UnitTests.Service;
 public class CardSetServiceTests
 {
     [Fact]
-    public void GetAll_ReturnsTheSevenCardSetsWithDisplayNames()
+    public void GetAll_ReturnsTheEightCardSetsWithDisplayNames()
     {
         var response = new CardSetService().GetAll();
 
         Assert.True(response.IsSuccess);
         Assert.Equal(
-            ["fibonacci", "modified-fibonacci", "linear", "powers-of-2", "t-shirt-sizes", "traffic-lights", "fist-of-five"],
+            ["fibonacci", "modified-fibonacci", "linear", "powers-of-2", "t-shirt-sizes", "traffic-lights", "fist-of-five", "esendex-fibonacci"],
             response.Data!.Select(option => option.Value));
         Assert.Equal("Linear (1-10)", response.Data!.Single(option => option.Value == "linear").Display);
         Assert.All(response.Data!, option => Assert.False(string.IsNullOrWhiteSpace(option.Display)));
@@ -25,6 +25,7 @@ public class CardSetServiceTests
     [InlineData("t-shirt-sizes", 8)]
     [InlineData("traffic-lights", 3)]
     [InlineData("fist-of-five", 6)]
+    [InlineData("esendex-fibonacci", 10)]
     public void GetCards_ReturnsTheCardsOfEverySet(string set, int count)
     {
         var response = new CardSetService().GetCards(set);

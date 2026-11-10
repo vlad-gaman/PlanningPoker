@@ -28,7 +28,8 @@ import { PERSON_TYPES, Person, PersonType } from '../../models/person';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
 import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
-import { CardPicker, cardImage } from './card-picker/card-picker';
+import { CardPicker, cardArt, cardImage, cardText } from './card-picker/card-picker';
+import { EsendexCardArt } from './card-picker/esendex-card-art';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
 import { Results } from './results/results';
 import { RoundTimer } from './round-timer/round-timer';
@@ -40,6 +41,7 @@ type Phase = 'loading' | 'name' | 'joined';
   selector: 'app-room',
   imports: [
     CardPicker,
+    EsendexCardArt,
     FireworksOverlay,
     Results,
     ReactiveFormsModule,
@@ -181,16 +183,21 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   }
 
   /** What a participant's mark cell shows: nothing for no vote or an observer, a block while hidden, the card once revealed. */
-  protected markOf(person: Person): { text: string; image: string | null; alt: string } {
+  protected markOf(person: Person): { text: string; image: string | null; art: string | null; alt: string } {
     const mark = this.store.votes()[person.guid];
     if (mark === undefined || person.personType === 'obs') {
-      return { text: '', image: null, alt: '' };
+      return { text: '', image: null, art: null, alt: '' };
     }
     if (mark === HIDDEN_MARK && !this.store.votingFinished()) {
-      return { text: '▮', image: null, alt: '' };
+      return { text: '▮', image: null, art: null, alt: '' };
     }
     const card = this.store.cards().find((option) => option.value === mark);
-    return { text: card?.display ?? mark, image: card ? cardImage(card) : null, alt: mark };
+    return {
+      text: (card && cardText(card)) ?? mark,
+      image: card ? cardImage(card) : null,
+      art: card ? cardArt(card) : null,
+      alt: mark,
+    };
   }
 
   protected roleLabel(type: string): string {
