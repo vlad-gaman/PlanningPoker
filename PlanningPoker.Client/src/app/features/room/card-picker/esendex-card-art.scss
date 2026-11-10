@@ -164,7 +164,7 @@ svg {
 
 .arm {
   stroke: var(--esendex-black);
-  stroke-width: 6;
+  stroke-width: 3.5;
 }
 
 .tail {
@@ -174,8 +174,19 @@ svg {
 
 .handle {
   stroke: var(--esendex-grey);
-  stroke-width: 7;
-  opacity: 0.7;
+  stroke-width: 4;
+  opacity: 0.45;
+}
+
+.crack {
+  stroke: var(--esendex-grey);
+  stroke-width: 0.9;
+}
+
+// Thin inner shading inside the cat's ears.
+.ear-in {
+  fill: var(--esendex-shadow);
+  opacity: 0.35;
 }
 
 .mouth {
@@ -189,6 +200,7 @@ svg {
 }
 
 // Numbers drawn on the art: light on purple or black, purple on white. The sizes are set on each text element.
+.glyph,
 .num,
 .numk,
 .nump,
@@ -217,7 +229,7 @@ svg {
 }
 
 .tick {
-  fill: var(--esendex-grey);
+  fill: var(--esendex-ink);
   font-weight: 400;
   text-anchor: end;
 }

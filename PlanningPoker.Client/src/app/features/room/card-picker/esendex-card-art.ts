@@ -19,21 +19,27 @@ function pixelPath(rows: string[], lit: (cell: string) => boolean, x: number, y:
     .join('');
 }
 
-/** A space invader: 'x' is purple, 'e' is the white of its eyes and mouth. */
+/** A space invader: 'x' is purple, 'e' is the white of its eyes. Its mouth is a slit drawn over it. */
 const INVADER = [
   '..x.....x..',
   '...x...x...',
   '..xxxxxxx..',
   '.xxexxxexx.',
   'xxxxxxxxxxx',
-  'x.eeeeeee.x',
+  'x.xxxxxxx.x',
   'x.x.....x.x',
   '...xx.xx...',
 ];
 
-/** The three invaders across the top of their card: their left edges. */
-const INVADER_X = [6, 36, 66];
-const INVADER_Y = 35;
+/** The three invaders across the top of their card, closer together than the cell grid alone would space them. */
+const INVADER_X = [12, 40, 68];
+const INVADER_Y = 40;
+
+/** The thin light slit of each invader's mouth, on its row 5. */
+function mouthPath(x: number, y: number): string {
+  const top = y + 5 * CELL + (CELL - 1.2) / 2;
+  return `M${x + CELL * 3} ${top}h${CELL * 5}v1.2h-${CELL * 5}z`;
+}
 
 /**
  * An original drawing of one Esendex Fibonacci card, in the card's purple, white and grey, coloured from the theme's
@@ -57,4 +63,5 @@ export class EsendexCardArt {
   protected readonly invaderEyes = INVADER_X.map((x) =>
     pixelPath(INVADER, (cell) => cell === 'e', x, INVADER_Y),
   ).join('');
+  protected readonly invaderMouth = INVADER_X.map((x) => mouthPath(x, INVADER_Y)).join('');
 }
