@@ -15,29 +15,38 @@
           <stop class="sg" offset="0.92" stop-opacity="0.5" />
           <stop class="sg" offset="1" stop-opacity="0.65" />
         </linearGradient>
+        <clipPath id="esx-1-clip">
+          <path d="M45 14 Q45 9 51 9 Q57 9 57 14 L57 44 L62 52 Q70 62 70 80 Q71 100 64 116 Q61 121 60 122 Q52 124 46 122 L44 121 Q39 116 36 102 Q31 84 33 70 Q35 58 42 52 L45 44 Z" />
+        </clipPath>
       </defs>
       <ellipse class="shadow" style="opacity: 0.6" cx="49" cy="123" rx="20" ry="3.5" />
       <path
         fill="url(#esx-1-body)"
-        d="M45 15 Q45 9 51 9 Q57 9 58 15 L58 50 Q59 56 64 63 Q68 72 68 82 Q68 98 60 113 Q59 117 59 121 Q52 123 47 122 Q40 121 40 117 Q33 100 31 84 Q30 72 35 63 Q42 56 44 50 Z"
+        d="M45 14 Q45 9 51 9 Q57 9 57 14 L57 44 L62 52 Q70 62 70 80 Q71 100 64 116 Q61 121 60 122 Q52 124 46 122 L44 121 Q39 116 36 102 Q31 84 33 70 Q35 58 42 52 L45 44 Z"
       />
-      <rect class="p" x="41" y="40" width="17" height="6.5" />
-      <rect class="p" x="40" y="49" width="19" height="6" />
+      <g clip-path="url(#esx-1-clip)">
+        <path class="p" d="M36 41 Q51 46 66 41 L66 46.5 Q51 51.5 36 46.5 Z" />
+        <path class="p" d="M34 51 Q51 57 68 51 L68 56.5 Q51 62.5 34 56.5 Z" />
+      </g>
+      <rect class="g" x="44" y="120.5" width="14" height="2.5" rx="1" />
       <circle class="p" cx="49" cy="88" r="11.5" />
       <text class="num" x="49" y="94" font-size="17">1</text>
     }
     @case ('esendex-2') {
-      <ellipse class="shadow" cx="50" cy="90" rx="42" ry="4" />
-      <path class="arm" d="M38 57 Q66 53 95 49" />
-      <path class="frame" d="M52 63 Q52 61 55 61 L86 65 Q94 66 95 72 L95 80 Q95 84 91 85 L55 84 Q52 84 52 80 Z" />
-      <path class="lens" d="M51.5 65 L86 68.5 L92 79 L53.5 81.5 Z" />
-      <path class="lens-deep" d="M51.5 65 L86 68.5 L86.4 71 L51.5 67.5 Z" />
-      <path class="frame" d="M6 55 Q6 53 9 53 L36 56 Q40 56.5 40 60 L41 73 Q41 77 37 77 L9 75 Q6 74 6 71 Z" />
-      <path class="lens" d="M9 57 L36 59.5 L37.5 72 L9.5 71 Z" />
-      <path class="lens-deep" d="M9 57 L36 59.5 L36.3 62 L9 59.5 Z" />
-      <path class="arm" d="M38 44 Q58 46 70 56 Q76 62 80 66" />
-      <rect class="tape" x="40" y="70" width="8" height="7" />
-      <text class="nump" x="44" y="75.4" font-size="4.6">2</text>
+      <g>
+        <ellipse class="shadow" cx="50" cy="88" rx="44" ry="4" />
+        <path class="arm" d="M8 52 Q50 42 96 48" />
+        <path class="arm" d="M38 44 Q58 46 70 56 Q76 62 80 66" />
+        <path class="frame" d="M56 62 L86 66 Q93 67 93 73 L93 80 Q93 84 89 84 L58 82 Q55 82 55 79 Z" />
+        <path class="lens" d="M59 65.5 L84 68.5 L88.5 78.5 L60 77 Z" />
+        <path class="lens-deep" d="M59 65.5 L84 68.5 L84.4 70.8 L59 67.6 Z" />
+        <rect class="frame" x="91" y="66" width="3.5" height="16" rx="1.75" />
+        <rect class="frame" x="6" y="54" width="36" height="22" rx="8" />
+        <rect class="lens" x="8" y="56" width="32" height="18" rx="6" />
+        <rect class="lens-deep" x="8" y="56" width="32" height="4.5" rx="2" />
+        <rect class="tape" x="43" y="62" width="11" height="7" />
+        <text class="tag" x="48.5" y="67.4" font-size="5.5">2</text>
+      </g>
     }
     @case ('esendex-3') {
       <ellipse class="shadow" cx="50" cy="114" rx="26" ry="4" />
@@ -53,14 +62,14 @@
       <path class="p" d="M48.5 67h3v3h-3z M48.5 77h3v3h-3z" />
       <path class="tank" d="M32 110 V102 H36 V98 H42 V94 H58 V98 H64 V102 H68 V110 Z" />
       <rect class="tank" x="46" y="88" width="8" height="6" />
-      <rect class="l" x="46" y="107.5" width="16" height="1.5" />
-      <text class="num" x="50" y="106.5" font-size="14">3</text>
+      <path class="paper" d="M44 105 H56 V110 H44 Z" />
+      <text class="num" x="50" y="101.5" font-size="12">3</text>
     }
     @case ('esendex-5') {
       <defs>
         <linearGradient id="esx-5-left" x1="0" x2="1" y1="0" y2="1">
           <stop class="sl" offset="0" />
-          <stop class="sg" offset="1" stop-opacity="0.45" />
+          <stop class="sdie" offset="1" />
         </linearGradient>
         <linearGradient id="esx-5-right" x1="0" x2="1" y1="0" y2="1">
           <stop class="sl" offset="0" />
@@ -73,20 +82,21 @@
         </radialGradient>
       </defs>
       <g transform="translate(50 70) scale(0.7) translate(-50 -70)">
-      <ellipse class="shadow" cx="50" cy="118" rx="36" ry="5" />
-      <polygon fill="url(#esx-5-left)" points="7,49.5 50,71 50,111 7,89.5" />
-      <polygon fill="url(#esx-5-right)" points="50,71 93,49.5 93,89.5 50,111" />
-      <polygon class="l" points="50,28 93,49.5 50,71 7,49.5" />
-      <ellipse class="b" cx="50" cy="39.6" rx="4" ry="2.4" />
-      <ellipse class="b" cx="18.6" cy="49.5" rx="4" ry="2.4" />
-      <ellipse class="b" cx="81.4" cy="49.5" rx="4" ry="2.4" />
-      <ellipse class="b" cx="50" cy="59.4" rx="4" ry="2.4" />
-      <ellipse class="b" cx="50" cy="49.5" rx="4" ry="2.4" />
-      <ellipse class="b" cx="28.5" cy="80.25" rx="4" ry="2.4" />
-      <g transform="translate(71.5 80.25) skewY(-30)">
-        <ellipse class="p" rx="9" ry="6.5" />
-        <text class="num" x="0" y="3.6" font-size="10">5</text>
-      </g>
+        <ellipse class="shadow" cx="50" cy="116" rx="28" ry="4" />
+        <polygon fill="url(#esx-5-left)" points="7,49.5 50,71 50,111 7,89.5" />
+        <polygon fill="url(#esx-5-right)" points="50,71 93,49.5 93,89.5 50,111" />
+        <polygon class="die-top" points="50,28 93,49.5 50,71 7,49.5" />
+        <line class="edge-hi" x1="50" y1="71" x2="50" y2="111" />
+        <ellipse class="b" cx="50" cy="39.6" rx="4" ry="2.4" />
+        <ellipse class="b" cx="18.6" cy="49.5" rx="4" ry="2.4" />
+        <ellipse class="b" cx="81.4" cy="49.5" rx="4" ry="2.4" />
+        <ellipse class="b" cx="50" cy="59.4" rx="4" ry="2.4" />
+        <ellipse class="b" cx="50" cy="49.5" rx="4" ry="2.4" />
+        <ellipse class="b" cx="28.5" cy="80.25" rx="4" ry="2.4" />
+        <g transform="translate(71.5 80.25) skewY(-30)">
+          <ellipse class="p" rx="10" ry="7" />
+          <text class="num" x="0" y="4.4" font-size="13">5</text>
+        </g>
       </g>
     }
     @case ('esendex-8') {
@@ -95,43 +105,41 @@
           <ellipse cx="50" cy="67" rx="32" ry="30" />
         </clipPath>
         <radialGradient id="esx-8-streak" cx="0.5" cy="0.5" r="0.5">
-          <stop class="sl" offset="0" stop-opacity="0.75" />
+          <stop class="sl" offset="0" stop-opacity="0.8" />
           <stop class="sl" offset="1" stop-opacity="0" />
-        </radialGradient>
-        <radialGradient id="esx-8-glow" cx="0.5" cy="0.5" r="0.5">
-          <stop class="sg" offset="0" stop-opacity="0.45" />
-          <stop class="sg" offset="1" stop-opacity="0" />
         </radialGradient>
       </defs>
       <ellipse class="shadow" style="opacity: 0.8" cx="52" cy="102" rx="36" ry="5" />
-      <ellipse class="b rimmed" cx="50" cy="67" rx="32" ry="30" />
+      <ellipse class="b" cx="50" cy="67" rx="32" ry="30" />
       <path class="matte" clip-path="url(#esx-8-clip)" d="M14 80 Q50 92 86 78 L86 104 L14 104 Z" />
-      <path class="arc-hi" d="M20 66 Q22 44 42 37" />
-      <path class="arc-hi" d="M80 66 Q78 44 58 37" />
+      <ellipse class="rim-light" clip-path="url(#esx-8-clip)" cx="50" cy="67" rx="31.2" ry="29.2" />
+      <ellipse clip-path="url(#esx-8-clip)" fill="url(#esx-8-streak)" cx="37" cy="48" rx="13" ry="7" transform="rotate(-35 37 48)" />
       <circle class="l" cx="53" cy="62" r="14.5" />
-      <text class="numk" x="53" y="69" font-size="18" style="font-weight: 900">8</text>
+      <circle class="eight" cx="53" cy="57.5" r="3.3" />
+      <circle class="eight" cx="53" cy="67" r="4.3" />
+      <text class="glyph" x="53" y="69" font-size="18" style="opacity: 0">8</text>
     }
     @case ('esendex-13') {
       <g transform="translate(50 74) scale(1 0.84) translate(-50 -74)">
-      <ellipse class="shadow" cx="50" cy="131" rx="28" ry="3.5" />
-      <path class="tail-thin" d="M68 122 Q86 118 84 104 Q82 92 90 86 Q96 80 90 70" />
-      <path class="b" d="M26 48 L27 20 L46 38 Z" />
-      <path class="b" d="M74 48 L73 20 L54 38 Z" />
-      <path class="ear-in" d="M31 43 L31 27 L41 38 Z" />
-      <path class="ear-in" d="M69 43 L69 27 L59 38 Z" />
-      <path class="b" d="M22 56 C22 40 34 30 50 30 C66 30 78 40 78 56 C78 66 72 72 64 74 L36 74 C28 72 22 66 22 56 Z" />
-      <path class="b" d="M34 70 C30 86 26 100 22 116 Q50 124 78 116 C74 100 70 86 66 70 Z" />
-      <path class="seam" d="M34 104 Q40 110 46 110 M54 110 Q60 110 66 104 M42 120 Q50 124 58 120" />
-      <ellipse class="n" cx="38" cy="54" rx="6.5" ry="5.5" />
-      <ellipse class="n" cx="62" cy="54" rx="6.5" ry="5.5" />
-      <ellipse class="b" cx="38" cy="54" rx="1.6" ry="4" />
-      <ellipse class="b" cx="62" cy="54" rx="1.6" ry="4" />
-      <circle class="l" cx="36" cy="52" r="1" />
-      <circle class="l" cx="60" cy="52" r="1" />
-      <ellipse class="nose" cx="50" cy="64" rx="2.2" ry="1.4" />
-      <path class="p collar" d="M34 71 Q50 80 66 71 L66 77 Q50 86 34 77 Z" />
-      <circle class="l" cx="50" cy="84" r="5.5" />
-      <text class="nump" x="50" y="86.2" font-size="5.5" style="font-weight: 800">13</text>
+        <ellipse class="shadow" cx="50" cy="131" rx="28" ry="3.5" />
+        <path class="tail-thin" d="M70 104 Q86 102 84 92 Q82 82 90 78 Q94 75 90 68" />
+        <path class="b" d="M22 46 L20 22 L42 36 Z" />
+        <path class="b" d="M78 46 L80 22 L58 36 Z" />
+        <path class="ear-in" d="M26 41 L25 28 L37 37 Z" />
+        <path class="ear-in" d="M74 41 L75 28 L63 37 Z" />
+        <path class="b rim-body" d="M24 56 C24 44 32 36 40 34 L60 34 C68 36 76 44 76 56 C76 66 72 72 64 74 L36 74 C28 72 24 66 24 56 Z" />
+        <path class="b rim-body" d="M36 70 C28 86 22 104 20 118 Q50 126 80 118 C78 104 72 86 64 70 Z" />
+        <path class="seam" d="M34 104 Q40 110 46 110 M54 110 Q60 110 66 104 M42 120 Q50 124 58 120" />
+        <path class="n" d="M32 54 Q38 49 45 54 Q38 59 32 54 Z" />
+        <path class="n" d="M55 54 Q62 49 68 54 Q62 59 55 54 Z" />
+        <ellipse class="b" cx="38.5" cy="54" rx="1" ry="3.5" />
+        <ellipse class="b" cx="61.5" cy="54" rx="1" ry="3.5" />
+        <circle class="l" cx="36.5" cy="52.6" r="0.8" />
+        <circle class="l" cx="59.5" cy="52.6" r="0.8" />
+        <ellipse class="nose" cx="50" cy="64" rx="2.2" ry="1.4" />
+        <path class="p collar" d="M34 71 Q50 80 66 71 L66 77 Q50 86 34 77 Z" />
+        <circle class="l" cx="50" cy="84" r="5.5" />
+        <text class="nump" x="50" y="86.2" font-size="5.5" style="font-weight: 800">13</text>
       </g>
     }
     @case ('esendex-30') {
@@ -148,30 +156,24 @@
       </defs>
       <ellipse class="shadow" cx="50" cy="122" rx="20" ry="3.5" />
       <rect class="tube-top" x="44" y="15" width="12" height="25" rx="6" />
+      <rect class="shine" x="46" y="19" width="2" height="18" rx="1" style="opacity: 0.5" />
       <rect class="r" x="44" y="40" width="12" height="6" />
       <rect fill="url(#esx-30-tube)" x="44" y="46" width="12" height="40" />
       <line class="k-line" x1="41" y1="40" x2="43.5" y2="40" />
       <line class="k-line" x1="41" y1="55" x2="43.5" y2="55" />
       <line class="k-line" x1="41" y1="70" x2="43.5" y2="70" />
       <line class="k-line" x1="41" y1="85" x2="43.5" y2="85" />
-      <text class="tick" x="39.5" y="41" font-size="4.5">30</text>
-      <text class="tick" x="39.5" y="56" font-size="4.5">20</text>
-      <text class="tick" x="39.5" y="71" font-size="4.5">10</text>
-      <text class="tick" x="39.5" y="86" font-size="4.5">0</text>
+      <text class="tick" x="40.2" y="40.8" font-size="4">30</text>
+      <text class="tick" x="40.2" y="55.8" font-size="4">20</text>
+      <text class="tick" x="40.2" y="70.8" font-size="4">10</text>
+      <text class="tick" x="40.2" y="85.8" font-size="4">0</text>
       <circle fill="url(#esx-30-bulb)" cx="50" cy="103" r="17" />
-      <ellipse class="shine bulb-glint" style="opacity: 0.22" cx="42" cy="96" rx="4" ry="6" />
-      <text class="num" x="50" y="111" font-size="19">30</text>
+      <path class="crescent" style="opacity: 0.35" d="M36 110 Q33 99 41 91 Q37 100 40 110 Z" />
+      <ellipse class="crescent" style="opacity: 0.15" cx="59" cy="112" rx="7" ry="3.5" />
+      <text class="num" x="50" y="112" font-size="19">30</text>
     }
     @case ('esendex-100') {
       <defs>
-        <linearGradient id="esx-100-top" x1="0" x2="0" y1="0" y2="1">
-          <stop class="sl" offset="0" />
-          <stop class="sl" offset="1" />
-        </linearGradient>
-        <linearGradient id="esx-100-front" x1="0" x2="0" y1="0" y2="1">
-          <stop class="sl" offset="0" />
-          <stop class="sg" offset="1" />
-        </linearGradient>
         <linearGradient id="esx-100-body" x1="0" x2="1" y1="0" y2="0.4">
           <stop class="sm" offset="0" />
           <stop class="sm" offset="0.5" />
@@ -181,67 +183,64 @@
       <ellipse class="shadow" cx="50" cy="101" rx="34" ry="4" />
       <path
         class="crack"
-        d="M50 96 L38 99 L28 97 L16 100 M50 96 L62 99 L74 97 L86 100 M48 96 L40 92 L26 92 L10 89 M54 96 L66 92 L80 92 L92 95 M50 97 L46 103 L42 106 M56 97 L60 103 L64 106"
+        d="M52 97 L44 101 L40 98 L32 103 L28 100 M52 97 L60 101 L64 98 L72 103 L76 100 M50 97 L40 92 L34 94 L26 90 L20 92 M54 97 L64 93 L70 95 L80 90 L86 92 M50 98 L48 105 L44 107 M58 98 L60 104 L56 110 M74 96 L82 99 L88 97"
       />
       <path class="crack-fill" d="M51 97 L56 93 L62 98 L60 104 L66 103 L58 97 Z" />
       <path
         fill="url(#esx-100-body)"
-        d="M76 28.5 Q62 36 56 42 Q36 54 18 67 Q15 70 17 72 Q24 78 26 80 Q34 84 41 76 Q38 84 40 90 Q46 96 56 97 Q70 96 78 90 Q82 84 84 70 Q84 66 78 62 Q70 58 68 55 L68 44 Q71 36 76 28.5 Z"
+        d="M76 28.5 Q62 36 56 42 Q36 54 18 67 L18 72 L36 80 Q34 86 34 92 Q40 98 52 98 Q70 98 80 92 Q84 86 84 72 Q84 66 78 62 Q70 58 68 55 L68 44 Q71 36 76 28.5 Z"
       />
-      <path class="smd-face" d="M18 72 L25 80 L68 55 L68 44 L56 47 Q36 58 18 72 Z" />
+      <path class="smd-face" d="M18 72 L36 80 L68 55 L68 44 L56 47 Q36 58 18 72 Z" />
       <path class="top-face" d="M76 28.5 Q62 36 56 42 Q36 54 18 67 L18 72 Q36 58 56 47 L68 44 Q71 36 76 28.5 Z" />
-      <text class="nump" x="44" y="56" font-size="10" textLength="30" lengthAdjust="spacingAndGlyphs" transform="rotate(-28 44 56)">100</text>
+      <text class="nump" x="46" y="61" font-size="8.5" textLength="24" lengthAdjust="spacingAndGlyphs" transform="rotate(-25 46 61)">100</text>
     }
     @case ('esendex-question') {
       <defs>
         <radialGradient id="esx-q-bubble" cx="0.35" cy="0.3" r="0.85">
           <stop class="sl" offset="0.65" />
-          <stop class="sp" offset="1" />
+          <stop class="sp-deep" offset="1" />
         </radialGradient>
         <linearGradient id="esx-q-tail" x1="0" x2="1" y1="0" y2="1">
-          <stop class="sp" offset="0" />
+          <stop class="sp-deep" offset="0" />
           <stop class="sp-deep" offset="1" />
-        </linearGradient>
-        <linearGradient id="esx-q-glyph" x1="0" x2="0" y1="0" y2="1">
-          <stop class="sk" offset="0" />
-          <stop class="sk" offset="0.7" />
-          <stop class="sg" offset="1" />
         </linearGradient>
       </defs>
       <ellipse class="shadow" style="opacity: 0.9" cx="24" cy="104" rx="14" ry="2.5" />
       <ellipse class="shadow" cx="50" cy="100" rx="30" ry="3.5" />
       <path fill="url(#esx-q-tail)" d="M26 89 Q18 98 14 104 Q34 102 46 97 Z" />
-      <ellipse class="p" cx="50" cy="70" rx="34" ry="27" />
-      <ellipse fill="url(#esx-q-bubble)" cx="50" cy="63" rx="31" ry="24" />
-      <ellipse class="shine" style="opacity: 0.9" cx="48" cy="51" rx="22" ry="8" transform="rotate(-6 48 51)" />
-      <text class="glyph" x="50" y="84" font-size="48" fill="url(#esx-q-glyph)">?</text>
+      <ellipse class="sp-rim" cx="50" cy="70" rx="34" ry="26" />
+      <ellipse fill="url(#esx-q-bubble)" cx="50" cy="63" rx="31" ry="22" />
+      <ellipse class="shine" style="opacity: 0.9" cx="48" cy="52" rx="22" ry="7" transform="rotate(-6 48 52)" />
+      <path class="qmark" d="M39 62 Q39 50 51 50 Q63 50 63 61 Q63 68 53 72 Q50 74 50 80" />
+      <rect class="qmark-dot" x="46" y="85" width="8" height="8" rx="2" />
+      <text class="glyph" x="50" y="84" font-size="48" style="opacity: 0">?</text>
     }
     @case ('esendex-coffee') {
       <defs>
         <linearGradient id="esx-c-cup" x1="0" x2="1" y1="0" y2="0">
-          <stop class="sg" offset="0" stop-opacity="0.6" />
+          <stop class="sl" offset="0" stop-opacity="0.7" />
           <stop class="sl" offset="0.35" />
           <stop class="sl" offset="1" />
         </linearGradient>
       </defs>
       <ellipse class="shadow" cx="50" cy="98" rx="44" ry="4" />
-      <ellipse class="p" cx="50" cy="90" rx="40" ry="8" />
-      <ellipse class="l" cx="50" cy="89" rx="34" ry="4.5" />
-      <path class="handle" d="M26 68 Q12 68 13 77 Q14 84 26 82" />
-      <path fill="url(#esx-c-cup)" d="M25 58 Q24 90 40 93 Q50 95 60 93 Q76 90 75 58 Z" />
-      <path class="p" d="M25.5 70 Q50 80 74.5 70 L74 77 Q50 87 26 77 Z" />
+      <ellipse class="p" cx="50" cy="88" rx="40" ry="8" />
+      <ellipse class="l" cx="50" cy="87.5" rx="34" ry="5" />
+      <path class="handle-fill" d="M26 66 Q15 66 15 75 Q15 84 26 84 L26 80 Q21 80 21 75 Q21 71 26 71 Z" />
+      <path fill="url(#esx-c-cup)" d="M25 58 Q24 82 36 86 Q50 88 64 86 Q76 82 75 58 Z" />
+      <path class="band" d="M25 66 Q50 78 75 66 L74.5 76 Q50 88 25.5 76 Z" />
       <ellipse class="l" cx="50" cy="58" rx="25" ry="5.5" />
       <ellipse class="rim-ring" cx="50" cy="58.5" rx="23" ry="4.5" />
       <ellipse class="y" cx="50" cy="58.5" rx="21" ry="3.8" />
       <g transform="translate(5 6) rotate(-30) scale(1.1)">
         <path class="l" d="M0 0 L1 8 Q2 10 6 10 Q10 10 11 8 L12 0 Z" />
-        <rect class="p" x="0.4" y="3.5" width="11.2" height="1.8" />
+        <rect class="band" x="0.4" y="3.5" width="11.2" height="2.4" />
         <ellipse class="l" cx="6" cy="0" rx="6" ry="1.6" />
         <ellipse class="y" cx="6" cy="0.2" rx="4.6" ry="1.1" />
       </g>
       <g transform="translate(80 120) rotate(25) scale(1.1)">
         <path class="l" d="M0 0 L1 8 Q2 10 6 10 Q10 10 11 8 L12 0 Z" />
-        <rect class="p" x="0.4" y="3.5" width="11.2" height="1.8" />
+        <rect class="band" x="0.4" y="3.5" width="11.2" height="2.4" />
         <ellipse class="l" cx="6" cy="0" rx="6" ry="1.6" />
         <ellipse class="y" cx="6" cy="0.2" rx="4.6" ry="1.1" />
       </g>

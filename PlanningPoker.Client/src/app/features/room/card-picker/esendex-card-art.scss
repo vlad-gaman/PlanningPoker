@@ -149,32 +149,92 @@ svg {
   stop-color: var(--esendex-tube-lit);
 }
 
-// The ball's rim: a thin lit edge so a black ball separates from the card in the dark theme too.
-.rimmed {
+// The ball's rim light: drawn inside the ball's edge (clipped to it), so a black ball separates from the dark card.
+.rim-light {
+  fill: none;
   stroke: var(--esendex-frame);
-  stroke-width: 1.2;
-  stroke-opacity: 0.6;
+  stroke-width: 1.6;
+  stroke-opacity: 0.5;
 }
 
-// The two thin highlight arcs on the ball.
-.arc-hi {
+// The 8 on the ball: two outlined loops, the top one smaller.
+.eight {
   fill: none;
-  stroke: var(--esendex-light);
-  stroke-width: 1.2;
+  stroke: var(--esendex-black);
+  stroke-width: 1.6;
+}
+
+// The body's rim light: a faint edge so the cat's silhouette reads on the dark card.
+.rim-body {
+  stroke: var(--esendex-frame);
+  stroke-width: 0.8;
+  stroke-opacity: 0.5;
+}
+
+// The question mark: a stroked hook and a rounded square dot, drawn in the theme's black.
+.qmark {
+  fill: none;
+  stroke: var(--esendex-black);
+  stroke-width: 7;
   stroke-linecap: round;
-  opacity: 0.85;
+}
+
+.qmark-dot {
+  fill: var(--esendex-black);
+}
+
+.sp-rim {
+  fill: var(--esendex-purple-deep);
+}
+
+// The tag's purple 2 on the glasses: dark enough to read on the white tape in both themes.
+.tag {
+  fill: var(--esendex-tag);
+  font-weight: 800;
+  text-anchor: middle;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+// The die: a warm cream top face, a deeper left face, and a thin highlight on the front vertical edge.
+.die-top {
+  fill: var(--esendex-top-face);
+}
+
+.sdie {
+  stop-color: var(--esendex-die-deep);
+}
+
+.edge-hi {
+  stroke: var(--esendex-light);
+  stroke-width: 0.9;
+  stroke-opacity: 0.7;
+}
+
+// The white notch cut into the invader's cannon base: the card's own paper colour.
+.paper {
+  fill: var(--esendex-paper);
+}
+
+// The coffee's band: dark plum.
+.band {
+  fill: var(--esendex-band);
+}
+
+// The coffee handle: a light grey filled loop.
+.handle-fill {
+  fill: var(--esendex-handle);
 }
 
 .tail-thin {
   fill: none;
   stroke: var(--esendex-black);
-  stroke-width: 4.5;
+  stroke-width: 2.8;
   stroke-linecap: round;
 }
 
 .matte {
-  fill: var(--esendex-grey);
-  opacity: 0.22;
+  fill: var(--esendex-metal-deep);
+  opacity: 0.3;
 }
 
 .crescent {
@@ -214,7 +274,7 @@ svg {
 
 .arm {
   stroke: var(--esendex-frame);
-  stroke-width: 1.8;
+  stroke-width: 2.2;
 }
 
 .tail {
@@ -229,8 +289,9 @@ svg {
 }
 
 .crack {
-  stroke: var(--esendex-grey);
+  stroke: var(--esendex-crack);
   stroke-width: 0.9;
+  stroke-linejoin: round;
 }
 
 // Thin inner shading inside the cat's ears.

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /** Side of one pixel of the invader sprite in the artwork's 100 by 140 units. */
-const CELL = 2.7;
+const CELL = 2.9;
 
 /**
  * Builds one path of the lit cells of a pixel sprite, with its top-left corner at (x, y). Every cell is a closed
@@ -21,24 +21,21 @@ function pixelPath(rows: string[], lit: (cell: string) => boolean, x: number, y:
 
 /** A space invader: 'x' is purple, 'e' is the white of its eyes. Its mouth is a slit drawn over it. */
 const INVADER = [
-  '..x.....x..',
-  '...x...x...',
-  '..xxxxxxx..',
-  '.xxexxxexx.',
-  'xxxxxxxxxxx',
-  'x.xxxxxxx.x',
-  'x.x.....x.x',
-  '...xx.xx...',
+  '.x.....x.',
+  '..xxxxx..',
+  '.xexxxex.',
+  'xxxxxxxxx',
+  'x.x...x.x',
 ];
 
-/** The three invaders across the top of their card, closer together than the cell grid alone would space them. */
-const INVADER_X = [3, 35, 67];
-const INVADER_Y = 40;
+/** The three invaders across the top of their card, with wider gaps between them. */
+const INVADER_X = [4, 37, 70];
+const INVADER_Y = 44;
 
-/** The thin light slit of each invader's mouth, on its row 5. */
+/** The thin light slit of each invader's mouth, across its row 3. */
 function mouthPath(x: number, y: number): string {
-  const top = y + 5 * CELL + (CELL - 1.2) / 2;
-  return `M${x + CELL * 3} ${top}h${CELL * 5}v1.2h-${CELL * 5}z`;
+  const top = y + 3 * CELL + (CELL - 1.2) / 2;
+  return `M${x + CELL * 2} ${top}h${CELL * 5}v1.2h-${CELL * 5}z`;
 }
 
 /**
