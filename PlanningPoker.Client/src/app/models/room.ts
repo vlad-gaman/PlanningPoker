@@ -28,7 +28,10 @@ export interface RoomExists {
 
 export interface CardOption {
   value: string;
-  /** Text to show instead of the value, or the file name of an image in /public when it ends in .png. */
+  /**
+   * Text to show instead of the value; the file name of an image in /public when it ends in .png; or "art:NAME" for an
+   * illustration the client draws.
+   */
   display: string | null;
 }
 

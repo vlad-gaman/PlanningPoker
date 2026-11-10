@@ -69,6 +69,8 @@
                   @let mark = markOf(person);
                   @if (mark.image; as src) {
                     <img [src]="src" [alt]="mark.alt" [style.--mark-mask]="'url(' + src + ')'" />
+                  } @else if (mark.art; as art) {
+                    <app-esendex-card-art [art]="art" [label]="mark.alt" />
                   } @else {
                     {{ mark.text }}
                   }

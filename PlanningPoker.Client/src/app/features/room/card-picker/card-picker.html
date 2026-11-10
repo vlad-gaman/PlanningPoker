@@ -11,8 +11,10 @@
       />
       @if (image(card); as src) {
         <img [src]="src" [alt]="card.value" [style.--mark-mask]="'url(' + src + ')'" />
+      } @else if (art(card); as name) {
+        <app-esendex-card-art [art]="name" [label]="card.value" />
       } @else {
-        <span>{{ card.display ?? card.value }}</span>
+        <span>{{ text(card) ?? card.value }}</span>
       }
     </label>
   }

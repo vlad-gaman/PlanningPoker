@@ -22,6 +22,16 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --chart-color-success: #28a745;
   --coffee-bg: #ffdd00;
   --coffee-filter: none;
+  // The Esendex Fibonacci illustrations: the physical cards' purple, white, grey and ink.
+  --esendex-purple: #5b2d82;
+  --esendex-light: #fbfaff;
+  --esendex-grey: #aeb4bb;
+  --esendex-ink: #3b3b44;
+  --esendex-black: #1d1d22;
+  --esendex-red: #e35b53;
+  --esendex-gold: #c9a33b;
+  --esendex-green: #4caf50;
+  --esendex-nose: #e88ea0;
   color-scheme: light;
 }
 
@@ -44,6 +54,15 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --chart-color-success: #51cf66;
   --coffee-bg: #ffdd00;
   --coffee-filter: brightness(0.95) contrast(1.05);
+  --esendex-purple: #b48ae0;
+  --esendex-light: #ece9f2;
+  --esendex-grey: #7d838b;
+  --esendex-ink: #d6d6de;
+  --esendex-black: #0c0c0f;
+  --esendex-red: #ff7b72;
+  --esendex-gold: #d8b452;
+  --esendex-green: #7ee07e;
+  --esendex-nose: #f09aaa;
   color-scheme: dark;
 }
 

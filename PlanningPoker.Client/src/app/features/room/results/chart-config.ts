@@ -1,6 +1,6 @@
 import type { ChartConfiguration, Plugin } from 'chart.js';
 import { CardOption, GroupStatistics } from '../../../models/room';
-import { cardImage } from '../card-picker/card-picker';
+import { cardImage, cardText } from '../card-picker/card-picker';
 
 export interface ChartColors {
   primary: string;
@@ -129,7 +129,7 @@ export function buildChartConfig(
   const options = group.marks.map((share) => cards.find((option) => option.value === share.mark));
   const sources = options.map((card) => (card ? cardImage(card) : null));
   const labels = group.marks.map((share, index) =>
-    sources[index] ? '' : (options[index]?.display ?? share.mark),
+    sources[index] ? '' : ((options[index] && cardText(options[index])) ?? share.mark),
   );
   const hasImages = sources.some((source) => source !== null);
 
