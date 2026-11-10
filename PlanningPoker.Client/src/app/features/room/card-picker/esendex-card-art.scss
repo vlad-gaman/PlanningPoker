@@ -140,6 +140,36 @@ svg {
   stop-color: var(--esendex-metal-deep);
 }
 
+// The traced anvil and glasses (see the trace note in the component): five roles, darkest to lightest, mapped to
+// the theme's colours. tr0 is the crevice, tr1 the value's purple, tr2-tr4 the metal; trf is the frame, trl the lens.
+.tr0 {
+  fill: var(--esendex-black);
+}
+
+.tr1 {
+  fill: var(--esendex-purple);
+}
+
+.tr2 {
+  fill: var(--esendex-metal-deep);
+}
+
+.tr3 {
+  fill: var(--esendex-metal);
+}
+
+.tr4 {
+  fill: var(--esendex-metal-light);
+}
+
+.trf {
+  fill: var(--esendex-frame);
+}
+
+.trl {
+  fill: var(--esendex-lens);
+}
+
 // The thermometer tube: a dark two-tone purple, lit in the middle.
 .stube {
   stop-color: var(--esendex-tube);
