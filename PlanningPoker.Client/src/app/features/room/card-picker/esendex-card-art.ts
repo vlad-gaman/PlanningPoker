@@ -1,21 +1,22 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Side of one pixel in the artwork's 100 by 140 units. */
-const CELL = 2.4;
+/** Side of one pixel of the invader sprite in the artwork's 100 by 140 units. */
+const CELL = 2.6;
 
-/** A lit pixel of a pixel-art sprite, by its top-left corner. */
-interface Pixel {
-  x: number;
-  y: number;
-}
-
-/** Lays out the cells of a sprite that equal `lit`, with its top-left corner at (x, y). */
-function pixels(rows: string[], lit: string, x: number, y: number): Pixel[] {
-  return rows.flatMap((row, rowIndex) =>
-    [...row].flatMap((cell, columnIndex) =>
-      cell === lit ? [{ x: x + columnIndex * CELL, y: y + rowIndex * CELL }] : [],
-    ),
-  );
+/**
+ * Builds one path of the lit cells of a pixel sprite, with its top-left corner at (x, y). Every cell is a closed
+ * square in a single path, so neighbouring cells join without the seams that separate rectangles would show.
+ */
+function pixelPath(rows: string[], lit: (cell: string) => boolean, x: number, y: number): string {
+  return rows
+    .flatMap((row, rowIndex) =>
+      [...row].flatMap((cell, columnIndex) =>
+        lit(cell)
+          ? [`M${x + columnIndex * CELL} ${y + rowIndex * CELL}h${CELL}v${CELL}h-${CELL}z`]
+          : [],
+      ),
+    )
+    .join('');
 }
 
 /** A space invader: 'x' is purple, 'e' is the white of its eyes and mouth. */
@@ -30,22 +31,14 @@ const INVADER = [
   '...xx.xx...',
 ];
 
-/** The cannon at the foot of the space invaders card: 'x' is purple, 'e' the white band under it. */
-const CANNON = [
-  '....x....',
-  '...xxx...',
-  '..xxxxx..',
-  '.xxxxxxx.',
-  'xxxxxxxxx',
-  'xxxxxxxxx',
-  'xxxxxxxxx',
-  'eeeeeeeee',
-];
+/** The three invaders across the top of their card: their left edges. */
+const INVADER_X = [6, 36, 66];
+const INVADER_Y = 35;
 
 /**
  * An original drawing of one Esendex Fibonacci card, in the card's purple, white and grey, coloured from the theme's
  * CSS variables (see styles.scss). Corner numbers are left out: the card face is the label around it. The number
- * drawn on the illustration is the value.
+ * drawn on the illustration is the value. The drawing fills its host, which the card or the table sizes.
  */
 @Component({
   selector: 'app-esendex-card-art',
@@ -58,9 +51,10 @@ export class EsendexCardArt {
   /** The card's value, read out as the image's name. */
   readonly label = input.required<string>();
 
-  protected readonly invaders = [9, 37, 65].flatMap((x) => pixels(INVADER, 'x', x, 24));
-  protected readonly invaderEyes = [9, 37, 65].flatMap((x) => pixels(INVADER, 'e', x, 24));
-  protected readonly cannon = pixels(CANNON, 'x', 39.2, 94);
-  protected readonly cannonBand = pixels(CANNON, 'e', 39.2, 94);
-  protected readonly cell = CELL;
+  protected readonly invaderBody = INVADER_X.map((x) =>
+    pixelPath(INVADER, (cell) => cell !== '.', x, INVADER_Y),
+  ).join('');
+  protected readonly invaderEyes = INVADER_X.map((x) =>
+    pixelPath(INVADER, (cell) => cell === 'e', x, INVADER_Y),
+  ).join('');
 }

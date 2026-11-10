@@ -47,6 +47,36 @@
     }
   }
 
+  // An illustrated card is a physical card: 5:7, its paper colour, no border. Its art fills the face.
+  &.art-card {
+    padding: 0;
+    aspect-ratio: 5 / 7;
+    border: none;
+    border-radius: 10px;
+    background: var(--esendex-paper);
+    overflow: hidden;
+
+    app-esendex-card-art {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover:not(.disabled, .selected) {
+      background: var(--esendex-paper);
+      filter: brightness(0.96);
+    }
+
+    &.selected {
+      background: var(--esendex-paper);
+      box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    &.disabled {
+      background: var(--esendex-paper);
+      opacity: 0.6;
+    }
+  }
+
   // The radio stays in the layout for keyboard and screen reader use; the label is the visible control.
   input {
     position: absolute;

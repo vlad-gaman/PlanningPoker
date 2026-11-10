@@ -1,8 +1,8 @@
-// Sized by the card it sits in; the 100 by 140 drawing scales to fill it.
+// The drawing fills its host: the card picker sizes an art card to 5:7, the table sizes its mark.
 :host {
   display: block;
-  width: 2.9em;
-  height: 4em;
+  width: 100%;
+  height: 100%;
 }
 
 svg {
@@ -57,7 +57,7 @@ svg {
 
 .sh {
   stop-color: var(--esendex-shadow);
-  stop-opacity: 0.4;
+  stop-opacity: 0.5;
 }
 
 .sh-off {
@@ -78,28 +78,71 @@ svg {
   stop-color: var(--esendex-purple);
 }
 
+.sp-deep {
+  stop-color: var(--esendex-purple-deep);
+}
+
 .sk {
   stop-color: var(--esendex-black);
 }
 
-.outline {
-  stroke: var(--esendex-ink);
-  stroke-width: 0.8;
+.sl-lens {
+  stop-color: var(--esendex-lens);
 }
 
-// Edges of the cube: a hairline of grey between the faces (fills are set on each face).
-.edge {
-  stroke: var(--esendex-grey);
-  stroke-width: 0.5;
-  stroke-linejoin: round;
+.sl-lens-deep {
+  stop-color: var(--esendex-lens-deep);
 }
 
-// The seams and outline of the glasses frames: black, rounded corners.
+// Shapes that are a tone rather than an outline: the glasses frame and lenses, the cube's faces, the matte band.
 .frame {
-  fill: none;
+  fill: var(--esendex-black);
   stroke: var(--esendex-black);
-  stroke-width: 4;
+  stroke-width: 3;
   stroke-linejoin: round;
+}
+
+.lens {
+  fill: var(--esendex-lens);
+}
+
+.lens-deep {
+  fill: var(--esendex-lens-deep);
+}
+
+.tube-top {
+  fill: var(--esendex-tube-top);
+}
+
+.tank {
+  fill: var(--esendex-purple);
+}
+
+.crack-fill {
+  fill: var(--esendex-shadow);
+}
+
+.matte {
+  fill: var(--esendex-grey);
+  opacity: 0.4;
+}
+
+.crescent {
+  fill: var(--esendex-light);
+  opacity: 0.6;
+}
+
+.inner-ear {
+  opacity: 0.6;
+}
+
+.collar {
+  opacity: 0.8;
+}
+
+.rim-ring {
+  fill: var(--esendex-grey);
+  opacity: 0.4;
 }
 
 .seam {
@@ -113,40 +156,36 @@ svg {
 .tail,
 .crack,
 .k-line,
-.handle-out,
-.handle-in {
+.handle,
+.mouth {
   fill: none;
   stroke-linecap: round;
 }
 
 .arm {
   stroke: var(--esendex-black);
-  stroke-width: 3.5;
+  stroke-width: 6;
 }
 
 .tail {
   stroke: var(--esendex-black);
-  stroke-width: 5;
+  stroke-width: 7;
 }
 
-.crack {
-  stroke: var(--esendex-ink);
-  stroke-width: 1.2;
+.handle {
+  stroke: var(--esendex-grey);
+  stroke-width: 7;
+  opacity: 0.7;
+}
+
+.mouth {
+  stroke: var(--esendex-nose);
+  stroke-width: 0.8;
 }
 
 .k-line {
   stroke: var(--esendex-ink);
   stroke-width: 0.8;
-}
-
-.handle-out {
-  stroke: var(--esendex-ink);
-  stroke-width: 6;
-}
-
-.handle-in {
-  stroke: var(--esendex-light);
-  stroke-width: 3;
 }
 
 // Numbers drawn on the art: light on purple or black, purple on white. The sizes are set on each text element.
@@ -161,7 +200,7 @@ svg {
     Roboto,
     Arial,
     sans-serif;
-  font-weight: 700;
+  font-weight: 800;
   text-anchor: middle;
 }
 
@@ -178,7 +217,7 @@ svg {
 }
 
 .tick {
-  fill: var(--esendex-ink);
+  fill: var(--esendex-grey);
   font-weight: 400;
   text-anchor: end;
 }

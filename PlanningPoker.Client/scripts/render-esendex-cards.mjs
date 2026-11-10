@@ -40,6 +40,8 @@ await page.evaluate((px) => {
 
 for (const theme of ['light', 'dark']) {
   await page.getByLabel('Theme').selectOption(theme);
+  // Park the pointer off the cards so no render catches a hover state.
+  await page.mouse.move(0, 0);
   for (const value of VALUES) {
     const card = cards.locator('label.card').filter({ has: page.locator(`input[value="${value}"]`) });
     await card.scrollIntoViewIfNeeded();
