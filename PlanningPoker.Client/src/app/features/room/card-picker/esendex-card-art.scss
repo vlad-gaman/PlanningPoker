@@ -191,7 +191,23 @@ svg {
 .eight {
   fill: none;
   stroke: var(--esendex-black);
-  stroke-width: 1.6;
+  stroke-width: 2;
+}
+
+// The ball's halo: a faint lighter field behind the ball, so it reads on the dark card without an outline.
+.glow {
+  fill: var(--esendex-glow);
+  opacity: 0.2;
+}
+
+// The saucer's rim: a softer, less saturated purple than the value's badge.
+.saucer {
+  fill: var(--esendex-saucer);
+}
+
+// A traced path hidden in the anvil (a stray dark hook over the value's "1").
+.trhide {
+  display: none;
 }
 
 // The body's rim light: a faint edge so the cat's silhouette reads on the dark card.
