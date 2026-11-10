@@ -96,10 +96,11 @@ svg {
 
 // Shapes that are a tone rather than an outline: the glasses frame and lenses, the cube's faces, the matte band.
 .frame {
-  fill: var(--esendex-black);
-  stroke: var(--esendex-black);
-  stroke-width: 3;
-  stroke-linejoin: round;
+  fill: var(--esendex-frame);
+}
+
+.tape {
+  fill: var(--esendex-light);
 }
 
 .lens {
@@ -120,6 +121,23 @@ svg {
 
 .crack-fill {
   fill: var(--esendex-shadow);
+}
+
+// The metal of the anvil, sampled from the photo's warm grey: the lit top face, the body and its darker front.
+.top-face {
+  fill: var(--esendex-metal);
+}
+
+.smd-face {
+  fill: var(--esendex-metal-deep);
+}
+
+.sm {
+  stop-color: var(--esendex-metal);
+}
+
+.smd {
+  stop-color: var(--esendex-metal-deep);
 }
 
 .matte {
@@ -163,8 +181,8 @@ svg {
 }
 
 .arm {
-  stroke: var(--esendex-black);
-  stroke-width: 3.5;
+  stroke: var(--esendex-frame);
+  stroke-width: 1.8;
 }
 
 .tail {
