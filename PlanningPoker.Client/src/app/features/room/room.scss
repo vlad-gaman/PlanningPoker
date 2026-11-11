@@ -2,84 +2,149 @@
   max-width: 1140px;
 }
 
-// The old page centres the title, the action row and the cards above two equal columns (people | results).
-.top {
-  text-align: center;
-}
-
-.layout {
+.title {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--muted-color);
+    word-break: break-all;
+  }
 }
 
-.main,
-.side {
-  flex: 1 1 24rem;
-  min-width: 0;
-  text-align: center;
+.copy {
+  padding: 0.1rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--muted-color);
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
 }
 
 .name-entry {
-  text-align: center;
+  max-width: 30rem;
+  margin: 2rem auto;
 }
 
-h1 {
-  margin: 0.25rem 0;
-  font-size: 1rem;
-  font-weight: 400;
-  text-align: center;
+// People and results on the left, the card deck and actions in a rail on the right.
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1.5rem;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+
+    // The deck comes first on a phone so a vote is one tap away.
+    .rail {
+      order: -1;
+      position: static;
+    }
+  }
 }
 
-// Old table: 16px left-aligned text, 8px cell padding, 41px rows.
-.people {
-  --mat-table-row-item-container-height: 41px;
-  --mat-table-header-container-height: 41px;
-  --mat-table-row-item-label-text-size: 1rem;
-  --mat-table-header-headline-size: 1rem;
-  --mat-table-row-item-outline-color: var(--border-color);
-
-  width: 100%;
-  text-align: left;
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 1rem;
-  background: var(--bg-color);
-  color: var(--text-color);
 }
 
 .countdown {
+  margin: 0 0 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background: var(--primary-color);
+  color: #fff;
   font-weight: 700;
-  color: var(--primary-color);
 }
 
-.actions {
+// People tiles: avatar, name, role, then the vote card.
+.people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.person {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 0.25rem;
-  margin-bottom: 0.5rem;
+  padding: 1rem 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--panel-bg);
+  text-align: center;
+  min-width: 0;
 }
 
-.mark {
-  display: inline-flex;
+.avatar {
+  position: relative;
+  display: flex;
   align-items: center;
-  min-height: 1.5rem;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 0.25rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--avatar-from), var(--avatar-to));
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
 
-  img {
-    height: 1.5rem;
-    width: 1.5rem;
-    // The fist-of-five images are black line art: the PNG is the mask and the fill is the theme's text colour. The
-    // image itself is pushed out of its box so only the recoloured mask shows.
-    background-color: var(--text-color);
-    -webkit-mask: var(--mark-mask) center / contain no-repeat;
-    mask: var(--mark-mask) center / contain no-repeat;
-    object-fit: none;
-    object-position: 9999px 0;
-  }
+// The owner's crown sits on the top of the avatar circle, overlapping its edge. Gold reads on both themes.
+.crown {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  width: 30px;
+  height: 22px;
+  transform: translateX(-50%) rotate(-8deg);
+  fill: #f5b82e;
+  stroke: #b8860b;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 2px var(--shadow-color));
+}
 
-  app-esendex-card-art {
-    width: 1.7rem;
-    height: 2.4rem;
-  }
+.name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .owner {
@@ -94,50 +159,221 @@ h1 {
   opacity: 0.7;
 }
 
-// The old role toggles: small bordered buttons, the selected one blue. The radio itself stays for keyboard use.
-.role {
+// One box for every state of the vote card, so a hidden vote and its reveal are the same size: 72 x 96 with a 3px frame, the same as the deck cards.
+.mark {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  box-sizing: border-box;
+  width: 72px;
+  height: 96px;
+  margin-top: 0.5rem;
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 2.1rem;
+  font-weight: 700;
 
-  label {
-    position: relative;
-    padding: 2px 4px;
-    border: 1px solid var(--card-border);
-    border-radius: 2px;
-    background: var(--card-bg);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: all 0.3s ease;
-
-    &:hover {
-      background: var(--card-hover-bg);
-    }
-
-    &:has(input:checked) {
-      border-color: var(--primary-color);
-      background: var(--primary-color);
-      color: #fff;
-    }
-
-    &:has(input:focus-visible) {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 2px;
-    }
+  // No vote yet: an empty dashed slot of the same size.
+  &.none {
+    border: 3px dashed var(--card-border);
+    background: transparent;
   }
 
-  input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
+  img {
+    height: 2.4rem;
+    width: 2.4rem;
+    // The fist-of-five images are black line art: the PNG is the mask and the fill is white on the card. The image
+    // itself is pushed out of its box so only the recoloured mask shows.
+    background-color: #fff;
+    -webkit-mask: var(--mark-mask) center / contain no-repeat;
+    mask: var(--mark-mask) center / contain no-repeat;
+    object-fit: none;
+    object-position: 9999px 0;
+  }
+
+  app-esendex-card-art {
+    width: 2.6rem;
+    height: 3.6rem;
+  }
+
+  // Voted but still hidden: a face-down card back. The block character stays as text for assistive tech.
+  &.back {
+    border-color: #fff;
+    font-size: 0;
+    color: transparent;
+    background: repeating-linear-gradient(45deg, var(--primary-hover) 0, var(--primary-hover) 5px, var(--primary-color) 7px, var(--primary-color) 11px, var(--primary-hover) 12px);
+    box-shadow: 0 4px 10px var(--shadow-color);
+  }
+
+  &.flip {
+    animation: flip-in 0.35s ease-out;
   }
 }
 
-.people td,
-.people th {
-  padding: 8px;
-  text-align: left;
+// Observers never vote: no slot.
+.observer .mark {
+  display: none;
+}
+
+@keyframes flip-in {
+  from {
+    transform: rotateY(90deg);
+  }
+  to {
+    transform: rotateY(0);
+  }
+}
+
+// A sine-shaped float: the card eases in and out of both ends, so it never seems to stop and start. The `translate`
+// property is animated (not `transform`) so the flip keeps its own transform, and the layer stays on the compositor.
+@keyframes bob {
+  0%,
+  100% {
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  50% {
+    translate: 0 -5px;
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mark.back {
+    animation: bob 1.8s infinite;
+    will-change: translate;
+    backface-visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark.flip {
+    animation: none;
+  }
+}
+
+.rail {
+  position: sticky;
+  top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--panel-bg);
+}
+
+.person {
+  position: relative;
+  overflow: hidden;
+
+  // The role as a short tag in the top-right corner of the tile.
+  &::before {
+    content: attr(data-short);
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 2px 9px;
+    border-radius: 0 0 0 10px;
+    background: var(--role);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .avatar {
+    box-shadow: 0 0 0 3px var(--panel-bg), 0 0 0 5px var(--role);
+  }
+
+  .name {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+// The action buttons: one toolbar row under the role picker; Leave sits at the far right.
+.act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 38px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    background: var(--card-hover-bg);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &.primary {
+    border-color: var(--primary-hover);
+    background: var(--primary-color);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+
+  .leave {
+    margin-left: auto;
+  }
+}
+
+.copy.icon {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 }

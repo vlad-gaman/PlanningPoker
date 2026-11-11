@@ -2,45 +2,69 @@
   max-width: 44rem;
 }
 
-h1 {
-  text-align: center;
-  font-weight: 500;
-  // Bootstrap's heading scale: fluid below 1200px, fixed above.
-  font-size: calc(1.325rem + 0.9vw);
-
-  @media (min-width: 1200px) {
-    font-size: 2rem;
-  }
-}
-
-section {
+.hero {
   margin-bottom: 1.5rem;
-  padding: 1rem 1.25rem;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  text-align: center;
+
+  h1 {
+    margin: 0.5rem 0 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
 }
 
-h2 {
-  margin-top: 0;
-  font-weight: 500;
-  font-size: calc(1.275rem + 0.3vw);
+.logo {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 6px 12px var(--shadow-color));
+}
 
-  @media (min-width: 1200px) {
-    font-size: 1.5rem;
-  }
+.panel {
+  margin-bottom: 1.25rem;
+}
+
+.lead {
+  margin: -0.5rem 0 1rem;
+  color: var(--muted-color);
 }
 
 ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+// Each credit is a row of its own, like a person tile.
 li {
-  margin-bottom: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
+a {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.license {
+  margin-left: 0.25rem;
+  color: var(--muted-color);
+  font-size: 0.9rem;
 }
 
 .actions {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
 }

@@ -4,7 +4,7 @@ import { Home } from './features/home/home';
 
 export const routes: Routes = [
   { path: '', title: 'Home', component: Home },
-  // Lazy, so the charting and fireworks libraries load only when someone opens a room.
+  // Lazy, so the fireworks library loads only when someone opens a room.
   { path: 'room/:id', title: 'Room', loadComponent: () => import('./features/room/room').then((m) => m.Room) },
   { path: 'credits', title: 'Credits', component: Credits },
   // Links from the previous Razor app used capitalised paths.

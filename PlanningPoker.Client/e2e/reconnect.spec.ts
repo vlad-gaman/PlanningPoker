@@ -16,10 +16,10 @@ async function join(page: Page, roomUrl: string, name: string): Promise<void> {
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Join room' }).click();
-  await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();
+  await expect(page.locator('li.person').filter({ hasText: name })).toBeVisible();
 }
 
-const row = (page: Page, name: string) => page.locator('tr[mat-row]').filter({ hasText: name });
+const row = (page: Page, name: string) => page.locator('li.person').filter({ hasText: name });
 const mark = (page: Page, name: string) => row(page, name).locator('.mark');
 const card = (page: Page, value: string) => page.getByRole('radio', { name: value, exact: true });
 const pick = (page: Page, value: string) =>

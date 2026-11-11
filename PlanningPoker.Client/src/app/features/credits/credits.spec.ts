@@ -23,11 +23,11 @@ describe('Credits', () => {
     expect(links[0].title).toBe('poker icons');
   });
 
-  it('credits the charting and fireworks libraries after the icons', () => {
+  it('credits the fireworks library after the icons', () => {
     const root = render();
 
     const links = Array.from(root.querySelectorAll('section.libraries a')) as HTMLAnchorElement[];
-    expect(links.map((l) => l.textContent)).toEqual(['Chart.js', 'fireworks-js']);
+    expect(links.map((l) => l.textContent)).toEqual(['fireworks-js']);
     expect(root.textContent).toContain('MIT license');
     expect(root.querySelector('section.icons')!.compareDocumentPosition(root.querySelector('section.libraries')!))
       .toBe(Node.DOCUMENT_POSITION_FOLLOWING);

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ThemePreference, ThemeService } from '../../core/theme.service';
 
+/** Auto, light or dark as three icon buttons in one pill, like the room's role picker. */
 @Component({
   selector: 'app-theme-select',
   templateUrl: './theme-select.html',
@@ -10,7 +11,9 @@ import { ThemePreference, ThemeService } from '../../core/theme.service';
 export class ThemeSelect {
   protected readonly theme = inject(ThemeService);
 
-  protected pick(event: Event): void {
-    this.theme.set((event.target as HTMLSelectElement).value as ThemePreference);
-  }
+  protected readonly options: { value: ThemePreference; label: string }[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+  ];
 }

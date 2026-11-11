@@ -1,49 +1,67 @@
+// The deck: cards the exact size of the vote card on a person's tile (72 x 96, 3px frame), so picking and revealing match.
 .cards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 72px);
+  justify-content: space-between;
+  gap: 0.75rem 0.5rem;
   margin-bottom: 1rem;
 }
 
-// Same box as the old Razor card: 4em wide, 1.8em of padding above and below, 10px corners, 2px margin.
 .card {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 4em;
-  min-width: 4em;
-  margin: 2px;
-  padding: 1.8em 0;
-  border: 1px solid var(--card-border);
+  width: 72px;
+  height: 96px;
+  border: 3px solid var(--border-color);
   border-radius: 10px;
   background: var(--card-bg);
   color: var(--text-color);
-  font-size: 1rem;
+  font-size: 2.1rem;
+  font-weight: 700;
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s ease;
+  // Only the properties that change, on the compositor-friendly curve: `all` re-ran every property on each hover.
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.28s ease;
+  will-change: transform;
+
+  // The lift moves the card out from under the pointer, which made it drop and lift again at its bottom edge (the
+  // stutter). This invisible pad keeps the hover steady for the distance it travels.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px -2px;
+  }
 
   &:hover:not(.disabled, .selected) {
-    background: var(--card-hover-bg);
+    border-color: var(--primary-color);
+    transform: translate3d(0, -4px, 0);
   }
 
   &.selected {
-    border-color: var(--primary-color);
-    background: var(--card-selected-bg);
-    box-shadow: 0 0 0 2px var(--primary-color);
+    border-color: var(--primary-hover);
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 6px 18px var(--shadow-color);
+
+    img {
+      background-color: #fff;
+    }
   }
 
   &.disabled {
-    border-color: var(--border-color);
-    background: var(--card-disabled-bg);
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 
     &.selected {
-      border-color: var(--primary-color);
-      background: var(--card-selected-bg);
+      opacity: 1;
     }
   }
 
@@ -91,8 +109,8 @@
   }
 
   img {
-    height: 40px;
-    width: 40px;
+    height: 2.4rem;
+    width: 2.4rem;
     // The fist-of-five images are black line art: the PNG is the mask and the fill is the theme's text colour. The
     // image itself is pushed out of its box so only the recoloured mask shows.
     background-color: var(--text-color);

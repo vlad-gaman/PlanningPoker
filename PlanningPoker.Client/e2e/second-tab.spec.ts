@@ -27,7 +27,7 @@ test('a second tab of a person who voted shows their card and takes the room fro
   await bobPage.goto(roomUrl);
   await bobPage.getByLabel('Your name').fill('Bob');
   await bobPage.getByRole('button', { name: 'Join room' }).click();
-  await expect(bobPage.locator('tr[mat-row]').filter({ hasText: 'Bob' })).toBeVisible();
+  await expect(bobPage.locator('li.person').filter({ hasText: 'Bob' })).toBeVisible();
 
   await pick(first, '5');
   await expect(card(first, '5')).toBeChecked();

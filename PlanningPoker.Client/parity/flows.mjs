@@ -119,15 +119,15 @@ export async function newExtraFlow(browser, url, options, shot) {
   await dialog.getByLabel('Use fun room name').uncheck();
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await a.waitForURL(/\/room\//);
-  await a.waitForSelector('tr[mat-row]');
+  await a.waitForSelector('li.person');
   const room = a.url();
   for (const [page, name, role] of [[b, 'Bob', 'Developer'], [c, 'Carol', 'Observer']]) {
     await page.goto(room);
     await page.getByLabel('Your name').waitFor();
     await page.getByLabel('Your name').fill(name);
-    await page.getByLabel('Role').selectOption({ label: role });
+    await page.locator('.role-picker label', { hasText: role }).click();
     await page.getByRole('button', { name: 'Join room' }).click();
-    await page.waitForSelector('tr[mat-row]');
+    await page.waitForSelector('li.person');
   }
   await a.waitForTimeout(500);
   await shot(c, 'room-observer');
@@ -168,7 +168,7 @@ export async function newFlow(browser, url, options, shot) {
   await dialog.getByLabel('Use fun room name').uncheck();
   await dialog.getByRole('button', { name: 'Create room' }).click();
   await a.waitForURL(/\/room\//);
-  await a.waitForSelector('tr[mat-row]');
+  await a.waitForSelector('li.person');
   await shot(a, 'room-lobby');
   const room = a.url();
   for (const [page, name, role] of [[b, 'Bob', 'Developer'], [c, 'Carol', 'Tester']]) {
@@ -178,9 +178,9 @@ export async function newFlow(browser, url, options, shot) {
       await shot(page, 'join');
     }
     await page.getByLabel('Your name').fill(name);
-    await page.getByLabel('Role').selectOption({ label: role });
+    await page.locator('.role-picker label', { hasText: role }).click();
     await page.getByRole('button', { name: 'Join room' }).click();
-    await page.waitForSelector('tr[mat-row]');
+    await page.waitForSelector('li.person');
   }
   await b.getByRole('radio', { name: '5', exact: true }).click();
   await c.getByRole('radio', { name: '8', exact: true }).click();

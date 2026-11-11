@@ -10,7 +10,7 @@ async function newPerson(browser: Browser): Promise<{ context: BrowserContext; p
 }
 
 async function chooseRole(page: Page, role: string): Promise<void> {
-  await page.getByLabel('Role').selectOption({ label: role });
+  await page.locator('.role-picker label', { hasText: role }).click();
 }
 
 async function createRoom(page: Page, name: string, options: { funName: boolean }): Promise<string> {
@@ -31,7 +31,7 @@ async function joinByLink(page: Page, roomUrl: string, name: string, role?: stri
   await page.getByRole('button', { name: 'Join room' }).click();
 }
 
-const rows = (page: Page) => page.locator('tr[mat-row]');
+const rows = (page: Page) => page.locator('li.person');
 
 test('creating a room with a fun name shows the owner as the only participant', async ({ page }) => {
   await createRoom(page, 'Ann', { funName: true });
@@ -39,6 +39,7 @@ test('creating a room with a fun name shows the owner as the only participant', 
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText('Ann');
   await expect(rows(page).first()).toContainText('(owner)');
+  await expect(rows(page).first().locator('.crown')).toBeVisible();
 });
 
 test('creating a room without a fun name uses a GUID', async ({ page }) => {
@@ -210,4 +211,15 @@ test('a creator who opens the room after someone else joins as a regular member'
   await expect(ann.page.getByRole('button', { name: 'Settings' })).toHaveCount(0);
 
   await Promise.all([ann, bob].map(({ context }) => context.close()));
+});
+
+test('the selected role in the role picker takes the colour of that role', async ({ page }) => {
+  await createRoom(page, 'Ann', { funName: true });
+  const colourOf = (name: string) =>
+    page.locator('.role-picker label', { hasText: name }).evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  const developer = await colourOf('Developer');
+  await page.locator('.role-picker label', { hasText: 'Tester' }).click();
+  await expect.poll(() => colourOf('Tester')).not.toBe(developer);
+  expect(await colourOf('Developer')).not.toBe(await colourOf('Tester'));
 });

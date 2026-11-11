@@ -13,9 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
@@ -47,8 +45,6 @@ type Phase = 'loading' | 'name' | 'joined';
     ReactiveFormsModule,
     PersonFields,
     RoundTimer,
-    MatButtonModule,
-    MatTableModule,
   ],
   providers: [RoomStore, RoomHubClient],
   templateUrl: './room.html',
@@ -66,10 +62,15 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly roomDefaults = inject(RoomDefaultsService);
 
   protected readonly personTypes = PERSON_TYPES;
-  protected readonly columns = ['name', 'role', 'mark'];
   protected readonly cardImage = cardImage;
+
+  /** The short role tag on a tile. */
+  protected roleShort(type: string): string {
+    return { dev: 'DEV', test: 'QA', sre: 'SRE', obs: 'OBS' }[type] ?? type;
+  }
   protected readonly phase = signal<Phase>('loading');
   protected readonly error = signal<string | null>(null);
+  protected readonly copied = signal<'name' | 'link' | null>(null);
 
   protected readonly form = createPersonForm(inject(FormBuilder));
 
@@ -89,6 +90,13 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   protected readonly myPersonType = computed(
     () => this.store.people().find((person) => person.guid === this.myGuid())?.personType ?? null,
+  );
+  /** People who have cast a vote this round; observers never vote. */
+  protected readonly voterCount = computed(
+    () =>
+      this.store
+        .people()
+        .filter((person) => person.personType !== 'obs' && this.store.votes()[person.guid] !== undefined).length,
   );
   protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
@@ -156,6 +164,22 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     void this.store.showVotes();
   }
 
+  /** Puts the room name, or the full room URL, on the clipboard and says so for a moment. */
+  private roomUrl(): string {
+    return `${location.origin}/room/${encodeURIComponent(this.id())}`;
+  }
+
+  protected async copy(what: 'name' | 'link'): Promise<void> {
+    const text = what === 'name' ? this.id() : this.roomUrl();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      return;
+    }
+    this.copied.set(what);
+    setTimeout(() => this.copied.set(null), 1500);
+  }
+
   protected changeRole(personType: PersonType): void {
     void this.store.changePersonType(personType);
   }
@@ -182,14 +206,24 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     void this.store.leaveRoom();
   }
 
-  /** What a participant's mark cell shows: nothing for no vote or an observer, a block while hidden, the card once revealed. */
-  protected markOf(person: Person): { text: string; image: string | null; art: string | null; alt: string } {
+  /**
+   * What a participant's mark card shows: an empty slot for no vote or an observer, a face-down card while hidden
+   * (the block stays as its text for assistive tech), the card itself once revealed.
+   */
+  protected markOf(person: Person): {
+    text: string;
+    image: string | null;
+    art: string | null;
+    alt: string;
+    hidden: boolean;
+    revealed: boolean;
+  } {
     const mark = this.store.votes()[person.guid];
     if (mark === undefined || person.personType === 'obs') {
-      return { text: '', image: null, art: null, alt: '' };
+      return { text: '', image: null, art: null, alt: '', hidden: false, revealed: false };
     }
     if (mark === HIDDEN_MARK && !this.store.votingFinished()) {
-      return { text: '▮', image: null, art: null, alt: '' };
+      return { text: '▮', image: null, art: null, alt: '', hidden: true, revealed: false };
     }
     const card = this.store.cards().find((option) => option.value === mark);
     return {
@@ -197,7 +231,14 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       image: card ? cardImage(card) : null,
       art: card ? cardArt(card) : null,
       alt: mark,
+      hidden: false,
+      revealed: true,
     };
+  }
+
+  /** The letter an avatar shows. */
+  protected initial(person: Person): string {
+    return person.name.trim().charAt(0).toUpperCase();
   }
 
   protected roleLabel(type: string): string {

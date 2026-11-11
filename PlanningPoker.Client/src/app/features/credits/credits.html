@@ -1,9 +1,12 @@
 <div class="page credits">
-  <h1>Credits &amp; Attributions</h1>
+  <header class="hero">
+    <img class="logo" src="android-chrome-192x192.png" alt="" width="56" height="56" />
+    <h1>Credits &amp; Attributions</h1>
+  </header>
 
-  <section class="icons">
+  <section class="icons panel">
     <h2>Icons</h2>
-    <p>We would like to thank the following creators for their excellent work:</p>
+    <p class="lead">We would like to thank the following creators for their excellent work:</p>
     <ul>
       @for (icon of icons; track icon.slug) {
         <li>
@@ -20,19 +23,19 @@
     </ul>
   </section>
 
-  <section class="libraries">
+  <section class="libraries panel">
     <h2>Libraries</h2>
     <ul>
       @for (library of libraries; track library.name) {
         <li>
           <a [href]="library.url" target="_blank" rel="noopener noreferrer">{{ library.name }}</a>
-          ({{ library.license }})
+          <span class="license">({{ library.license }})</span>
         </li>
       }
     </ul>
   </section>
 
   <div class="actions">
-    <a mat-flat-button class="back-home" routerLink="/">Back to Home</a>
+    <a class="primary-button back-home" routerLink="/">Back to Home</a>
   </div>
 </div>

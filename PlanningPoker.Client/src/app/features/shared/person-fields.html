@@ -1,12 +1,20 @@
-<div class="row" [formGroup]="form()">
-  <label [for]="nameId">Your Name:</label>
-  <input class="plain-input" [id]="nameId" formControlName="name" autocomplete="off" />
-  <select class="plain-input" aria-label="Role" formControlName="personType">
-    @for (option of personTypes; track option.value) {
-      <option [value]="option.value">{{ option.label }}</option>
-    }
-  </select>
+<div class="fields" [formGroup]="form()">
+  <div class="field">
+    <label [for]="nameId">Your Name:</label>
+    <input class="input" [id]="nameId" formControlName="name" autocomplete="off" placeholder="How the team sees you" />
+  </div>
+  @if (form().controls.name.invalid && form().controls.name.touched) {
+    <div class="field-error" role="alert">Use 2 to 20 characters.</div>
+  }
+  <div class="field">
+    <span class="label" [id]="roleId">Role</span>
+    <div class="role-picker" role="radiogroup" [attr.aria-labelledby]="roleId">
+      @for (option of personTypes; track option.value) {
+        <label [attr.data-role]="option.value">
+          <input type="radio" name="personType" [value]="option.value" formControlName="personType" />
+          {{ option.label }}
+        </label>
+      }
+    </div>
+  </div>
 </div>
-@if (form().controls.name.invalid && form().controls.name.touched) {
-  <div class="field-error" role="alert">Use 2 to 20 characters.</div>
-}

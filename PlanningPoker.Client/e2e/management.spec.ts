@@ -25,12 +25,12 @@ async function createRoom(page: Page, name: string): Promise<string> {
 async function join(page: Page, roomUrl: string, name: string, roleLabel?: string): Promise<void> {
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
-  if (roleLabel) await page.getByLabel('Role').selectOption({ label: roleLabel });
+  if (roleLabel) await page.locator('.role-picker label', { hasText: roleLabel }).click();
   await page.getByRole('button', { name: 'Join room' }).click();
-  await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();
+  await expect(page.locator('li.person').filter({ hasText: name })).toBeVisible();
 }
 
-const row = (page: Page, name: string) => page.locator('tr[mat-row]').filter({ hasText: name });
+const row = (page: Page, name: string) => page.locator('li.person').filter({ hasText: name });
 const role = (page: Page, label: string) => page.getByRole('radiogroup', { name: 'Your role' }).getByLabel(label);
 const settings = (page: Page) => page.getByRole('button', { name: 'Settings' });
 
@@ -107,7 +107,7 @@ test('observers are listed after voters, and a role change moves the row on ever
   await join(bob.page, roomUrl, 'Bob', 'Observer');
   await join(cid.page, roomUrl, 'Cid', 'Developer');
 
-  const rows = (page: Page) => page.locator('tr[mat-row]');
+  const rows = (page: Page) => page.locator('li.person');
   for (const page of [ann.page, bob.page]) {
     await expect(rows(page)).toHaveCount(3);
     await expect(rows(page).nth(0)).toContainText('Ann');
