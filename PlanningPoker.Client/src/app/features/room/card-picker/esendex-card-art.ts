@@ -1,47 +1,23 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-/** Side of one pixel of the invader sprite in the artwork's 100 by 140 units. */
-const CELL = 3.1;
-
-/**
- * Builds one path of the lit cells of a pixel sprite, with its top-left corner at (x, y). Every cell is a closed
- * square in a single path, so neighbouring cells join without the seams that separate rectangles would show.
- */
-function pixelPath(rows: string[], lit: (cell: string) => boolean, x: number, y: number): string {
-  return rows
-    .flatMap((row, rowIndex) =>
-      [...row].flatMap((cell, columnIndex) =>
-        lit(cell)
-          ? [`M${x + columnIndex * CELL} ${y + rowIndex * CELL}h${CELL}v${CELL}h-${CELL}z`]
-          : [],
-      ),
-    )
-    .join('');
-}
-
-/** A space invader: 'x' is purple, 'e' is the white of its eyes. Its mouth is a slit drawn over it. */
-const INVADER = [
-  '.x.....x.',
-  '..xxxxx..',
-  '.xexxxex.',
-  'xxxxxxxxx',
-  'xx.x.x.xx',
-];
-
-/** The three invaders across the top of their card, with wider gaps between them. */
-const INVADER_X = [2, 35, 68];
-const INVADER_Y = 33;
-
-/** The thin light slit of each invader's mouth, across its row 3. */
-function mouthPath(x: number, y: number): string {
-  const top = y + 3 * CELL + (CELL - 1.2) / 2;
-  return `M${x + CELL * 2} ${top}h${CELL * 5}v1.2h-${CELL * 5}z`;
-}
+/** The illustration files in public/esendex, by art name. */
+const FILES: Record<string, string> = {
+  'esendex-1': '1',
+  'esendex-2': '2',
+  'esendex-3': '3',
+  'esendex-5': '5',
+  'esendex-8': '8',
+  'esendex-13': '13',
+  'esendex-30': '30',
+  'esendex-100': '100',
+  'esendex-question': 'q',
+  'esendex-coffee': 'coffee',
+};
 
 /**
- * An original drawing of one Esendex Fibonacci card, in the card's purple, white and grey, coloured from the theme's
- * CSS variables (see styles.scss). Corner numbers are left out: the card face is the label around it. The number
- * drawn on the illustration is the value. The drawing fills its host, which the card or the table sizes.
+ * One Esendex Fibonacci card drawing, traced from the physical cards (self-contained 750 by 1050 SVGs with a
+ * transparent background, so the card face shows through). Corner numbers are left out: the card face is the label
+ * around it. The drawing fills its host, which the card or the table sizes.
  */
 @Component({
   selector: 'app-esendex-card-art',
@@ -54,11 +30,8 @@ export class EsendexCardArt {
   /** The card's value, read out as the image's name. */
   readonly label = input.required<string>();
 
-  protected readonly invaderBody = INVADER_X.map((x) =>
-    pixelPath(INVADER, (cell) => cell !== '.', x, INVADER_Y),
-  ).join('');
-  protected readonly invaderEyes = INVADER_X.map((x) =>
-    pixelPath(INVADER, (cell) => cell === 'e', x, INVADER_Y),
-  ).join('');
-  protected readonly invaderMouth = INVADER_X.map((x) => mouthPath(x, INVADER_Y)).join('');
+  protected readonly src = computed(() => {
+    const file = FILES[this.art()];
+    return file ? `esendex/${file}.svg` : null;
+  });
 }

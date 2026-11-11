@@ -3,45 +3,39 @@ import { CardOption } from '../../../models/room';
 import { cardArt, cardText } from './card-picker';
 import { EsendexCardArt } from './esendex-card-art';
 
-/** The text each illustration draws, in order. Only the value is drawn on it: the corners carry no numbers. */
-const DRAWN_TEXT: Record<string, string[]> = {
-  'esendex-1': ['1'],
-  'esendex-2': ['2'],
-  'esendex-3': ['3'],
-  'esendex-5': ['5'],
-  'esendex-8': ['8'],
-  'esendex-13': ['13'],
-  'esendex-30': ['30', '20', '10', '0', '30'],
-  'esendex-100': ['100'],
-  'esendex-question': ['?'],
-  'esendex-coffee': [],
-};
+const ARTS = [
+  'esendex-1',
+  'esendex-2',
+  'esendex-3',
+  'esendex-5',
+  'esendex-8',
+  'esendex-13',
+  'esendex-30',
+  'esendex-100',
+  'esendex-question',
+  'esendex-coffee',
+];
 
 describe('EsendexCardArt', () => {
-  function render(art: string): SVGSVGElement {
+  function render(art: string): HTMLElement {
     const fixture = TestBed.createComponent(EsendexCardArt);
     fixture.componentRef.setInput('art', art);
     fixture.componentRef.setInput('label', 'value');
     fixture.detectChanges();
-    return (fixture.nativeElement as HTMLElement).querySelector('svg') as SVGSVGElement;
+    return fixture.nativeElement as HTMLElement;
   }
 
-  for (const art of Object.keys(DRAWN_TEXT)) {
-    it(`draws ${art} as a labelled svg with only its own text`, () => {
-      const svg = render(art);
+  for (const art of ARTS) {
+    it(`draws ${art} as a labelled image`, () => {
+      const img = render(art).querySelector('img') as HTMLImageElement;
 
-      expect(svg.getAttribute('role')).toBe('img');
-      expect(svg.getAttribute('aria-label')).toBe('value');
-      expect(Array.from(svg.querySelectorAll('text')).map((text) => text.textContent)).toEqual(
-        DRAWN_TEXT[art],
-      );
-      expect(svg.querySelectorAll('*').length).toBeGreaterThan(1);
+      expect(img.getAttribute('alt')).toBe('value');
+      expect(img.getAttribute('src')).toMatch(/^esendex\/[\w]+\.svg$/);
     });
   }
 
   it('draws nothing for an unknown illustration', () => {
-    const drawn = Array.from(render('esendex-unknown').children).filter((child) => child.tagName !== 'defs');
-    expect(drawn.length).toBe(0);
+    expect(render('esendex-unknown').querySelector('img')).toBeNull();
   });
 });
 

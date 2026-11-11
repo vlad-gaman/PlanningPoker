@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050">
+<defs>
+<radialGradient id="c8-sh0" cx="0.5" cy="0.5" r="0.5"><stop offset="0.000" stop-color="#04050f" stop-opacity="0.521"/><stop offset="0.100" stop-color="#04050f" stop-opacity="0.487"/><stop offset="0.200" stop-color="#04050f" stop-opacity="0.397"/><stop offset="0.300" stop-color="#04050f" stop-opacity="0.283"/><stop offset="0.400" stop-color="#04050f" stop-opacity="0.177"/><stop offset="0.500" stop-color="#04050f" stop-opacity="0.096"/><stop offset="0.600" stop-color="#04050f" stop-opacity="0.046"/><stop offset="0.700" stop-color="#04050f" stop-opacity="0.019"/><stop offset="0.800" stop-color="#04050f" stop-opacity="0.007"/><stop offset="0.900" stop-color="#04050f" stop-opacity="0.002"/><stop offset="1.000" stop-color="#04050f" stop-opacity="0.001"/></radialGradient>
+<radialGradient id="c8-sh1" cx="0.5" cy="0.5" r="0.5"><stop offset="0.000" stop-color="#04050f" stop-opacity="0.237"/><stop offset="0.100" stop-color="#04050f" stop-opacity="0.222"/><stop offset="0.200" stop-color="#04050f" stop-opacity="0.181"/><stop offset="0.300" stop-color="#04050f" stop-opacity="0.129"/><stop offset="0.400" stop-color="#04050f" stop-opacity="0.080"/><stop offset="0.500" stop-color="#04050f" stop-opacity="0.044"/><stop offset="0.600" stop-color="#04050f" stop-opacity="0.021"/><stop offset="0.700" stop-color="#04050f" stop-opacity="0.009"/><stop offset="0.800" stop-color="#04050f" stop-opacity="0.003"/><stop offset="0.900" stop-color="#04050f" stop-opacity="0.001"/><stop offset="1.000" stop-color="#04050f" stop-opacity="0.000"/></radialGradient>
+<radialGradient id="c8-sh2" cx="0.5" cy="0.5" r="0.5"><stop offset="0.000" stop-color="#04050f" stop-opacity="0.709"/><stop offset="0.100" stop-color="#04050f" stop-opacity="0.663"/><stop offset="0.200" stop-color="#04050f" stop-opacity="0.541"/><stop offset="0.300" stop-color="#04050f" stop-opacity="0.386"/><stop offset="0.400" stop-color="#04050f" stop-opacity="0.240"/><stop offset="0.500" stop-color="#04050f" stop-opacity="0.131"/><stop offset="0.600" stop-color="#04050f" stop-opacity="0.062"/><stop offset="0.700" stop-color="#04050f" stop-opacity="0.026"/><stop offset="0.800" stop-color="#04050f" stop-opacity="0.009"/><stop offset="0.900" stop-color="#04050f" stop-opacity="0.003"/><stop offset="1.000" stop-color="#04050f" stop-opacity="0.001"/></radialGradient>
+<linearGradient id="c8-crest" gradientUnits="userSpaceOnUse" x1="0" y1="330" x2="0" y2="480">
+<stop offset="0" stop-color="#363532" stop-opacity="1"/>
+<stop offset="0.6" stop-color="#363532" stop-opacity="0.85"/>
+<stop offset="1" stop-color="#363532" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="c8-band" gradientUnits="userSpaceOnUse" x1="0" y1="605" x2="0" y2="745"><stop offset="0" stop-color="#46473c"/><stop offset="0.21" stop-color="#3c3d34"/><stop offset="0.36" stop-color="#37372f"/><stop offset="0.5" stop-color="#32322b"/><stop offset="0.64" stop-color="#2f2f28"/><stop offset="0.79" stop-color="#2c2d26"/><stop offset="1" stop-color="#2b2b25"/></linearGradient>
+<radialGradient id="c8-disc" cx="0.5" cy="0.45" r="0.6">
+<stop offset="0" stop-color="#fbfafb"/>
+<stop offset="1" stop-color="#eeedf0"/>
+</radialGradient>
+<clipPath id="c8-clip"><circle cx="377.6" cy="530.3" r="213.5"/></clipPath>
+</defs>
+<ellipse cx="380.3" cy="731.9" rx="385.2" ry="72.4" fill="url(#c8-sh0)"/>
+<ellipse cx="379.3" cy="775.0" rx="486.4" ry="145.6" fill="url(#c8-sh1)"/>
+<ellipse cx="382.7" cy="671.8" rx="373.6" ry="149.0" fill="url(#c8-sh2)"/>
+<circle cx="377.6" cy="530.3" r="213.5" fill="#2b2a28"/>
+<g clip-path="url(#c8-clip)">
+<circle cx="377.6" cy="540" r="206" fill="url(#c8-crest)"/>
+<circle cx="377.6" cy="540" r="183" fill="#2b2a28"/>
+<path d="M160 521.9 L180 535.1 L200 547.1 L220 557.9 L240 567.5 L260 576.0 L280 583.4 L300 589.7 L320 595.1 L340 599.5 L360 603.1 L380 605.7 L400 607.6 L420 608.7 L440 609.0 L460 608.7 L480 607.7 L500 606.2 L520 604.1 L540 601.4 L560 598.3 L580 594.8 L600 800 L160 800 Z" fill="url(#c8-band)"/>
+</g>
+<circle cx="377.6" cy="530.3" r="213.5" fill="none" stroke="#1a1917" stroke-width="2"/>
+<circle cx="397.7" cy="477.5" r="85.3" fill="url(#c8-disc)"/>
+<path fill="#1b1a1e" fill-rule="evenodd" d="M380.0,416.5L372.5,419.2 365.0,423.5 358.8,428.8 353.2,435.2 349.2,443.0 347.5,450.0 347.2,456.2 348.2,463.0 352.2,472.0 357.5,478.2 365.0,483.0 375.2,486.5 370.2,497.8 368.2,507.8 368.2,513.5 371.2,525.0 376.0,533.0 384.0,540.0 395.0,545.0 407.0,546.2 421.2,544.0 428.2,541.2 437.5,536.0 444.2,530.2 449.8,523.2 453.8,515.2 455.5,509.2 456.2,501.2 455.2,493.5 450.8,482.8 443.8,475.2 437.2,471.5 423.8,467.8 427.0,454.5 426.5,442.2 422.0,430.8 415.8,423.0 409.5,418.5 401.8,415.8 388.0,415.0Z M394.0,486.8L406.0,485.2 418.0,485.2 424.8,486.2 430.5,489.0 435.0,494.2 437.2,502.2 436.0,509.5 432.8,515.5 423.5,524.0 414.0,527.8 404.8,528.0 399.0,526.2 394.8,523.8 390.5,519.5 388.5,516.0 386.0,506.5 386.2,501.5 388.0,495.0 390.2,490.2Z M402.0,436.2L407.8,443.5 409.5,450.2 409.2,459.8 407.2,465.5 405.0,468.0 394.5,470.2 383.8,470.2 374.8,468.2 369.0,463.5 366.2,457.8 366.0,451.5 367.2,447.0 373.0,439.8 380.0,435.2 387.0,433.0 396.0,433.2Z"/>
+</svg>
