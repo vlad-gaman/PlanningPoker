@@ -6,7 +6,11 @@ import { ApiRequestError } from './api-request-error';
 export type HubConnectionFactory = () => signalR.HubConnection;
 
 export const defaultHubConnectionFactory: HubConnectionFactory = () =>
-  new signalR.HubConnectionBuilder().withUrl('/hubs/room').withAutomaticReconnect().build();
+  new signalR.HubConnectionBuilder()
+    .withUrl('/hubs/room')
+    // Never give up: wait a little longer after each failed try, up to ten seconds, so a returning server is found.
+    .withAutomaticReconnect({ nextRetryDelayInMilliseconds: (context) => Math.min(1000 + context.previousRetryCount * 2000, 10000) })
+    .build();
 
 /** Wraps the SignalR connection; hub invocations that return an ApiResponse are unwrapped. Each room provides its own. */
 @Injectable()
@@ -30,6 +34,16 @@ export class RoomHubClient {
 
   on<T extends unknown[]>(method: string, handler: (...args: T) => void): void {
     this.connection?.on(method, handler as (...args: unknown[]) => void);
+  }
+
+  /** Runs when the connection drops and the automatic reconnect starts trying. */
+  onReconnecting(handler: () => void): void {
+    this.connection?.onreconnecting(() => handler());
+  }
+
+  /** Runs when the connection is closed for good (it was stopped, or reconnecting gave up). */
+  onClosed(handler: () => void): void {
+    this.connection?.onclose(() => handler());
   }
 
   /** Runs after the automatic reconnect succeeded; the server has forgotten the old connection by then. */

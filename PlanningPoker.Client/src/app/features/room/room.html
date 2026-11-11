@@ -79,7 +79,7 @@
           }
           <ul class="people" aria-label="Participants">
             @for (person of store.orderedPeople(); track person.guid) {
-              <li class="person" [class.observer]="person.personType === 'obs'" [attr.data-role]="person.personType" [attr.data-short]="roleShort(person.personType)">
+              <li class="person" [class.offgrid-person]="isOffgrid(person)" [attr.title]="isOffgrid(person) ? 'Not connected right now; their vote is kept' : null" [class.observer]="person.personType === 'obs'" [attr.data-role]="person.personType" [attr.data-short]="roleShort(person.personType)">
                 <span class="avatar" aria-hidden="true">
                   {{ initial(person) }}
                   @if (person.guid === store.ownerGuid()) {
@@ -89,15 +89,7 @@
                     </svg>
                   }
                 </span>
-                <span class="name">
-                  {{ person.name }}
-                  @if (person.guid === store.ownerGuid()) {
-                    <span class="owner">(owner)</span>
-                  }
-                  @if (person.isOffgrid) {
-                    <span class="offgrid" title="Not connected right now; their vote is kept">(offgrid)</span>
-                  }
-                </span>
+                <span class="name">{{ person.name }}</span>
                 <span class="role-label">{{ roleLabel(person.personType) }}</span>
                 @let mark = markOf(person);
                 <span class="mark" [class.none]="!mark.text && !mark.image" [class.back]="mark.hidden" [class.flip]="mark.revealed">
@@ -120,7 +112,7 @@
           <app-card-picker
             [cards]="store.cards()"
             [selected]="store.myMark()"
-            [disabled]="store.votingFinished() || isObserver()"
+            [disabled]="store.votingFinished() || isObserver() || !store.connected()"
             (markSelected)="store.vote($event)"
           />
         </aside>

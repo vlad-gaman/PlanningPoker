@@ -147,16 +147,10 @@
   white-space: nowrap;
 }
 
-.owner {
-  color: var(--primary-color);
-  font-size: 0.85em;
-}
-
-.offgrid {
-  color: var(--text-color);
-  font-size: 0.85em;
-  font-style: italic;
-  opacity: 0.7;
+// Someone who is offgrid looks switched off; their vote is still kept.
+.offgrid-person {
+  opacity: 0.45;
+  filter: grayscale(1);
 }
 
 // One box for every state of the vote card, so a hidden vote and its reveal are the same size: 72 x 96 with a 3px frame, the same as the deck cards.

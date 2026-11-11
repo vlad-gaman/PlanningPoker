@@ -38,7 +38,6 @@ test('creating a room with a fun name shows the owner as the only participant', 
 
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText('Ann');
-  await expect(rows(page).first()).toContainText('(owner)');
   await expect(rows(page).first().locator('.crown')).toBeVisible();
 });
 
@@ -82,7 +81,7 @@ test('ownership moves to another member when the owner leaves', async ({ browser
 
   await expect(rows(bob.page)).toHaveCount(1);
   await expect(rows(bob.page).first()).toContainText('Bob');
-  await expect(rows(bob.page).first()).toContainText('(owner)');
+  await expect(rows(bob.page).first().locator('.crown')).toBeVisible();
 
   await Promise.all([ann, bob].map(({ context }) => context.close()));
 });
@@ -182,7 +181,8 @@ test('a room whose creator never joins is owned by the first person in and disap
   await joinByLink(bob.page, roomUrl, 'Bob');
 
   await expect(rows(bob.page)).toHaveCount(1);
-  await expect(rows(bob.page).first()).toContainText('Bob (owner)');
+  await expect(rows(bob.page).first()).toContainText('Bob');
+  await expect(rows(bob.page).first().locator('.crown')).toBeVisible();
   await expect(bob.page.getByRole('button', { name: 'Settings' })).toBeVisible();
 
   await bob.page.getByRole('button', { name: 'Leave room' }).click();
@@ -205,8 +205,8 @@ test('a creator who opens the room after someone else joins as a regular member'
   await expect(rows(ann.page)).toHaveCount(2);
 
   await expect(rows(bob.page)).toHaveCount(2);
-  await expect(rows(bob.page).filter({ hasText: 'Bob' })).toContainText('(owner)');
-  await expect(rows(bob.page).filter({ hasText: 'Ann' })).not.toContainText('(owner)');
+  await expect(rows(bob.page).filter({ hasText: 'Bob' }).locator('.crown')).toBeVisible();
+  await expect(rows(bob.page).filter({ hasText: 'Ann' }).locator('.crown')).toHaveCount(0);
   await expect(bob.page.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(ann.page.getByRole('button', { name: 'Settings' })).toHaveCount(0);
 

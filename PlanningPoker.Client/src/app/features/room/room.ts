@@ -36,6 +36,8 @@ import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './ro
 
 type Phase = 'loading' | 'name' | 'joined';
 
+const DISCONNECTED_MESSAGE = 'You are disconnected from the server. Trying to reconnect…';
+
 @Component({
   selector: 'app-room',
   imports: [
@@ -107,6 +109,17 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       const message = this.error();
       if (message) {
         popup.show(message);
+      }
+    });
+    // Losing the server shows a popup that stays until the connection is back.
+    effect(() => {
+      if (this.phase() !== 'joined') {
+        return;
+      }
+      if (this.store.connected()) {
+        popup.dismiss();
+      } else {
+        popup.show(DISCONNECTED_MESSAGE, true);
       }
     });
     // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
@@ -184,6 +197,11 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     }
     this.copied.set(what);
     setTimeout(() => this.copied.set(null), 1500);
+  }
+
+  /** Offgrid people look disabled; so does your own tile while your connection to the server is down. */
+  protected isOffgrid(person: Person): boolean {
+    return person.isOffgrid === true || (!this.store.connected() && person.guid === this.myGuid());
   }
 
   protected changeRole(personType: PersonType): void {

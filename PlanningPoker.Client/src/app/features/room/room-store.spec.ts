@@ -167,6 +167,22 @@ describe('RoomStore', () => {
     expect(store.ownerGuid()).toBe(BOB.guid);
   });
 
+  it('is disconnected while the hub reconnects, and connected again after, and when it is closed on purpose', async () => {
+    expect(store.connected()).toBe(true);
+
+    hub.dropConnection();
+    expect(store.connected()).toBe(false);
+
+    hub.reconnect();
+    expect(store.connected()).toBe(true);
+
+    hub.closeConnection();
+    expect(store.connected()).toBe(false);
+
+    await store.close();
+    expect(store.connected()).toBe(true);
+  });
+
   it('joins again after the hub reconnects', async () => {
     hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
 

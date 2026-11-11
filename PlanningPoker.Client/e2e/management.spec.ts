@@ -94,7 +94,7 @@ test('transferring ownership moves the Settings button to the new owner', async 
 
   await expect(settings(bob.page)).toBeVisible();
   await expect(settings(ann.page)).toHaveCount(0);
-  await expect(row(bob.page, 'Bob')).toContainText('(owner)');
+  await expect(row(bob.page, 'Bob').locator('.crown')).toBeVisible();
 
   await Promise.all([ann.context.close(), bob.context.close()]);
 });

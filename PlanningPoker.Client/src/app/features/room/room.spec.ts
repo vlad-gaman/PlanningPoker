@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
+import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -33,6 +34,7 @@ describe('Room', () => {
   const fireworks = { launch: vi.fn(), dispose: vi.fn() };
   const launcher = { create: vi.fn() };
   const dialog = { open: vi.fn() };
+  const popup = { show: vi.fn(), dismiss: vi.fn() };
   let hub: ReturnType<typeof fakeHub>;
   let navigate: ReturnType<typeof vi.spyOn>;
 
@@ -44,6 +46,8 @@ describe('Room', () => {
     fireworks.dispose.mockReset();
     launcher.create.mockReset();
     dialog.open.mockReset();
+    popup.show.mockReset();
+    popup.dismiss.mockReset();
     launcher.create.mockReturnValue(fireworks);
     TestBed.configureTestingModule({
       providers: [
@@ -51,6 +55,7 @@ describe('Room', () => {
         { provide: MeService, useValue: me },
         { provide: FireworksLauncher, useValue: launcher },
         { provide: MatDialog, useValue: dialog },
+        { provide: ErrorPopupService, useValue: popup },
       ],
     });
     // The room provides its own hub client at component level, so the fake replaces it there.
@@ -80,18 +85,48 @@ describe('Room', () => {
     expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
     expect(element.querySelector('form')).toBeNull();
     expect(element.textContent).toContain('Ann');
-    expect(element.textContent).toContain('(owner)');
+    expect(element.querySelector('.person .crown')).not.toBeNull();
+    expect(element.textContent).not.toContain('(owner)');
   });
 
-  it('marks offgrid people on their tile and leaves online people unmarked', async () => {
+  it('flags offgrid people on their tile and leaves online people unflagged', async () => {
     me.get.mockReturnValue(of(ANN));
     hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
 
     const { element } = await render();
 
     const rows = Array.from(element.querySelectorAll('.person'));
-    expect(rows.find((row) => row.textContent?.includes('Bob'))?.textContent).toContain('(offgrid)');
-    expect(rows.find((row) => row.textContent?.includes('Ann'))?.textContent).not.toContain('(offgrid)');
+    expect(rows.find((row) => row.textContent?.includes('Bob'))?.getAttribute('title')).toContain('Not connected');
+    expect(rows.find((row) => row.textContent?.includes('Ann'))?.getAttribute('title')).toBeNull();
+  });
+
+  it('greys out the tile of an offgrid person', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
+
+    const { element } = await render();
+
+    const tiles = Array.from(element.querySelectorAll('.person'));
+    expect(tiles.find((tile) => tile.textContent?.includes('Bob'))?.classList).toContain('offgrid-person');
+    expect(tiles.find((tile) => tile.textContent?.includes('Ann'))?.classList).not.toContain('offgrid-person');
+  });
+
+  it('tells you when you lose the server, greys out your own tile and clears it when you are back', async () => {
+    me.get.mockReturnValue(of(ANN));
+    const { fixture, element } = await render();
+    expect(popup.show).not.toHaveBeenCalled();
+
+    hub.dropConnection();
+    await settle(fixture);
+
+    expect(popup.show).toHaveBeenCalledWith(expect.stringContaining('disconnected from the server'), true);
+    expect(element.querySelector('.person')?.classList).toContain('offgrid-person');
+
+    hub.reconnect();
+    await settle(fixture);
+
+    expect(popup.dismiss).toHaveBeenCalled();
+    expect(element.querySelector('.person')?.classList).not.toContain('offgrid-person');
   });
 
   it('asks for a name when there is no session, then saves it and joins', async () => {
