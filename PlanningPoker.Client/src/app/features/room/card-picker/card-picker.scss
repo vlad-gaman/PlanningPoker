@@ -72,7 +72,7 @@
     border: none;
     border-radius: 10px;
     background: var(--esendex-paper);
-    overflow: hidden;
+    // Not clipped: the number bubble pokes out past the card's edge.
 
     app-esendex-card-art {
       width: 100%;

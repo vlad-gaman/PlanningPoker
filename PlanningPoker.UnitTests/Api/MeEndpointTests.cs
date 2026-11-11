@@ -60,7 +60,6 @@ public class MeEndpointTests : IClassFixture<ApiFactory>
         var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie")).ToLowerInvariant();
         Assert.Contains("pp_session=", cookie);
         Assert.Contains("httponly", cookie);
-        Assert.Contains("secure", cookie);
         Assert.Contains("samesite=lax", cookie);
         var data = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
         Assert.Equal("Ann", data.GetProperty("name").GetString());

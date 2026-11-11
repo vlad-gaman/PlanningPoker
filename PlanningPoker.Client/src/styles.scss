@@ -489,3 +489,10 @@ a {
 .cdk-overlay-dark-backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
+
+// The popup for failures (ErrorPopupService): red, on top of everything, readable in both themes.
+.error-popup {
+  --mat-snack-bar-container-color: #b3261e;
+  --mat-snack-bar-supporting-text-color: #fff;
+  --mat-snack-bar-button-color: #fff;
+}

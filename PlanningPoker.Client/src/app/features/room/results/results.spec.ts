@@ -91,6 +91,14 @@ describe('Results', () => {
     expect(segments).toEqual(['5 x4', '8 x3', '3 x1']);
   });
 
+  it('shows the number, not the art name, for an illustrated card', () => {
+    const statistics = { ...CONSENSUS_STATISTICS, all: { marks: [{ mark: '13', percentage: 100 }], highestMark: '13', averageMark: 13 } };
+    const { element } = render(statistics, 2, [{ value: '13', display: 'art:esendex-13' }]);
+
+    expect(element.querySelector('.segment b')?.textContent).toBe('13');
+    expect(element.textContent).not.toContain('art:');
+  });
+
   it('shows a card display instead of its mark', () => {
     const statistics = { ...CONSENSUS_STATISTICS, all: { marks: [{ mark: '0.5', percentage: 100 }], highestMark: '0.5', averageMark: 0.5 } };
     const { element } = render(statistics, 2, [{ value: '0.5', display: '½' }]);

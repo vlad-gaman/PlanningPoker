@@ -30,6 +30,9 @@ export class EsendexCardArt {
   /** The card's value, read out as the image's name. */
   readonly label = input.required<string>();
 
+  /** The coffee card's bubble holds a small tilted copy of the cup instead of a number. */
+  protected readonly isCoffee = computed(() => this.art() === 'esendex-coffee');
+
   protected readonly src = computed(() => {
     const file = FILES[this.art()];
     return file ? `esendex/${file}.svg` : null;

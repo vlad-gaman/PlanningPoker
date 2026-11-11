@@ -228,6 +228,20 @@ describe('Room', () => {
     vi.unstubAllGlobals();
   });
 
+  it('falls back to the legacy copy command when the clipboard API is unavailable', async () => {
+    me.get.mockReturnValue(of(ANN));
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('insecure')) } });
+    const exec = vi.fn().mockReturnValue(true);
+    document.execCommand = exec;
+    const { fixture, element } = await render();
+
+    element.querySelector<HTMLButtonElement>('.copy')?.click();
+    await settle(fixture);
+
+    expect(exec).toHaveBeenCalledWith('copy');
+    vi.unstubAllGlobals();
+  });
+
   it('tags each tile with its short role and role colour key', async () => {
     me.get.mockReturnValue(of(ANN));
     hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });

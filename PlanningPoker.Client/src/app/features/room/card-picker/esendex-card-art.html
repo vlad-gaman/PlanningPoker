@@ -1,3 +1,17 @@
 @if (src(); as src) {
   <img [src]="src" [alt]="label()" draggable="false" />
+  <span class="bubble" [class.cup-bubble]="isCoffee()" aria-hidden="true">
+    <i class="string"></i>
+    <span class="tag">
+      <span class="face">
+        @if (isCoffee()) {
+          <svg class="cup" viewBox="95 325 500 440">
+            <image href="esendex/coffee.svg" width="750" height="1050" />
+          </svg>
+        } @else {
+          <b [class.long]="label().length > 2">{{ label() }}</b>
+        }
+      </span>
+    </span>
+  </span>
 }

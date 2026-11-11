@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { CardOption, GroupStatistics, VoteStatistics } from '../../../models/room';
-import { cardImage } from '../card-picker/card-picker';
+import { cardImage, cardText } from '../card-picker/card-picker';
 
 type Tone = 'good' | 'mid' | 'bad';
 
@@ -54,7 +54,7 @@ export class Results {
         const card = this.cards().find((option) => option.value === share.mark);
         return {
           mark: share.mark,
-          text: card?.display && !cardImage(card) ? card.display : share.mark,
+          text: (card && cardText(card)) ?? share.mark,
           image: card ? cardImage(card) : null,
           count: Math.round((share.percentage * this.voters()) / 100),
         };

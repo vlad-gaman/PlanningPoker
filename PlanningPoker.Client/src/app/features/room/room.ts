@@ -17,6 +17,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
+import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -101,6 +102,13 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
+    const popup = inject(ErrorPopupService);
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        popup.show(message);
+      }
+    });
     // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
     // in consensus, if the room has them on; they stop as soon as the votes are gone.
     effect(() => {
@@ -171,9 +179,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   protected async copy(what: 'name' | 'link'): Promise<void> {
     const text = what === 'name' ? this.id() : this.roomUrl();
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
+    if (!(await writeClipboard(text))) {
       return;
     }
     this.copied.set(what);
@@ -302,6 +308,30 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       }
       this.error.set(errorMessage(error));
       this.phase.set('name');
+    }
+  }
+}
+
+/**
+ * Copies text to the clipboard. The async clipboard API needs a secure context (HTTPS or localhost), so over plain
+ * HTTP on the local network it falls back to a hidden textarea and the legacy copy command.
+ */
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+    try {
+      return document.execCommand('copy');
+    } finally {
+      field.remove();
     }
   }
 }
