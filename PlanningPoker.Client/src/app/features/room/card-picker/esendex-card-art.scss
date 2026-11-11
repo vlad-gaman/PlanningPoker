@@ -241,13 +241,17 @@ svg {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
-// The die: a warm cream top face, a deeper left face, and a thin highlight on the front vertical edge.
+// The die: a cream top face, a light left face, a deeper right face, and a thin highlight on the front vertical edge.
 .die-top {
   fill: var(--esendex-top-face);
 }
 
-.sdie {
-  stop-color: var(--esendex-die-deep);
+.die-left {
+  fill: var(--esendex-light);
+}
+
+.die-right {
+  fill: var(--esendex-die-deep);
 }
 
 .edge-hi {
