@@ -2,21 +2,18 @@ import { expect, test } from '@playwright/test';
 
 const ROOM_PATH = /\/room\/[^/]+$/;
 
-/**
- * Each card's value and the text its illustration draws, in order. Only the value is drawn on the art (or the
- * scale of the thermometer); the corners of the physical cards carry no numbers, so nothing else is listed.
- */
-const DRAWN_TEXT: [string, string[]][] = [
-  ['1', ['1']],
-  ['2', ['2']],
-  ['3', ['3']],
-  ['5', ['5']],
-  ['8', ['8']],
-  ['13', ['13']],
-  ['30', ['30', '20', '10', '0', '30']],
-  ['100', ['100']],
-  ['?', ['?']],
-  ['coffee', []],
+/** Each card's value and the file of its illustration. The corners of the physical cards carry no numbers. */
+const CARDS: [string, string][] = [
+  ['1', '1'],
+  ['2', '2'],
+  ['3', '3'],
+  ['5', '5'],
+  ['8', '8'],
+  ['13', '13'],
+  ['30', '30'],
+  ['100', '100'],
+  ['?', 'q'],
+  ['coffee', 'coffee'],
 ];
 
 test('the Esendex Fibonacci set, chosen in room settings, draws its illustrated cards with no corner numbers', async ({
@@ -32,21 +29,23 @@ test('the Esendex Fibonacci set, chosen in room settings, draws its illustrated 
   await expect(page).toHaveURL(ROOM_PATH);
 
   const cards = page.getByRole('radiogroup', { name: 'Cards' });
-  await expect(cards.getByRole('radio')).toHaveCount(DRAWN_TEXT.length);
-  for (const [value, texts] of DRAWN_TEXT) {
+  await expect(cards.getByRole('radio')).toHaveCount(CARDS.length);
+  for (const [value, file] of CARDS) {
     const card = cards
       .locator('label.card')
       .filter({ has: page.locator(`input[value="${value}"]`) });
-    await expect(card.locator('svg')).toHaveAttribute('aria-label', value);
+    const img = card.locator('img');
+    await expect(img).toHaveAttribute('alt', value);
+    await expect(img).toHaveAttribute('src', `esendex/${file}.svg`);
     await expect(card.locator('span')).toHaveCount(0);
-    expect(await card.locator('svg text').allTextContents()).toEqual(texts);
+    await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
   }
 
   // Every illustration is visible in the other theme too.
   await page.getByLabel('Theme').selectOption('dark');
-  await expect(cards.locator('svg')).toHaveCount(DRAWN_TEXT.length);
-  for (const svg of await cards.locator('svg').all()) {
-    await expect(svg).toBeVisible();
+  await expect(cards.locator('img')).toHaveCount(CARDS.length);
+  for (const img of await cards.locator('img').all()) {
+    await expect(img).toBeVisible();
   }
 
   // A picked card shows its illustration in the participants table once the votes are shown.
@@ -56,5 +55,5 @@ test('the Esendex Fibonacci set, chosen in room settings, draws its illustrated 
     .click();
   await page.getByRole('button', { name: 'Show votes' }).click();
   const mark = page.locator('tr[mat-row]').filter({ hasText: 'Ann' }).locator('.mark');
-  await expect(mark.locator('svg')).toHaveAttribute('aria-label', '30');
+  await expect(mark.locator('img')).toHaveAttribute('alt', '30');
 });

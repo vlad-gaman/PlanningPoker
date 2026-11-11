@@ -1,6 +1,11 @@
 <div class="cards" role="radiogroup" aria-label="Cards">
   @for (card of cards(); track card.value) {
-    <label class="card" [class.selected]="card.value === selected()" [class.disabled]="disabled()">
+    <label
+      class="card"
+      [class.art-card]="art(card) !== null"
+      [class.selected]="card.value === selected()"
+      [class.disabled]="disabled()"
+    >
       <input
         type="radio"
         name="card"

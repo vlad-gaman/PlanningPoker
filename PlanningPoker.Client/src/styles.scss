@@ -23,7 +23,7 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --coffee-bg: #ffdd00;
   --coffee-filter: none;
   // The Esendex Fibonacci illustrations: the physical cards' purple, white, grey and ink.
-  --esendex-purple: #5b2d82;
+  --esendex-purple: #4b2468;
   --esendex-light: #fbfaff;
   --esendex-grey: #aeb4bb;
   --esendex-ink: #3b3b44;
@@ -32,6 +32,26 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --esendex-gold: #c9a33b;
   --esendex-green: #4caf50;
   --esendex-nose: #e88ea0;
+  --esendex-shadow: #3b3b44;
+  --esendex-paper: #f3efe3;
+  --esendex-lens: #9fb0a6;
+  --esendex-lens-deep: #6b7b71;
+  --esendex-glow: #ffffff;
+  --esendex-saucer: #5d4a6e;
+  --esendex-tube-top: #c3c9bd;
+  --esendex-purple-deep: #35194a;
+  --esendex-metal: #aeb1a3;
+  --esendex-metal-light: #c9ccc1;
+  --esendex-frame: #2f3536;
+  --esendex-tube: #3f2250;
+  --esendex-tube-lit: #5e3a7a;
+  --esendex-tag: #4b2468;
+  --esendex-crack: #55584f;
+  --esendex-band: #3d2a4d;
+  --esendex-handle: #c3c8cd;
+  --esendex-die-deep: #c4c8c8;
+  --esendex-top-face: #f5f8fb;
+  --esendex-metal-deep: #8f9284;
   color-scheme: light;
 }
 
@@ -54,7 +74,7 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --chart-color-success: #51cf66;
   --coffee-bg: #ffdd00;
   --coffee-filter: brightness(0.95) contrast(1.05);
-  --esendex-purple: #b48ae0;
+  --esendex-purple: #9566c6;
   --esendex-light: #ece9f2;
   --esendex-grey: #7d838b;
   --esendex-ink: #d6d6de;
@@ -63,6 +83,26 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --esendex-gold: #d8b452;
   --esendex-green: #7ee07e;
   --esendex-nose: #f09aaa;
+  --esendex-shadow: #000000;
+  --esendex-paper: #2d2d2d;
+  --esendex-lens: #6f8078;
+  --esendex-lens-deep: #4d5c55;
+  --esendex-glow: #4a4f57;
+  --esendex-saucer: #8b7aa0;
+  --esendex-tube-top: #8f9a92;
+  --esendex-purple-deep: #6a4399;
+  --esendex-metal: #6e7469;
+  --esendex-metal-light: #9aa096;
+  --esendex-frame: #9aa3ab;
+  --esendex-tube: #4a3560;
+  --esendex-tube-lit: #6a5088;
+  --esendex-tag: #2e1545;
+  --esendex-crack: #111114;
+  --esendex-band: #3d2a4d;
+  --esendex-handle: #d5dadf;
+  --esendex-die-deep: #9aa1a8;
+  --esendex-top-face: #e6ebf0;
+  --esendex-metal-deep: #3f443e;
   color-scheme: dark;
 }
 
