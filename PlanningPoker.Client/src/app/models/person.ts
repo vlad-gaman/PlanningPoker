@@ -4,6 +4,8 @@ export interface Person {
   guid: string;
   name: string;
   personType: PersonType;
+  /** True when the person is still in the room but has had no connection for longer than the grace period. */
+  isOffgrid?: boolean;
 }
 
 export interface UpdateMeRequest {

@@ -15,6 +15,15 @@ public class PersonMappersTests
         Assert.Equal(entity.Guid, person.Guid);
         Assert.Equal("Ann", person.Name);
         Assert.Equal("test", person.PersonType);
+        Assert.False(person.IsOffgrid);
+    }
+
+    [Fact]
+    public void PersonMapper_CarriesTheOffgridState()
+    {
+        var entity = new PersonEntity { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "test" };
+
+        Assert.True(new PersonMapper().Map(entity, isOffgrid: true).IsOffgrid);
     }
 
     [Fact]

@@ -15,5 +15,14 @@ public class PersonResponseMapperTests
         Assert.Equal(person.Guid, response.Guid);
         Assert.Equal("Ann", response.Name);
         Assert.Equal("obs", response.PersonType);
+        Assert.False(response.IsOffgrid);
+    }
+
+    [Fact]
+    public void Map_CarriesTheOffgridState()
+    {
+        var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "obs", IsOffgrid = true };
+
+        Assert.True(new PersonResponseMapper().Map(person).IsOffgrid);
     }
 }

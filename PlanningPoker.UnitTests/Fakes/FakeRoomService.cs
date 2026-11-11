@@ -31,6 +31,11 @@ public sealed class FakeRoomService : IRoomService
         return ExitResult;
     }
 
+    public VotingFollowUp FollowUpAfterChange(string roomId)
+    {
+        return VotingFollowUp.None;
+    }
+
     public ServiceResponse<VoteResult> VoteResult { get; set; } = ServiceResponse<VoteResult>.Failure();
 
     public ServiceResponse<ClearVotesResult> ClearResult { get; set; } = ServiceResponse<ClearVotesResult>.Failure();

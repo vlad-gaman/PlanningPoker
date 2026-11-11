@@ -27,6 +27,22 @@ public class RevealedVotesEntityMapperTests
     }
 
     [Fact]
+    public void Map_OffgridVoterWhoDidNotVote_DoesNotCountAgainstEveryoneVotedAndOffgridVotesStay()
+    {
+        var room = Room((Dev, "5"), (Tester, null));
+        room.OffgridGuids = [Tester];
+        var withOffgridVote = Room((Dev, null), (Tester, "8"));
+        withOffgridVote.OffgridGuids = [Tester];
+
+        var revealed = new RevealedVotesEntityMapper().Map(room, Types);
+        var offgridVote = new RevealedVotesEntityMapper().Map(withOffgridVote, Types);
+
+        Assert.True(revealed.EveryoneVoted);
+        Assert.False(offgridVote.EveryoneVoted);
+        Assert.Equal("8", offgridVote.Votes[Tester].Mark);
+    }
+
+    [Fact]
     public void Map_CopiesTheMarksWithTheTypeOfEachVoter()
     {
         var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Tester, "8")), Types);

@@ -137,6 +137,30 @@ describe('RoomStore', () => {
     expect(store.votes()).toEqual({});
   });
 
+  it('marks a person who went offgrid and keeps their place and vote', () => {
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: 'hide', personType: 'test' });
+
+    hub.emit(HUB_EVENTS.PersonOffgrid, { person: { ...BOB, isOffgrid: true } });
+
+    expect(store.people()).toEqual([ANN, { ...BOB, isOffgrid: true }]);
+    expect(store.votes()).toEqual({ [BOB.guid]: 'hide' });
+  });
+
+  it('shows a person who came back as online again', () => {
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+    hub.emit(HUB_EVENTS.PersonOffgrid, { person: { ...BOB, isOffgrid: true } });
+
+    hub.emit(HUB_EVENTS.PersonBack, { person: { ...BOB, isOffgrid: false } });
+
+    expect(store.people()).toEqual([ANN, { ...BOB, isOffgrid: false }]);
+  });
+
+  it('ignores an offgrid event for a person the room does not list', () => {
+    hub.emit(HUB_EVENTS.PersonOffgrid, { person: { ...BOB, isOffgrid: true } });
+
+    expect(store.people()).toEqual([ANN]);
+  });
+
   it('follows ownership transfers', () => {
     hub.emit(HUB_EVENTS.OwnershipTransferred, { newOwner: BOB });
 
@@ -197,6 +221,23 @@ describe('RoomStore', () => {
     expect(store.people()).toEqual([ANN]);
   });
 
+  it('leaveRoom tells the server to remove the person before it disconnects and navigates home', async () => {
+    await store.leaveRoom();
+
+    expect(hub.invoke).toHaveBeenLastCalledWith('LeaveRoom');
+    expect(hub.disconnect).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('leaveRoom still leaves when the server refuses', async () => {
+    hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'not_in_room', message: 'Not in the room.' }]));
+
+    await store.leaveRoom();
+
+    expect(hub.disconnect).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
   it('leave disconnects, clears the state and navigates home', async () => {
     await store.leave();
 
@@ -209,7 +250,7 @@ describe('RoomStore', () => {
   it('binds the hub handlers only once across joins', async () => {
     await store.join('room-1');
 
-    expect(hub.on).toHaveBeenCalledTimes(12);
+    expect(hub.on).toHaveBeenCalledTimes(14);
   });
 
   it('aborts a join quietly when the store is closed while connecting', async () => {
@@ -235,7 +276,7 @@ describe('RoomStore', () => {
     await store.join('room-1');
 
     expect(store.people()).toEqual([ANN]);
-    expect(hub.on).toHaveBeenCalledTimes(24);
+    expect(hub.on).toHaveBeenCalledTimes(28);
   });
 
   /** Starts a join whose JoinRoom response is held until respond() is called. */

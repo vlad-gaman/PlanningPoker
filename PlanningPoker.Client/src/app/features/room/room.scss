@@ -87,6 +87,13 @@ h1 {
   font-size: 0.85em;
 }
 
+.offgrid {
+  color: var(--text-color);
+  font-size: 0.85em;
+  font-style: italic;
+  opacity: 0.7;
+}
+
 // The old role toggles: small bordered buttons, the selected one blue. The radio itself stays for keyboard use.
 .role {
   display: flex;

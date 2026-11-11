@@ -7,6 +7,6 @@ public class PersonResponseMapper : IPersonResponseMapper
 {
     public PersonResponse Map(Person person)
     {
-        return new PersonResponse { Guid = person.Guid, Name = person.Name, PersonType = person.PersonType };
+        return new PersonResponse { Guid = person.Guid, Name = person.Name, PersonType = person.PersonType, IsOffgrid = person.IsOffgrid };
     }
 }

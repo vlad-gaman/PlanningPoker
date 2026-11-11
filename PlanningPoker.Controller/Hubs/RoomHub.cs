@@ -20,6 +20,7 @@ namespace PlanningPoker.Controller.Hubs;
 /// </summary>
 public class RoomHub(
     IRoomService rooms,
+    IPresenceService presence,
     IRoomEventPublisher roomEvents,
     IRoomTimerService timer,
     RoomIdentifierValidation identifierValidation,
@@ -70,6 +71,28 @@ public class RoomHub(
 
         await roomEvents.PublishPersonJoinedAsync(result, Context.ConnectionId);
         return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Success(joinRoomResponseMapper.Map(result)));
+    }
+
+    /// <summary>
+    /// Leaves the caller's room for good: unlike a dropped connection, which keeps the person in the room as online or offgrid,
+    /// they are removed at once and their vote is discarded for the others.
+    /// </summary>
+    public async Task<ApiResponse<object>> LeaveRoom()
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var exited = rooms.Exit(person.Guid, Context.ConnectionId);
+        if (!exited.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(exited.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishPersonExitedAsync(exited.Data!);
+        await ApplyFollowUpAsync(exited.Data!.RoomId, exited.Data.FollowUp);
+        return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
     /// <summary>Casts or changes the caller's vote.</summary>
@@ -211,7 +234,8 @@ public class RoomHub(
         logger.LogInformation(exception, "Hub disconnected: person {PersonGuid}", person?.Guid);
         if (person is not null)
         {
-            await ExitAndPublishAsync(person.Guid);
+            // The person is dropped, not removed: they stay in the room, online for the grace period and offgrid after it.
+            presence.Disconnect(person.Guid, Context.ConnectionId);
         }
 
         await base.OnDisconnectedAsync(exception);

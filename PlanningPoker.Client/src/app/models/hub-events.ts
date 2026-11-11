@@ -2,6 +2,8 @@
 export const HUB_EVENTS = {
   PersonJoined: 'PersonJoined',
   PersonExited: 'PersonExited',
+  PersonOffgrid: 'PersonOffgrid',
+  PersonBack: 'PersonBack',
   OwnershipTransferred: 'OwnershipTransferred',
   PersonTypeChanged: 'PersonTypeChanged',
   RoomConfigurationUpdated: 'RoomConfigurationUpdated',

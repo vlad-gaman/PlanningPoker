@@ -12,6 +12,7 @@ namespace PlanningPoker.Service.Services;
 /// Locking: every membership decision (who is in a room, whether it is disposed, who owns it) is made inside
 /// <see cref="IRoomRepository.Update{T}"/>. The person lock only edits the connection index and is never held while the
 /// room lock is taken, and the room lock never reads a person under its lock, so the two locks are never nested.
+/// Presence (dropped, offgrid and removed members) lives in <see cref="PresenceService"/>.
 /// </summary>
 public class RoomService(
     IRoomRepository rooms,
@@ -97,10 +98,12 @@ public class RoomService(
         {
             if (room.IsDisposed)
             {
-                return (Admitted: false, PersonAdded: false);
+                return (Admitted: false, PersonAdded: false, WasOffgrid: false, ResetCountdown: false);
             }
 
             var personAdded = !room.MemberGuids.Contains(personGuid);
+            var wasOffgrid = false;
+            var isVoter = join.Person.PersonType != PersonTypes.Observer;
             if (personAdded)
             {
                 // A room whose owner is not a member (the creator has not joined yet) is owned by the first person admitted.
@@ -111,9 +114,20 @@ public class RoomService(
 
                 room.MemberGuids.Add(personGuid);
                 var restored = RestoreDepartedVote(room, personGuid, join.Person);
-                if (room.VotingEnabled && join.Person.PersonType != PersonTypes.Observer && !restored)
+                if (room.VotingEnabled && isVoter && !restored)
                 {
                     // A new voter has not voted yet, so a running countdown no longer applies.
+                    room.Revision++;
+                }
+            }
+            else
+            {
+                // A dropped member is back: they are online again, with the vote they had.
+                room.DroppedAt.Remove(personGuid);
+                wasOffgrid = room.OffgridGuids.Remove(personGuid);
+                if (wasOffgrid && room.VotingEnabled && isVoter && !room.Votes.ContainsKey(personGuid))
+                {
+                    // The room had stopped waiting for them; now a voter without a vote is back, so a running countdown no longer applies.
                     room.Revision++;
                 }
             }
@@ -121,7 +135,8 @@ public class RoomService(
             var connections = room.MemberConnections.GetValueOrDefault(personGuid) ?? new HashSet<string>();
             connections.Add(connectionId);
             room.MemberConnections[personGuid] = connections;
-            return (Admitted: true, PersonAdded: personAdded);
+            var resetCountdown = room.VotingEnabled && isVoter && !(wasOffgrid && room.Votes.ContainsKey(personGuid));
+            return (Admitted: true, PersonAdded: personAdded, WasOffgrid: wasOffgrid, ResetCountdown: resetCountdown);
         }, out var outcome) ? outcome : default;
 
         if (!admission.Admitted)
@@ -147,6 +162,8 @@ public class RoomService(
             voteStatusMapper.Map(snapshot, members),
             cardSets.GetCards(snapshot.Configuration.CardSet).Data!,
             admission.PersonAdded,
+            admission.WasOffgrid,
+            admission.ResetCountdown,
             snapshot.Votes.GetValueOrDefault(personGuid)));
     }
 
@@ -692,7 +709,7 @@ public class RoomService(
     }
 
     /// <summary>The follow-up to a change that may have left everyone voted (a person leaving): read a snapshot, then decide.</summary>
-    private VotingFollowUp FollowUpAfterChange(string roomId)
+    public VotingFollowUp FollowUpAfterChange(string roomId)
     {
         var snapshot = rooms.Get(roomId);
         return snapshot is { VotingEnabled: true } ? Decide(snapshot, voteStatusMapper.Map(snapshot, Members(snapshot))) : VotingFollowUp.None;
@@ -810,12 +827,12 @@ public class RoomService(
 
     private List<Person> Members(RoomEntity room)
     {
-        return room.MemberGuids.Select(SnapshotPerson).OfType<Person>().ToList();
+        return room.MemberGuids.Select(guid => SnapshotPerson(guid, room.OffgridGuids.Contains(guid))).OfType<Person>().ToList();
     }
 
     /// <summary>Maps a person under their lock, so the copy never reads a half-applied change.</summary>
-    private Person? SnapshotPerson(Guid personGuid)
+    private Person? SnapshotPerson(Guid personGuid, bool isOffgrid = false)
     {
-        return people.Update(personGuid, entity => personMapper.Map(entity), out var snapshot) ? snapshot : null;
+        return people.Update(personGuid, entity => personMapper.Map(entity, isOffgrid), out var snapshot) ? snapshot : null;
     }
 }

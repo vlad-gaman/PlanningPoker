@@ -19,6 +19,12 @@ public interface IRoomService
     ServiceResponse<ExitRoomResult> Exit(Guid personGuid, string connectionId);
 
     /// <summary>
+    /// The follow-up to a change that may have left everyone voted (a person leaving or going offgrid): reads the room, then
+    /// decides whether to start the countdown or reveal. <see cref="VotingFollowUp.None"/> when voting is closed or the room is gone.
+    /// </summary>
+    VotingFollowUp FollowUpAfterChange(string roomId);
+
+    /// <summary>
     /// Stores or replaces the caller's vote in the room their connection is in. When that makes everyone voted, the
     /// result says which countdown to tick (or carries the votes when the countdown is 0 and they were revealed at once).
     /// </summary>

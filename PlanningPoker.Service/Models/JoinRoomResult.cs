@@ -20,5 +20,8 @@ public class JoinRoomResult
     /// <summary>The card the joining person has already picked in this room, or null. Their own pick is never masked from them.</summary>
     public string? MyMark { get; init; }
 
+    /// <summary>True when the person comes back from being offgrid, so the others, who were told they went offgrid, hear they are back.</summary>
+    public bool WasOffgrid { get; init; }
+
     public bool ResetCountdown { get; init; }
 }

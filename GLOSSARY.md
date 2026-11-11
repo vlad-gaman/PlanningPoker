@@ -20,6 +20,18 @@ _Avoid_: Vote timer, idle timer, activity timer
 A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and was created more than the abandon time ago. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. This has nothing to do with the round timer, which only measures the current round.
 _Avoid_: Idle, stale, expired, timed out
 
+**Online**:
+A person with a live connection to the room, or one who dropped less than the grace period (10 seconds) ago, so a refresh goes unnoticed. Observers count too.
+_Avoid_: Connected, present
+
+**Offgrid**:
+A person who is still a member of the room but has had no connection for longer than the grace period. They keep their vote and are shown to others as offgrid, and "everyone voted" is decided without them. A person who returns within the removal window is restored exactly as they were. An owner who goes offgrid hands the room to a connected member at once and does not get it back.
+_Avoid_: Away, disconnected, idle
+
+**Removed**:
+A person whose membership ended because they stayed offgrid for the removal window (10 minutes, the `Presence` appsettings section). Their vote is discarded and they can rejoin as a new person. Leaving a room on purpose removes the person at once.
+_Avoid_: Exited, kicked
+
 **Voter**:
 A person who can vote in a round: a developer, a tester or an SRE.
 _Avoid_: Player, participant

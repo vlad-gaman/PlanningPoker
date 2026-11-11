@@ -21,6 +21,7 @@ public class RoomHubWorkflowTests
     private static readonly Person Ann = new() { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Developer };
 
     private readonly FakeRoomService _rooms = new();
+    private readonly FakePresenceService _presence = new();
     private readonly FakeRoomEventPublisher _publisher = new();
     private readonly FakeRoomTimerService _timer = new();
     private readonly FakeGroupManager _groups = new();
@@ -35,6 +36,7 @@ public class RoomHubWorkflowTests
 
         return new RoomHub(
             _rooms,
+            _presence,
             _publisher,
             _timer,
             new RoomIdentifierValidation(),
@@ -132,36 +134,14 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
-    public async Task OnDisconnected_ExitSucceeds_PublishesTheExitResult()
+    public async Task OnDisconnected_DropsTheConnectionAndAnnouncesNothing()
     {
-        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, newOwner: Ann));
-
         await NewHub(Ann).OnDisconnectedAsync(null);
 
-        Assert.Equal((Ann.Guid, ConnectionId), Assert.Single(_rooms.ExitCalls));
-        var exited = Assert.Single(_publisher.Exited);
-        Assert.Same(Ann, exited.NewOwner);
-        Assert.False(exited.RoomDisposed);
-    }
-
-    [Fact]
-    public async Task OnDisconnected_LastMember_PassesRoomDisposedToThePublisher()
-    {
-        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, roomDisposed: true));
-
-        await NewHub(Ann).OnDisconnectedAsync(null);
-
-        Assert.True(Assert.Single(_publisher.Exited).RoomDisposed);
-    }
-
-    [Fact]
-    public async Task OnDisconnected_OtherTabStillOpen_PassesPersonLeftFalseToThePublisher()
-    {
-        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, personLeft: false));
-
-        await NewHub(Ann).OnDisconnectedAsync(null);
-
-        Assert.False(Assert.Single(_publisher.Exited).PersonLeft);
+        Assert.Equal((Ann.Guid, ConnectionId), Assert.Single(_presence.DisconnectCalls));
+        Assert.Empty(_rooms.ExitCalls);
+        Assert.Empty(_publisher.Exited);
+        Assert.Empty(_timer.Started);
     }
 
     [Fact]
@@ -175,9 +155,75 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
-    public async Task OnDisconnected_UnknownConnection_PublishesNothing()
+    public async Task LeaveRoom_ExitSucceeds_PublishesTheExitResult()
+    {
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, newOwner: Ann));
+
+        var response = await NewHub(Ann).LeaveRoom();
+
+        Assert.Null(response.Errors);
+        Assert.Equal((Ann.Guid, ConnectionId), Assert.Single(_rooms.ExitCalls));
+        var exited = Assert.Single(_publisher.Exited);
+        Assert.Same(Ann, exited.NewOwner);
+        Assert.False(exited.RoomDisposed);
+    }
+
+    [Fact]
+    public async Task LeaveRoom_LastMember_PassesRoomDisposedToThePublisher()
+    {
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, roomDisposed: true));
+
+        await NewHub(Ann).LeaveRoom();
+
+        Assert.True(Assert.Single(_publisher.Exited).RoomDisposed);
+    }
+
+    [Fact]
+    public async Task LeaveRoom_OtherTabStillOpen_PassesPersonLeftFalseToThePublisher()
+    {
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, personLeft: false));
+
+        await NewHub(Ann).LeaveRoom();
+
+        Assert.False(Assert.Single(_publisher.Exited).PersonLeft);
+    }
+
+    [Fact]
+    public async Task LeaveRoom_ExitWithCountdownFollowUp_RestartsTheTicker()
+    {
+        var exit = RoomResults.Exit(Ann, followUp: new VotingFollowUp { Countdown = new CountdownStart { Revision = 9, Seconds = 3 } });
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(exit);
+
+        await NewHub(Ann).LeaveRoom();
+
+        Assert.Equal(("room", 9L), Assert.Single(_timer.Started));
+        Assert.Equal(("room", 3), Assert.Single(_publisher.CountdownUpdates));
+    }
+
+    [Fact]
+    public async Task LeaveRoom_UnknownConnection_FailsAndPublishesNothing()
     {
         _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Failure(ServiceError.NotInRoom());
+
+        var response = await NewHub(Ann).LeaveRoom();
+
+        Assert.Equal(ErrorCodes.NotInRoom, ErrorCode(response));
+        Assert.Empty(_publisher.Exited);
+    }
+
+    [Fact]
+    public async Task LeaveRoom_NoSession_Fails()
+    {
+        var response = await NewHub(null).LeaveRoom();
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.ExitCalls);
+    }
+
+    [Fact]
+    public async Task OnDisconnected_UnknownConnection_PublishesNothing()
+    {
+        _presence.DisconnectResult = ServiceResponse.Failure(ServiceError.NotInRoom());
 
         await NewHub(Ann).OnDisconnectedAsync(null);
 
@@ -185,11 +231,11 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
-    public async Task OnDisconnected_NoSession_DoesNotCallExit()
+    public async Task OnDisconnected_NoSession_DoesNotCallDisconnect()
     {
         await NewHub(null).OnDisconnectedAsync(null);
 
-        Assert.Empty(_rooms.ExitCalls);
+        Assert.Empty(_presence.DisconnectCalls);
         Assert.Empty(_publisher.Exited);
     }
 
@@ -531,15 +577,4 @@ public class RoomHubWorkflowTests
         Assert.Empty(_publisher.Shown);
     }
 
-    [Fact]
-    public async Task OnDisconnected_ExitWithCountdownFollowUp_RestartsTheTicker()
-    {
-        var exit = RoomResults.Exit(Ann, followUp: new VotingFollowUp { Countdown = new CountdownStart { Revision = 9, Seconds = 3 } });
-        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(exit);
-
-        await NewHub(Ann).OnDisconnectedAsync(null);
-
-        Assert.Equal(("room", 9L), Assert.Single(_timer.Started));
-        Assert.Equal(("room", 3), Assert.Single(_publisher.CountdownUpdates));
-    }
 }

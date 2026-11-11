@@ -12,28 +12,56 @@ public class RoomEventPublisher(
     IPersonJoinedEventMapper personJoinedEventMapper,
     IRoomCountdownEventMapper roomCountdownEventMapper,
     IPersonExitedEventMapper personExitedEventMapper,
+    IPersonOffgridEventMapper personOffgridEventMapper,
+    IPersonBackEventMapper personBackEventMapper,
     IOwnershipTransferredEventMapper ownershipTransferredEventMapper,
     IRoomDisposedEventMapper roomDisposedEventMapper,
     IVoteCastEventMapper voteCastEventMapper,
     IVoteStatusResponseMapper voteStatusResponseMapper,
     IPersonTypeChangedEventMapper personTypeChangedEventMapper,
     IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper,
-    IVotesClearedEventMapper votesClearedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier
+    IVotesClearedEventMapper votesClearedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier, IRoomPresenceNotifier
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
-        // The person already had a connection in the room (another tab or a reconnect): from everyone else's view nothing changed.
+        var others = hub.Clients.GroupExcept(result.Room.Id, [joinerConnectionId]);
+
+        // The person is not new to the room (another tab or a reconnect): from everyone else's view nothing changed, unless
+        // they had been announced offgrid. Then they hear the person is back, and a voter who had not voted holds up the round again.
         if (!result.PersonAdded)
         {
+            if (result.WasOffgrid)
+            {
+                await others.SendAsync(HubEvents.PersonBack, personBackEventMapper.Map(result));
+                if (result.ResetCountdown)
+                {
+                    await others.SendAsync(HubEvents.CountdownReset, roomCountdownEventMapper.Map(result.Room.Configuration.CountdownSeconds, reset: true));
+                }
+            }
+
             return;
         }
 
-        var others = hub.Clients.GroupExcept(result.Room.Id, [joinerConnectionId]);
         await others.SendAsync(HubEvents.PersonJoined, personJoinedEventMapper.Map(result));
         if (result.ResetCountdown)
         {
             await others.SendAsync(HubEvents.CountdownReset, roomCountdownEventMapper.Map(result.Room.Configuration.CountdownSeconds, reset: true));
         }
+    }
+
+    async Task IRoomPresenceNotifier.PersonOffgridAsync(PersonOffgridResult result)
+    {
+        var group = hub.Clients.Group(result.RoomId);
+        await group.SendAsync(HubEvents.PersonOffgrid, personOffgridEventMapper.Map(result));
+        if (result.NewOwner is not null)
+        {
+            await group.SendAsync(HubEvents.OwnershipTransferred, ownershipTransferredEventMapper.Map(result.NewOwner));
+        }
+    }
+
+    Task IRoomPresenceNotifier.PersonRemovedAsync(ExitRoomResult result)
+    {
+        return PublishPersonExitedAsync(result);
     }
 
     public async Task PublishPersonExitedAsync(ExitRoomResult result)

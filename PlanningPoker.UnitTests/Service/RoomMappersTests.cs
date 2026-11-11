@@ -51,6 +51,41 @@ public class RoomMappersTests
     }
 
     [Fact]
+    public void VoteStatusMapper_OffgridVoterWhoHasNotVoted_DoesNotHoldBackEveryoneVoted()
+    {
+        var online = Member();
+        var offgrid = Member();
+        var room = new RoomEntity { VotingEnabled = true, Votes = new Dictionary<Guid, string> { [online.Guid] = "8" }, OffgridGuids = [offgrid.Guid] };
+
+        var status = VoteStatusMappers.Create().Map(room, [online, offgrid]);
+
+        Assert.True(status.HasEveryoneVoted);
+    }
+
+    [Fact]
+    public void VoteStatusMapper_OnlyOffgridVotersAreLeft_NobodyHasEveryoneVoted()
+    {
+        var offgrid = Member();
+        var room = new RoomEntity { VotingEnabled = true, Votes = new Dictionary<Guid, string> { [offgrid.Guid] = "8" }, OffgridGuids = [offgrid.Guid] };
+
+        Assert.False(VoteStatusMappers.Create().Map(room, [offgrid]).HasEveryoneVoted);
+    }
+
+    [Fact]
+    public void VoteStatusMapper_OffgridVoter_KeepsTheirMaskedVoteWhileVotingAndTheRealMarkAfterTheReveal()
+    {
+        var online = Member();
+        var offgrid = Member();
+        var votes = new Dictionary<Guid, string> { [online.Guid] = "5", [offgrid.Guid] = "8" };
+
+        var open = VoteStatusMappers.Create().Map(new RoomEntity { VotingEnabled = true, Votes = votes, OffgridGuids = [offgrid.Guid] }, [online, offgrid]);
+        var revealed = VoteStatusMappers.Create().Map(new RoomEntity { VotingEnabled = false, Votes = votes, OffgridGuids = [offgrid.Guid] }, [online, offgrid]);
+
+        Assert.Equal(RoomConstraints.HiddenVote, open.Votes[offgrid.Guid]);
+        Assert.Equal("8", revealed.Votes[offgrid.Guid]);
+    }
+
+    [Fact]
     public void VoteStatusMapper_MasksEveryMark()
     {
         var voter = Member();
@@ -157,19 +192,20 @@ public class RoomMappersTests
     }
 
     [Fact]
-    public void JoinRoomResultMapper_CarriesInputsAndDecidesCountdownReset()
+    public void JoinRoomResultMapper_CarriesInputs()
     {
         var room = new Room { Id = "r", VotingEnabled = true, Configuration = Configuration };
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
         var status = new VoteStatus { Votes = new Dictionary<Guid, string>() };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], status, [], personAdded: true, myMark: "5");
+        var result = new JoinRoomResultMapper().Map(room, person, [person], status, [], personAdded: true, wasOffgrid: true, resetCountdown: true, myMark: "5");
 
         Assert.Same(room, result.Room);
         Assert.Same(person, result.Person);
         Assert.Same(status, result.VoteStatus);
         Assert.Equal([person], result.People);
         Assert.True(result.PersonAdded);
+        Assert.True(result.WasOffgrid);
         Assert.True(result.ResetCountdown);
         Assert.Equal("5", result.MyMark);
     }
@@ -180,9 +216,11 @@ public class RoomMappersTests
         var room = new Room { Id = "r", VotingEnabled = true, Configuration = Configuration };
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Tester };
 
-        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, [], personAdded: false, myMark: null);
+        var result = new JoinRoomResultMapper().Map(room, person, [person], new VoteStatus { Votes = new Dictionary<Guid, string>() }, [], personAdded: false, wasOffgrid: false, resetCountdown: false, myMark: null);
 
         Assert.False(result.PersonAdded);
+        Assert.False(result.WasOffgrid);
+        Assert.False(result.ResetCountdown);
     }
 
     [Fact]
