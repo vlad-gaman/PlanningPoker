@@ -7,6 +7,9 @@ public class PersonOffgridResult
 
     public Person Person { get; init; } = default!;
 
+    /// <summary>Who the room was handed to because its owner went offgrid; null when the owner did not change.</summary>
+    public Person? NewOwner { get; init; }
+
     /// <summary>A countdown or reveal the person going offgrid caused: the people still online had all voted.</summary>
     public VotingFollowUp FollowUp { get; init; } = VotingFollowUp.None;
 }

@@ -49,9 +49,14 @@ public class RoomEventPublisher(
         }
     }
 
-    Task IRoomPresenceNotifier.PersonOffgridAsync(PersonOffgridResult result)
+    async Task IRoomPresenceNotifier.PersonOffgridAsync(PersonOffgridResult result)
     {
-        return hub.Clients.Group(result.RoomId).SendAsync(HubEvents.PersonOffgrid, personOffgridEventMapper.Map(result));
+        var group = hub.Clients.Group(result.RoomId);
+        await group.SendAsync(HubEvents.PersonOffgrid, personOffgridEventMapper.Map(result));
+        if (result.NewOwner is not null)
+        {
+            await group.SendAsync(HubEvents.OwnershipTransferred, ownershipTransferredEventMapper.Map(result.NewOwner));
+        }
     }
 
     Task IRoomPresenceNotifier.PersonRemovedAsync(ExitRoomResult result)

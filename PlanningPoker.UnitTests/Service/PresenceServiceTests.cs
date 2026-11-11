@@ -10,10 +10,10 @@ using PlanningPoker.UnitTests.Fakes;
 namespace PlanningPoker.UnitTests.Service;
 
 /// <summary>
-/// The offgrid life of a person: a dropped connection keeps them online for the grace period, then offgrid with their vote,
+/// The offgrid life of a person (<see cref="PresenceService"/>, with joins and votes through <see cref="RoomService"/>): a dropped connection keeps them online for the grace period, then offgrid with their vote,
 /// then removed once the removal window passes. Everything is driven through the service's public entry points and a fake clock.
 /// </summary>
-public class RoomServicePresenceTests
+public class PresenceServiceTests
 {
     private static readonly TimeSpan Grace = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(10);
@@ -24,10 +24,12 @@ public class RoomServicePresenceTests
     private readonly PersonRepository _people = new();
     private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
     private readonly RoomService _service;
+    private readonly PresenceService _presence;
 
-    public RoomServicePresenceTests()
+    public PresenceServiceTests()
     {
         _service = RoomServiceFactory.Create(_rooms, _people, time: _time);
+        _presence = PresenceServiceFactory.Create(_rooms, _people, _service, _time);
     }
 
     private Guid AddPerson(string type = PersonTypes.Developer)
@@ -58,7 +60,7 @@ public class RoomServicePresenceTests
     private PresenceSweepResult SweepAfter(TimeSpan elapsed)
     {
         _time.Advance(elapsed);
-        return _service.SweepPresence();
+        return _presence.SweepPresence();
     }
 
     // --- dropping ---
@@ -69,7 +71,7 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[2], "c3", "5");
 
-        var disconnected = _service.Disconnect(people[2], "c3");
+        var disconnected = _presence.Disconnect(people[2], "c3");
 
         Assert.True(disconnected.IsSuccess);
         var room = _rooms.Get(roomId)!;
@@ -85,7 +87,7 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Join(people[1], "c2-second", roomId);
 
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         SweepAfter(Window * 2);
 
         var room = _rooms.Get(roomId)!;
@@ -98,7 +100,7 @@ public class RoomServicePresenceTests
     {
         var (_, people) = RoomWith(TwoDevs);
 
-        var disconnected = _service.Disconnect(people[0], "nope");
+        var disconnected = _presence.Disconnect(people[0], "nope");
 
         Assert.Equal(ErrorCodes.NotInRoom, Assert.Single(disconnected.Errors).Code);
     }
@@ -106,7 +108,7 @@ public class RoomServicePresenceTests
     [Fact]
     public void Disconnect_UnknownPerson_ReturnsNoSession()
     {
-        var disconnected = _service.Disconnect(Guid.NewGuid(), "c1");
+        var disconnected = _presence.Disconnect(Guid.NewGuid(), "c1");
 
         Assert.Equal(ErrorCodes.NoSession, Assert.Single(disconnected.Errors).Code);
     }
@@ -117,7 +119,7 @@ public class RoomServicePresenceTests
         var (_, people) = RoomWith(TwoDevs);
         _time.Advance(TimeSpan.FromMinutes(3));
 
-        _service.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[0], "c1");
 
         Assert.Equal(_time.GetUtcNow(), _people.Get(people[0])!.LastSeenAt);
     }
@@ -128,7 +130,7 @@ public class RoomServicePresenceTests
     public void SweepPresence_WithinTheGracePeriod_AnnouncesNothing()
     {
         var (_, people) = RoomWith(TwoDevs);
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
 
         var sweep = SweepAfter(Grace - TimeSpan.FromMilliseconds(1));
 
@@ -141,7 +143,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         _time.Advance(TimeSpan.FromSeconds(3));
 
         var joined = _service.Join(people[1], "c2-new", roomId).Data!;
@@ -159,7 +161,7 @@ public class RoomServicePresenceTests
     {
         var (_, people) = RoomWith(ThreeDevs);
         _service.Vote(people[0], "c1", "5");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         _time.Advance(TimeSpan.FromSeconds(5));
 
         var voted = _service.Vote(people[1], "c2", "8").Data!;
@@ -175,7 +177,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
 
         var first = SweepAfter(Grace);
         var second = SweepAfter(TimeSpan.FromSeconds(1));
@@ -193,7 +195,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         SweepAfter(Grace);
 
         var joined = _service.Join(AddPerson(), "c9", roomId).Data!;
@@ -208,7 +210,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         SweepAfter(Grace + TimeSpan.FromMinutes(1));
 
         var joined = _service.Join(people[1], "c2-new", roomId).Data!;
@@ -227,7 +229,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[2], "c3", "8");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
         _service.Vote(people[0], "c1", "5");
         _service.ForceShowVotes(people[0], "c1");
@@ -245,7 +247,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[0], "c1", "5");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
 
         var joined = _service.Join(people[2], "c3-new", roomId).Data!;
@@ -263,7 +265,7 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[0], "c1", "5");
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
 
         var sweep = SweepAfter(Grace);
 
@@ -278,7 +280,7 @@ public class RoomServicePresenceTests
     {
         var (_, people) = RoomWith(ThreeDevs);
         _service.Vote(people[0], "c1", "5");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
 
         var voted = _service.Vote(people[1], "c2", "8").Data!;
@@ -294,7 +296,7 @@ public class RoomServicePresenceTests
         _service.Vote(people[0], "c1", "5");
         _service.Vote(people[1], "c2", "8");
         var started = _service.Vote(people[2], "c3", "3").Data!.FollowUp.Countdown!;
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
 
         var sweep = SweepAfter(Grace);
 
@@ -307,8 +309,8 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[0], "c1", "5");
-        _service.Disconnect(people[0], "c1");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[1], "c2");
 
         var sweep = SweepAfter(Grace);
 
@@ -323,8 +325,8 @@ public class RoomServicePresenceTests
     {
         var (_, people) = RoomWith(ThreeDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
         _service.Vote(people[0], "c1", "5");
 
@@ -342,7 +344,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         SweepAfter(Grace);
 
         _service.ClearVotes(people[0], "c1");
@@ -359,7 +361,7 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[0], "c1", "5");
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         var started = Assert.Single(SweepAfter(Grace).Offgrid).FollowUp.Countdown!;
 
         var joined = _service.Join(people[2], "c3-new", roomId).Data!;
@@ -374,7 +376,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[2], "c3", "3");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
         _service.Vote(people[0], "c1", "5");
         var started = _service.Vote(people[1], "c2", "8").Data!.FollowUp.Countdown!;
@@ -391,7 +393,7 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[0], "c1", "5");
         var started = _service.Vote(people[1], "c2", "8").Data!.FollowUp.Countdown!;
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         _time.Advance(TimeSpan.FromSeconds(2));
 
         _service.Join(people[1], "c2-new", roomId);
@@ -406,7 +408,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[2], "c3", "8");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
 
         var sweep = SweepAfter(Window - Grace);
@@ -426,7 +428,7 @@ public class RoomServicePresenceTests
     public void SweepPresence_JustBeforeTheRemovalWindowEnds_KeepsThePerson()
     {
         var (roomId, people) = RoomWith(ThreeDevs);
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
 
         var sweep = SweepAfter(Window - TimeSpan.FromSeconds(1));
 
@@ -438,7 +440,7 @@ public class RoomServicePresenceTests
     public void SweepPresence_WhenAPersonIsDueForBothOffgridAndRemoval_OnlyRemovesThem()
     {
         var (_, people) = RoomWith(ThreeDevs);
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
 
         var sweep = SweepAfter(Window);
 
@@ -451,7 +453,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(ThreeDevs);
         _service.Vote(people[2], "c3", "3");
-        _service.Disconnect(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
         SweepAfter(Grace);
         _service.Vote(people[0], "c1", "5");
         var started = _service.Vote(people[1], "c2", "8").Data!.FollowUp.Countdown!;
@@ -468,8 +470,8 @@ public class RoomServicePresenceTests
     public void SweepPresence_RemovingTheOwner_HandsTheRoomToAConnectedMember()
     {
         var (roomId, people) = RoomWith(ThreeDevs);
-        _service.Disconnect(people[0], "c1");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[1], "c2");
 
         var sweep = SweepAfter(Window);
 
@@ -480,15 +482,55 @@ public class RoomServicePresenceTests
     }
 
     [Fact]
-    public void SweepPresence_OffgridOwner_StaysOwnerUntilRemoved()
+    public void SweepPresence_OwnerGoesOffgrid_HandsTheRoomToAConnectedMemberAtOnce()
     {
-        var (roomId, people) = RoomWith(TwoDevs);
-        _service.Disconnect(people[0], "c1");
+        var (roomId, people) = RoomWith(ThreeDevs);
+        _presence.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[1], "c2");
 
         var sweep = SweepAfter(Grace);
 
-        Assert.Single(sweep.Offgrid);
+        var ownerOffgrid = Assert.Single(sweep.Offgrid, result => result.Person.Guid == people[0]);
+        Assert.Equal(people[2], ownerOffgrid.NewOwner!.Guid);
+        Assert.Null(Assert.Single(sweep.Offgrid, result => result.Person.Guid == people[1]).NewOwner);
+        Assert.Equal(people[2], _rooms.Get(roomId)!.OwnerGuid);
+    }
+
+    [Fact]
+    public void Join_FormerOwnerReturningFromOffgrid_DoesNotGetTheRoomBack()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _presence.Disconnect(people[0], "c1");
+        SweepAfter(Grace);
+
+        _service.Join(people[0], "c1-new", roomId);
+
+        Assert.Equal(people[1], _rooms.Get(roomId)!.OwnerGuid);
+    }
+
+    [Fact]
+    public void SweepPresence_OwnerGoesOffgridWithNobodyElseConnected_KeepsTheRoom()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _presence.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[1], "c2");
+
+        var sweep = SweepAfter(Grace);
+
+        Assert.All(sweep.Offgrid, result => Assert.Null(result.NewOwner));
         Assert.Equal(people[0], _rooms.Get(roomId)!.OwnerGuid);
+    }
+
+    [Fact]
+    public void SweepPresence_OwnerAlreadyHandedOverWhenOffgrid_RemovalDoesNotTransferAgain()
+    {
+        var (_, people) = RoomWith(TwoDevs);
+        _presence.Disconnect(people[0], "c1");
+        SweepAfter(Grace);
+
+        var removed = Assert.Single(SweepAfter(Window).Removed);
+
+        Assert.Null(removed.NewOwner);
     }
 
     [Fact]
@@ -496,7 +538,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         SweepAfter(Window);
 
         var joined = _service.Join(people[1], "c2-new", roomId).Data!;
@@ -512,7 +554,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Vote(people[1], "c2", "8");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         SweepAfter(Window - TimeSpan.FromSeconds(1));
 
         var joined = _service.Join(people[1], "c2-new", roomId).Data!;
@@ -530,9 +572,9 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith([PersonTypes.Developer]);
         _service.Vote(people[0], "c1", "5");
 
-        _service.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[0], "c1");
         _time.Advance(TimeSpan.FromSeconds(2));
-        var sweep = _service.SweepPresence();
+        var sweep = _presence.SweepPresence();
         var joined = _service.Join(people[0], "c1-new", roomId);
 
         Assert.Empty(sweep.DisposedRoomIds);
@@ -544,7 +586,7 @@ public class RoomServicePresenceTests
     public void SweepPresence_RoomWithNobodyOnlineForTheEmptyRoomLifetime_DeletesTheRoom()
     {
         var (roomId, people) = RoomWith([PersonTypes.Developer]);
-        _service.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[0], "c1");
 
         var offgrid = SweepAfter(Grace);
         var stillThere = SweepAfter(TimeSpan.FromSeconds(9));
@@ -561,8 +603,8 @@ public class RoomServicePresenceTests
     public void SweepPresence_EveryoneInTheirGracePeriod_DoesNotDeleteTheRoom()
     {
         var (roomId, people) = RoomWith(TwoDevs);
-        _service.Disconnect(people[0], "c1");
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[1], "c2");
 
         var sweep = SweepAfter(Grace - TimeSpan.FromMilliseconds(1));
 
@@ -574,7 +616,7 @@ public class RoomServicePresenceTests
     public void SweepPresence_AnObserverOnline_KeepsTheRoomAlive()
     {
         var (roomId, people) = RoomWith(PersonTypes.Developer, PersonTypes.Observer);
-        _service.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[0], "c1");
 
         var sweep = SweepAfter(Window);
 
@@ -604,7 +646,7 @@ public class RoomServicePresenceTests
         var (roomId, people) = RoomWith(TwoDevs);
         _service.Join(people[1], "c2-new", roomId);
 
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         var sweep = SweepAfter(Window);
 
         Assert.Empty(sweep.Offgrid);
@@ -617,7 +659,7 @@ public class RoomServicePresenceTests
     {
         var (roomId, people) = RoomWith(TwoDevs);
 
-        _service.Disconnect(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
         _time.Advance(TimeSpan.FromSeconds(1));
         _service.Join(people[1], "c2-new", roomId);
         var sweep = SweepAfter(Window);
@@ -641,17 +683,18 @@ public class RoomServicePresenceTests
     [Fact]
     public void SweepPresence_UsesTheConfiguredRemovalWindow()
     {
-        var service = RoomServiceFactory.Create(_rooms, _people, time: _time, presence: new PresenceOptions { RemovalWindow = TimeSpan.FromMinutes(1) });
+        var service = RoomServiceFactory.Create(_rooms, _people, time: _time);
+        var presence = PresenceServiceFactory.Create(_rooms, _people, service, _time, new PresenceOptions { RemovalWindow = TimeSpan.FromMinutes(1) });
         var owner = AddPerson();
         var guest = AddPerson();
         var settings = new RoomSettings { Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = 5, ShowFireworks = false, MaxParticipants = 9 } };
         var roomId = service.Create(owner, settings).Data!.Id;
         service.Join(owner, "o1", roomId);
         service.Join(guest, "g1", roomId);
-        service.Disconnect(guest, "g1");
+        presence.Disconnect(guest, "g1");
         _time.Advance(TimeSpan.FromMinutes(1));
 
-        var sweep = service.SweepPresence();
+        var sweep = presence.SweepPresence();
 
         Assert.Equal(guest, Assert.Single(sweep.Removed).Person.Guid);
     }

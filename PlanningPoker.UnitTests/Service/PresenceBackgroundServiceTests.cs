@@ -15,7 +15,7 @@ public class PresenceBackgroundServiceTests
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(1);
     private static readonly Person Ann = new() { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "dev" };
 
-    private readonly FakeRoomService _rooms = new();
+    private readonly FakePresenceService _sweeps = new();
     private readonly FakeRoomPresenceNotifier _presence = new();
     private readonly FakeRoomCountdownNotifier _countdown = new();
     private readonly FakeRoomTimerService _timer = new();
@@ -23,7 +23,7 @@ public class PresenceBackgroundServiceTests
 
     private PresenceBackgroundService Create(ILogger<PresenceBackgroundService>? logger = null)
     {
-        return new PresenceBackgroundService(_rooms, _presence, _countdown, _timer, Options.Create(new PresenceOptions { SweepInterval = Interval }), _time, logger ?? NullLogger<PresenceBackgroundService>.Instance);
+        return new PresenceBackgroundService(_sweeps, _presence, _countdown, _timer, Options.Create(new PresenceOptions { SweepInterval = Interval }), _time, logger ?? NullLogger<PresenceBackgroundService>.Instance);
     }
 
     private static VotingFollowUp Countdown(long revision, int seconds)
@@ -34,7 +34,7 @@ public class PresenceBackgroundServiceTests
     [Fact]
     public async Task RunOnce_PersonWentOffgrid_AnnouncesThemAndStartsTheCountdownTheyCaused()
     {
-        _rooms.PresenceSweepResult = new PresenceSweepResult
+        _sweeps.PresenceSweepResult = new PresenceSweepResult
         {
             Offgrid = [new PersonOffgridResult { RoomId = "room", Person = Ann, FollowUp = Countdown(9, 3) }]
         };
@@ -50,7 +50,7 @@ public class PresenceBackgroundServiceTests
     public async Task RunOnce_PersonRemoved_AnnouncesThemAndRevealsWhenTheRestHadAllVoted()
     {
         var status = new VoteStatus { Votes = new Dictionary<Guid, string>() };
-        _rooms.PresenceSweepResult = new PresenceSweepResult
+        _sweeps.PresenceSweepResult = new PresenceSweepResult
         {
             Removed = [RoomResults.Exit(Ann, followUp: new VotingFollowUp { Revealed = status })]
         };
@@ -67,7 +67,7 @@ public class PresenceBackgroundServiceTests
     {
         await Create().RunOnceAsync();
 
-        Assert.Equal(1, _rooms.PresenceSweeps);
+        Assert.Equal(1, _sweeps.PresenceSweeps);
         Assert.Empty(_presence.Offgrid);
         Assert.Empty(_presence.Removed);
         Assert.Empty(_timer.Started);
@@ -77,13 +77,13 @@ public class PresenceBackgroundServiceTests
     public async Task RunOnce_SweepThrows_LogsAndDoesNotThrow()
     {
         var logger = new RecordingLogger();
-        _rooms.SweepPresenceException = new InvalidOperationException("boom");
+        _sweeps.SweepPresenceException = new InvalidOperationException("boom");
 
         await Create(logger).RunOnceAsync();
 
         var entry = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Error, entry.Level);
-        Assert.Same(_rooms.SweepPresenceException, entry.Exception);
+        Assert.Same(_sweeps.SweepPresenceException, entry.Exception);
     }
 
     [Fact]
@@ -92,9 +92,9 @@ public class PresenceBackgroundServiceTests
         var service = Create();
         await service.StartAsync(CancellationToken.None);
 
-        await AdvanceUntil(() => _rooms.PresenceSweeps >= 1);
-        var afterFirst = _rooms.PresenceSweeps;
-        await AdvanceUntil(() => _rooms.PresenceSweeps > afterFirst);
+        await AdvanceUntil(() => _sweeps.PresenceSweeps >= 1);
+        var afterFirst = _sweeps.PresenceSweeps;
+        await AdvanceUntil(() => _sweeps.PresenceSweeps > afterFirst);
 
         await service.StopAsync(CancellationToken.None);
     }

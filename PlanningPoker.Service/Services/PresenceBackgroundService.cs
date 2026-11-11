@@ -6,11 +6,11 @@ using PlanningPoker.Service.Models;
 namespace PlanningPoker.Service.Services;
 
 /// <summary>
-/// Runs <see cref="IRoomService.SweepPresence"/> on every tick of the configured interval until the host stops, and tells the
+/// Runs <see cref="IPresenceService.SweepPresence"/> on every tick of the configured interval until the host stops, and tells the
 /// rooms what changed: who went offgrid, who was removed, and the countdown or reveal that followed.
 /// </summary>
 public class PresenceBackgroundService(
-    IRoomService rooms,
+    IPresenceService presence,
     IRoomPresenceNotifier presenceNotifier,
     IRoomCountdownNotifier countdownNotifier,
     IRoomTimerService timer,
@@ -39,7 +39,7 @@ public class PresenceBackgroundService(
     {
         try
         {
-            var sweep = rooms.SweepPresence();
+            var sweep = presence.SweepPresence();
             foreach (var offgrid in sweep.Offgrid)
             {
                 await presenceNotifier.PersonOffgridAsync(offgrid);

@@ -31,27 +31,9 @@ public sealed class FakeRoomService : IRoomService
         return ExitResult;
     }
 
-    public ServiceResponse DisconnectResult { get; set; } = ServiceResponse.Success();
-
-    public List<(Guid PersonGuid, string ConnectionId)> DisconnectCalls { get; } = [];
-
-    public ServiceResponse Disconnect(Guid personGuid, string connectionId)
+    public VotingFollowUp FollowUpAfterChange(string roomId)
     {
-        DisconnectCalls.Add((personGuid, connectionId));
-        return DisconnectResult;
-    }
-
-    public PresenceSweepResult PresenceSweepResult { get; set; } = PresenceSweepResult.None;
-
-    public int PresenceSweeps { get; private set; }
-
-    /// <summary>Thrown by <see cref="SweepPresence"/> when set.</summary>
-    public Exception? SweepPresenceException { get; set; }
-
-    public PresenceSweepResult SweepPresence()
-    {
-        PresenceSweeps++;
-        return SweepPresenceException is { } exception ? throw exception : PresenceSweepResult;
+        return VotingFollowUp.None;
     }
 
     public ServiceResponse<VoteResult> VoteResult { get; set; } = ServiceResponse<VoteResult>.Failure();

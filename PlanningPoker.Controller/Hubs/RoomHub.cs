@@ -20,6 +20,7 @@ namespace PlanningPoker.Controller.Hubs;
 /// </summary>
 public class RoomHub(
     IRoomService rooms,
+    IPresenceService presence,
     IRoomEventPublisher roomEvents,
     IRoomTimerService timer,
     RoomIdentifierValidation identifierValidation,
@@ -234,7 +235,7 @@ public class RoomHub(
         if (person is not null)
         {
             // The person is dropped, not removed: they stay in the room, online for the grace period and offgrid after it.
-            rooms.Disconnect(person.Guid, Context.ConnectionId);
+            presence.Disconnect(person.Guid, Context.ConnectionId);
         }
 
         await base.OnDisconnectedAsync(exception);

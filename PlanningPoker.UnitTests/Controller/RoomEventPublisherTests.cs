@@ -245,6 +245,17 @@ public class RoomEventPublisherTests
     }
 
     [Fact]
+    public async Task PersonOffgrid_OwnerWentOffgrid_AlsoSendsOwnershipTransferredToTheWholeRoom()
+    {
+        var offgrid = new Person { Guid = Ann.Guid, Name = "Ann", PersonType = "dev", IsOffgrid = true };
+
+        await ((IRoomPresenceNotifier)_publisher).PersonOffgridAsync(new PersonOffgridResult { RoomId = "room", Person = offgrid, NewOwner = Bob });
+
+        Assert.Equal([HubEvents.PersonOffgrid, HubEvents.OwnershipTransferred], _hub.Clients.Sent.Select(message => message.Method));
+        Assert.Equal("Bob", Assert.IsType<OwnershipTransferredEvent>(_hub.Clients.Sent[1].Payload).NewOwner.Name);
+    }
+
+    [Fact]
     public async Task PersonRemoved_SendsPersonExitedAndTheNewOwnerToTheWholeRoom()
     {
         await ((IRoomPresenceNotifier)_publisher).PersonRemovedAsync(RoomResults.Exit(Bob, newOwner: Ann));

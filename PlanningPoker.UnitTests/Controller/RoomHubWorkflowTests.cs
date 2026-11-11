@@ -21,6 +21,7 @@ public class RoomHubWorkflowTests
     private static readonly Person Ann = new() { Guid = Guid.NewGuid(), Name = "Ann", PersonType = PersonTypes.Developer };
 
     private readonly FakeRoomService _rooms = new();
+    private readonly FakePresenceService _presence = new();
     private readonly FakeRoomEventPublisher _publisher = new();
     private readonly FakeRoomTimerService _timer = new();
     private readonly FakeGroupManager _groups = new();
@@ -35,6 +36,7 @@ public class RoomHubWorkflowTests
 
         return new RoomHub(
             _rooms,
+            _presence,
             _publisher,
             _timer,
             new RoomIdentifierValidation(),
@@ -136,7 +138,7 @@ public class RoomHubWorkflowTests
     {
         await NewHub(Ann).OnDisconnectedAsync(null);
 
-        Assert.Equal((Ann.Guid, ConnectionId), Assert.Single(_rooms.DisconnectCalls));
+        Assert.Equal((Ann.Guid, ConnectionId), Assert.Single(_presence.DisconnectCalls));
         Assert.Empty(_rooms.ExitCalls);
         Assert.Empty(_publisher.Exited);
         Assert.Empty(_timer.Started);
@@ -221,7 +223,7 @@ public class RoomHubWorkflowTests
     [Fact]
     public async Task OnDisconnected_UnknownConnection_PublishesNothing()
     {
-        _rooms.DisconnectResult = ServiceResponse.Failure(ServiceError.NotInRoom());
+        _presence.DisconnectResult = ServiceResponse.Failure(ServiceError.NotInRoom());
 
         await NewHub(Ann).OnDisconnectedAsync(null);
 
@@ -233,7 +235,7 @@ public class RoomHubWorkflowTests
     {
         await NewHub(null).OnDisconnectedAsync(null);
 
-        Assert.Empty(_rooms.DisconnectCalls);
+        Assert.Empty(_presence.DisconnectCalls);
         Assert.Empty(_publisher.Exited);
     }
 

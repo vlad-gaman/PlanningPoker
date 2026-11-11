@@ -25,7 +25,7 @@ A person with a live connection to the room, or one who dropped less than the gr
 _Avoid_: Connected, present
 
 **Offgrid**:
-A person who is still a member of the room but has had no connection for longer than the grace period. They keep their vote and are shown to others as offgrid, and "everyone voted" is decided without them. A person who returns within the removal window is restored exactly as they were.
+A person who is still a member of the room but has had no connection for longer than the grace period. They keep their vote and are shown to others as offgrid, and "everyone voted" is decided without them. A person who returns within the removal window is restored exactly as they were. An owner who goes offgrid hands the room to a connected member at once and does not get it back.
 _Avoid_: Away, disconnected, idle
 
 **Removed**:

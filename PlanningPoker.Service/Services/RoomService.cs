@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
 using PlanningPoker.Repository.Models;
@@ -13,8 +12,7 @@ namespace PlanningPoker.Service.Services;
 /// Locking: every membership decision (who is in a room, whether it is disposed, who owns it) is made inside
 /// <see cref="IRoomRepository.Update{T}"/>. The person lock only edits the connection index and is never held while the
 /// room lock is taken, and the room lock never reads a person under its lock, so the two locks are never nested.
-/// Presence: a member is online while they have a connection or dropped less than the grace period ago, offgrid after that
-/// (still a member, vote kept, no longer waited for) and removed once the removal window has passed (see <see cref="SweepPresence"/>).
+/// Presence (dropped, offgrid and removed members) lives in <see cref="PresenceService"/>.
 /// </summary>
 public class RoomService(
     IRoomRepository rooms,
@@ -34,8 +32,7 @@ public class RoomService(
     IRoomConfigurationMapper configurationMapper,
     ICardSetService cardSets,
     IPlanningPokerMetrics metrics,
-    TimeProvider time,
-    IOptions<PresenceOptions> presence) : IRoomService
+    TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
     {
@@ -271,172 +268,6 @@ public class RoomService(
             outcome.Disposed,
             newOwner,
             followUp));
-    }
-
-    public ServiceResponse Disconnect(Guid personGuid, string connectionId)
-    {
-        var now = time.GetUtcNow();
-
-        // Step 1 (person lock): drop the index entry of this connection and find its room.
-        var indexed = people.Update(personGuid, entity =>
-        {
-            if (!entity.Connections.Remove(connectionId, out var roomId))
-            {
-                return (Found: false, RoomId: string.Empty);
-            }
-
-            entity.LastSeenAt = now;
-            return (Found: true, RoomId: roomId);
-        }, out var index);
-        if (!indexed)
-        {
-            return ServiceResponse.Failure(ServiceError.NoSession());
-        }
-
-        if (!index.Found)
-        {
-            return ServiceResponse.Failure(ServiceError.NotInRoom());
-        }
-
-        // Step 2 (room lock): the member is dropped only when this was their last connection to the room. The first drop
-        // time stays, and a Join that ran before this point keeps them online.
-        var found = rooms.Update(index.RoomId, room =>
-        {
-            var connections = room.MemberConnections.GetValueOrDefault(personGuid);
-            if (connections is null || !connections.Remove(connectionId))
-            {
-                return false;
-            }
-
-            if (connections.Count == 0)
-            {
-                room.MemberConnections.Remove(personGuid);
-                room.DroppedAt.TryAdd(personGuid, now);
-            }
-
-            return true;
-        }, out var member);
-        if (!found)
-        {
-            return ServiceResponse.Failure(ServiceError.RoomNotFound(index.RoomId));
-        }
-
-        return member ? ServiceResponse.Success() : ServiceResponse.Failure(ServiceError.NotInRoom());
-    }
-
-    public PresenceSweepResult SweepPresence()
-    {
-        var offgrid = new List<PersonOffgridResult>();
-        var removed = new List<ExitRoomResult>();
-        var disposed = new List<string>();
-        foreach (var roomId in rooms.Ids())
-        {
-            var now = time.GetUtcNow();
-            if (!rooms.Update(roomId, room => ApplyPresence(room, now), out var change) || change is null || change.IsEmpty)
-            {
-                continue;
-            }
-
-            if (change.Disposed)
-            {
-                rooms.Remove(roomId);
-                disposed.Add(roomId);
-                continue;
-            }
-
-            // Read after the room lock is released: person details come from their own person locks.
-            var roomOffgrid = change.Offgrid.Select(guid => SnapshotPerson(guid, isOffgrid: true)).OfType<Person>().ToList();
-            var roomRemoved = change.Removed.Select(guid => SnapshotPerson(guid)).OfType<Person>().ToList();
-            var newOwner = change.NewOwnerGuid is { } ownerGuid ? SnapshotPerson(ownerGuid) : null;
-
-            // One decision per room for everything that changed: the people still online may all have voted now.
-            var followUp = FollowUpAfterChange(roomId);
-            for (var i = 0; i < roomOffgrid.Count; i++)
-            {
-                var isLast = i == roomOffgrid.Count - 1 && roomRemoved.Count == 0;
-                offgrid.Add(new PersonOffgridResult { RoomId = roomId, Person = roomOffgrid[i], FollowUp = isLast ? followUp : VotingFollowUp.None });
-            }
-
-            for (var i = 0; i < roomRemoved.Count; i++)
-            {
-                var isLast = i == roomRemoved.Count - 1;
-                var ownerLeft = roomRemoved[i].Guid == change.RemovedOwnerGuid;
-                removed.Add(exitRoomResultMapper.Map(roomId, roomRemoved[i], personLeft: true, roomDisposed: false, ownerLeft ? newOwner : null, isLast ? followUp : VotingFollowUp.None));
-            }
-        }
-
-        return new PresenceSweepResult { Offgrid = offgrid, Removed = removed, DisposedRoomIds = disposed };
-    }
-
-    /// <summary>
-    /// Removes the members whose removal window has passed, turns the ones past the grace period offgrid and disposes the
-    /// room when nobody has been online for the empty-room lifetime. Runs under the room lock.
-    /// </summary>
-    private PresenceChange ApplyPresence(RoomEntity room, DateTimeOffset now)
-    {
-        var options = presence.Value;
-        var removed = room.DroppedAt.Where(dropped => now - dropped.Value >= options.RemovalWindow).Select(dropped => dropped.Key).ToList();
-        var removedOwner = removed.Contains(room.OwnerGuid) ? room.OwnerGuid : (Guid?)null;
-        foreach (var guid in removed)
-        {
-            room.MemberGuids.Remove(guid);
-            room.DroppedAt.Remove(guid);
-            room.OffgridGuids.Remove(guid);
-            room.Votes.Remove(guid);
-        }
-
-        if (removed.Count > 0)
-        {
-            // The people left may all have voted, and a running countdown no longer applies to the old group.
-            room.Revision++;
-        }
-
-        var lapsed = room.DroppedAt
-            .Where(dropped => now - dropped.Value >= options.GracePeriod && !room.OffgridGuids.Contains(dropped.Key))
-            .Select(dropped => dropped.Key)
-            .ToList();
-        room.OffgridGuids.UnionWith(lapsed);
-
-        // Online means connected or still inside the grace period. A room that never had a member is left to the abandoned sweep.
-        var hadMembers = removed.Count > 0 || room.MemberGuids.Count > 0;
-        var nobodyOnline = room.MemberConnections.Count == 0 && !room.DroppedAt.Values.Any(dropped => now - dropped < options.GracePeriod);
-        if (hadMembers && nobodyOnline && NobodyOnlineLongEnough(room, now, options))
-        {
-            room.IsDisposed = true;
-            return new PresenceChange([], removed, null, removedOwner, Disposed: true);
-        }
-
-        Guid? newOwner = null;
-        if (removedOwner is not null && room.MemberGuids.Count > 0)
-        {
-            // Prefer a connected member; a room of only dropped members still needs an owner.
-            var candidates = room.MemberGuids.Where(room.MemberConnections.ContainsKey).ToList();
-            if (candidates.Count == 0)
-            {
-                candidates = [.. room.MemberGuids];
-            }
-
-            room.OwnerGuid = candidates[Random.Shared.Next(candidates.Count)];
-            newOwner = room.OwnerGuid;
-        }
-
-        return new PresenceChange(lapsed, removed, newOwner, removedOwner, Disposed: false);
-    }
-
-    private static bool NobodyOnlineLongEnough(RoomEntity room, DateTimeOffset now, PresenceOptions options)
-    {
-        if (room.MemberGuids.Count == 0)
-        {
-            return true;
-        }
-
-        // The last moment anyone was online is when the latest dropped member's grace period lapsed.
-        return room.DroppedAt.Count > 0 && now - (room.DroppedAt.Values.Max() + options.GracePeriod) >= options.EmptyRoomLifetime;
-    }
-
-    private sealed record PresenceChange(List<Guid> Offgrid, List<Guid> Removed, Guid? NewOwnerGuid, Guid? RemovedOwnerGuid, bool Disposed)
-    {
-        public bool IsEmpty => !Disposed && Offgrid.Count == 0 && Removed.Count == 0;
     }
 
     public ServiceResponse<VoteResult> Vote(Guid personGuid, string connectionId, string mark)
@@ -878,7 +709,7 @@ public class RoomService(
     }
 
     /// <summary>The follow-up to a change that may have left everyone voted (a person leaving): read a snapshot, then decide.</summary>
-    private VotingFollowUp FollowUpAfterChange(string roomId)
+    public VotingFollowUp FollowUpAfterChange(string roomId)
     {
         var snapshot = rooms.Get(roomId);
         return snapshot is { VotingEnabled: true } ? Decide(snapshot, voteStatusMapper.Map(snapshot, Members(snapshot))) : VotingFollowUp.None;

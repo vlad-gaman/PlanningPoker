@@ -38,6 +38,7 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<ISweepService, SweepService>();
         services.AddHostedService<SweepBackgroundService>();
         services.AddOptions<PresenceOptions>().BindConfiguration(PresenceConstants.ConfigurationSection);
+        services.AddSingleton<IPresenceService, PresenceService>();
         services.AddHostedService<PresenceBackgroundService>();
         return services;
     }
