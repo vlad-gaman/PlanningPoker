@@ -217,18 +217,6 @@ svg {
   stroke-opacity: 0.5;
 }
 
-// The question mark: a stroked hook and a rounded square dot, drawn in the theme's black.
-.qmark {
-  fill: none;
-  stroke: var(--esendex-black);
-  stroke-width: 7;
-  stroke-linecap: round;
-}
-
-.qmark-dot {
-  fill: var(--esendex-black);
-}
-
 .sp-rim {
   fill: var(--esendex-purple-deep);
 }
