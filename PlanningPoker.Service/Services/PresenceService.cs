@@ -150,7 +150,14 @@ public class PresenceService(
         // Online means connected or still inside the grace period. A room that never had a member is left to the abandoned sweep.
         var hadMembers = removed.Count > 0 || room.MemberGuids.Count > 0;
         var nobodyOnline = room.MemberConnections.Count == 0 && !room.DroppedAt.Values.Any(dropped => now - dropped < options.GracePeriod);
-        if (hadMembers && nobodyOnline && NobodyOnlineLongEnough(room, now, options))
+        if (room.MemberConnections.Count > 0)
+        {
+            room.AwaitingReturn = false;
+        }
+
+        // A restored room whose people have not come back yet keeps them until the removal window removes them.
+        var awaitingReturn = room.AwaitingReturn && room.MemberGuids.Count > 0;
+        if (hadMembers && nobodyOnline && !awaitingReturn && NobodyOnlineLongEnough(room, now, options))
         {
             room.IsDisposed = true;
             return new PresenceChange([], removed, null, null, Disposed: true);

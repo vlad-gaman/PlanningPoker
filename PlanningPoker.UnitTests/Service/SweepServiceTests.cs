@@ -16,7 +16,12 @@ public class SweepServiceTests
 
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms;
+
+    public SweepServiceTests()
+    {
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), time: _time);
+    }
 
     private SweepService CreateService(IRoomRepository? rooms = null, IPersonRepository? people = null)
     {

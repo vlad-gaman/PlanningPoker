@@ -32,6 +32,10 @@ _Avoid_: Away, disconnected, idle
 A person whose membership ended because they stayed offgrid for the removal window (10 minutes, the `Presence` appsettings section). Their vote is discarded and they can rejoin as a new person. Leaving a room on purpose removes the person at once.
 _Avoid_: Exited, kicked
 
+**Restored room**:
+A room that came back from the store after a server restart (SQLite file, `Persistence` appsettings section; on App Service point it at `/home`). Its people, votes and round state are kept and every person starts offgrid until they reconnect. A revealed round stays revealed; a countdown that was running is not resumed. A restored room is deleted once all its people are removed or it has had no activity for the `Sweep:AbandonedAfter` period (24 hours).
+_Avoid_: Recovered, reloaded
+
 **Voter**:
 A person who can vote in a round: a developer, a tester or an SRE.
 _Avoid_: Player, participant

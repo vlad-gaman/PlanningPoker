@@ -15,7 +15,7 @@ public class SweepService(IRoomRepository rooms, IPersonRepository people, IOpti
             // Disposing inside the room lock means a Join that comes later is refused, so the room cannot gain a member after the check.
             var abandoned = rooms.Update(roomId, room =>
             {
-                if (room.MemberConnections.Count > 0 || room.CreatedAt >= cutoff)
+                if (room.MemberConnections.Count > 0 || room.CreatedAt >= cutoff || room.LastActivityAt >= cutoff)
                 {
                     return false;
                 }
