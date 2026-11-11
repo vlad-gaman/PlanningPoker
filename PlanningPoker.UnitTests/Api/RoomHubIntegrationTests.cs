@@ -82,54 +82,21 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
     }
 
     [Fact]
-    public async Task Disconnect_Member_BroadcastsPersonExited()
+    public async Task LeaveRoom_RemovesThePersonAtOnceAndHandsOverOwnership()
     {
         await using var room = await factory.CreateTestRoomAsync();
-        var exited = room.Owner.NextEvent("PersonExited", payload => PersonName(payload) == "Bob");
-
-        await room.Guest.StopAsync();
-
-        Assert.Equal("Bob", PersonName(await exited));
-    }
-
-    [Fact]
-    public async Task Reconnect_AfterTheServerDroppedTheConnection_ReturnsTheVoteWithTheJoin()
-    {
-        var ownerCookie = await factory.MintCookie("Ann");
-        var bobCookie = await factory.MintCookie("Bob");
-        var roomId = await factory.CreateRoom(ownerCookie);
-        await using var owner = factory.Connect(ownerCookie);
-        await owner.StartAsync();
-        await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
-        await using var bob = factory.Connect(bobCookie);
-        await bob.StartAsync();
-        await bob.InvokeAsync<JsonElement>("JoinRoom", roomId);
-        await bob.InvokeAsync<JsonElement>("Vote", "5");
-        var exited = owner.NextEvent("PersonExited", payload => PersonName(payload) == "Bob");
-
-        // The server has run its disconnect for Bob before he comes back, as it does when a connection drops for long.
-        await bob.StopAsync();
-        await exited;
-        await using var bobAgain = factory.Connect(bobCookie);
-        await bobAgain.StartAsync();
-        var joined = await bobAgain.InvokeAsync<JsonElement>("JoinRoom", roomId);
-
-        Assert.Equal("5", Data(joined).GetProperty("myMark").GetString());
-    }
-
-    [Fact]
-    public async Task Disconnect_Owner_TransfersOwnershipToRemainingMember()
-    {
-        await using var room = await factory.CreateTestRoomAsync();
+        var exited = room.Guest.NextEvent("PersonExited", payload => PersonName(payload) == "Ann");
         var transferred = room.Guest.NextEvent("OwnershipTransferred");
 
-        await room.Owner.StopAsync();
+        var response = await room.Owner.InvokeAsync<JsonElement>("LeaveRoom");
 
+        Assert.Equal(JsonValueKind.Null, response.GetProperty("errors").ValueKind);
+        Assert.Equal("Ann", PersonName(await exited));
         Assert.Equal("Bob", (await transferred).GetProperty("newOwner").GetProperty("name").GetString());
     }
 
     [Fact]
-    public async Task Disconnect_LastMember_RemovesTheRoom()
+    public async Task LeaveRoom_LastMember_RemovesTheRoom()
     {
         var cookie = await factory.MintCookie();
         var roomId = await factory.CreateRoom(cookie);
@@ -137,7 +104,7 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
         await connection.StartAsync();
         await connection.InvokeAsync<JsonElement>("JoinRoom", roomId);
 
-        await connection.StopAsync();
+        await connection.InvokeAsync<JsonElement>("LeaveRoom");
 
         var client = factory.CreateClient();
         await TestSession.WaitUntilAsync(async () =>
@@ -146,7 +113,7 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
     }
 
     [Fact]
-    public async Task JoinRoom_CreatorNeverJoined_FirstPersonInIsOwnerAndRoomGoesWhenTheyLeave()
+    public async Task JoinRoom_CreatorNeverJoined_FirstPersonInIsOwner()
     {
         var creatorCookie = await factory.MintCookie("Ann");
         var roomId = await factory.CreateRoom(creatorCookie);
@@ -160,13 +127,6 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
         var person = Assert.Single(data.GetProperty("people").EnumerateArray());
         Assert.Equal("Bob", person.GetProperty("name").GetString());
         Assert.Equal(person.GetProperty("guid").GetGuid(), data.GetProperty("ownerGuid").GetGuid());
-
-        await bob.StopAsync();
-
-        var client = factory.CreateClient();
-        await TestSession.WaitUntilAsync(async () =>
-            (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode == System.Net.HttpStatusCode.NotFound,
-            TimeSpan.FromSeconds(5));
     }
 
     private static bool HasErrors(JsonElement response)

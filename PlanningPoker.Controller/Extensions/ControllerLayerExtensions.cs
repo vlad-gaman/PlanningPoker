@@ -47,6 +47,8 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IJoinRoomResponseMapper, JoinRoomResponseMapper>();
         services.AddSingleton<IPersonJoinedEventMapper, PersonJoinedEventMapper>();
         services.AddSingleton<IPersonExitedEventMapper, PersonExitedEventMapper>();
+        services.AddSingleton<IPersonOffgridEventMapper, PersonOffgridEventMapper>();
+        services.AddSingleton<IPersonBackEventMapper, PersonBackEventMapper>();
         services.AddSingleton<IOwnershipTransferredEventMapper, OwnershipTransferredEventMapper>();
         services.AddSingleton<IRoomDisposedEventMapper, RoomDisposedEventMapper>();
         services.AddSingleton<IRoomCountdownEventMapper, RoomCountdownEventMapper>();
@@ -58,6 +60,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<RoomEventPublisher>();
         services.AddSingleton<IRoomEventPublisher>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<IRoomCountdownNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
+        services.AddSingleton<IRoomPresenceNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<UpdateMeRequestValidation>();
         services.AddSingleton<RoomConfigurationValidation>();
         services.AddSingleton<CreateRoomRequestValidation>();

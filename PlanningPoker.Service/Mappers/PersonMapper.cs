@@ -7,6 +7,11 @@ public class PersonMapper : IPersonMapper
 {
     public Person Map(PersonEntity entity)
     {
-        return new Person { Guid = entity.Guid, Name = entity.Name, PersonType = entity.PersonType };
+        return Map(entity, isOffgrid: false);
+    }
+
+    public Person Map(PersonEntity entity, bool isOffgrid)
+    {
+        return new Person { Guid = entity.Guid, Name = entity.Name, PersonType = entity.PersonType, IsOffgrid = isOffgrid };
     }
 }

@@ -1,6 +1,8 @@
 using PlanningPoker.Repository.Repositories;
 using PlanningPoker.UnitTests.Builders;
+using Microsoft.Extensions.Options;
 using PlanningPoker.Service.Mappers;
+using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.Service.Validations;
 using PlanningPoker.UnitTests.Fakes;
@@ -10,7 +12,7 @@ namespace PlanningPoker.UnitTests.Service;
 /// <summary>Builds a <see cref="RoomService"/> over real mappers and the given repositories.</summary>
 public static class RoomServiceFactory
 {
-    public static RoomService Create(IRoomRepository rooms, IPersonRepository people, IRoomNameGenerator? generator = null, TimeProvider? time = null, IPlanningPokerMetrics? metrics = null)
+    public static RoomService Create(IRoomRepository rooms, IPersonRepository people, IRoomNameGenerator? generator = null, TimeProvider? time = null, IPlanningPokerMetrics? metrics = null, PresenceOptions? presence = null)
     {
         return new RoomService(
             rooms,
@@ -30,6 +32,7 @@ public static class RoomServiceFactory
             new RoomConfigurationMapper(),
             new CardSetService(),
             metrics ?? new FakePlanningPokerMetrics(),
-            time ?? TimeProvider.System);
+            time ?? TimeProvider.System,
+            Options.Create(presence ?? new PresenceOptions()));
     }
 }

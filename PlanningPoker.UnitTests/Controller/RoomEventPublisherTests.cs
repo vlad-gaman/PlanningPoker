@@ -29,6 +29,8 @@ public class RoomEventPublisherTests
             new PersonJoinedEventMapper(PersonMapper),
             new RoomCountdownEventMapper(),
             new PersonExitedEventMapper(PersonMapper),
+            new PersonOffgridEventMapper(PersonMapper),
+            new PersonBackEventMapper(PersonMapper),
             new OwnershipTransferredEventMapper(PersonMapper),
             new RoomDisposedEventMapper(),
             new VoteCastEventMapper(),
@@ -195,6 +197,59 @@ public class RoomEventPublisherTests
         await _publisher.PublishPersonExitedAsync(RoomResults.Exit(Ann, personLeft: false));
 
         Assert.Empty(_hub.Clients.Sent);
+    }
+
+    [Fact]
+    public async Task PublishPersonJoined_PersonReturningFromOffgrid_TellsOthersTheyAreBackAndResetsTheCountdown()
+    {
+        await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: true, countdownSeconds: 7, personAdded: false, wasOffgrid: true), JoinerConnection);
+
+        Assert.Equal([HubEvents.PersonBack, HubEvents.CountdownReset], _hub.Clients.Sent.Select(message => message.Method));
+        var back = _hub.Clients.Sent[0];
+        Assert.Equal(RoomGroup, back.Target);
+        Assert.Equal([JoinerConnection], back.Excluded);
+        Assert.Equal("Bob", Assert.IsType<PersonBackEvent>(back.Payload).Person.Name);
+        Assert.Equal(7, Assert.IsType<RoomCountdownEvent>(_hub.Clients.Sent[1].Payload).Countdown);
+    }
+
+    [Fact]
+    public async Task PublishPersonJoined_PersonReturningFromOffgridWithAVote_DoesNotResetTheCountdown()
+    {
+        await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: false, personAdded: false, wasOffgrid: true), JoinerConnection);
+
+        Assert.Equal(HubEvents.PersonBack, Assert.Single(_hub.Clients.Sent).Method);
+    }
+
+    [Fact]
+    public async Task PublishPersonJoined_PersonReturningWithinTheGracePeriod_SendsNothing()
+    {
+        await _publisher.PublishPersonJoinedAsync(RoomResults.Join(Bob, [Ann, Bob], resetCountdown: true, personAdded: false, wasOffgrid: false), JoinerConnection);
+
+        Assert.Empty(_hub.Clients.Sent);
+    }
+
+    [Fact]
+    public async Task PersonOffgrid_SendsThePersonToTheWholeRoom()
+    {
+        var offgrid = new Person { Guid = Bob.Guid, Name = "Bob", PersonType = "test", IsOffgrid = true };
+
+        await ((IRoomPresenceNotifier)_publisher).PersonOffgridAsync(new PersonOffgridResult { RoomId = "room", Person = offgrid });
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.PersonOffgrid, sent.Method);
+        Assert.Equal(RoomGroup, sent.Target);
+        Assert.Empty(sent.Excluded);
+        var person = Assert.IsType<PersonOffgridEvent>(sent.Payload).Person;
+        Assert.Equal("Bob", person.Name);
+        Assert.True(person.IsOffgrid);
+    }
+
+    [Fact]
+    public async Task PersonRemoved_SendsPersonExitedAndTheNewOwnerToTheWholeRoom()
+    {
+        await ((IRoomPresenceNotifier)_publisher).PersonRemovedAsync(RoomResults.Exit(Bob, newOwner: Ann));
+
+        Assert.Equal([HubEvents.PersonExited, HubEvents.OwnershipTransferred], _hub.Clients.Sent.Select(message => message.Method));
     }
 
     [Fact]

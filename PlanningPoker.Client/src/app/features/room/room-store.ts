@@ -13,8 +13,10 @@ import {
   CountdownEvent,
   JoinRoomResponse,
   OwnershipTransferredEvent,
+  PersonBackEvent,
   PersonExitedEvent,
   PersonJoinedEvent,
+  PersonOffgridEvent,
   PersonTypeChangedEvent,
   RoomConfigurationUpdatedEvent,
   RoomConfiguration,
@@ -127,6 +129,15 @@ export class RoomStore {
     await this.router.navigateByUrl('/');
   }
 
+  /**
+   * The person's own choice to go: the server removes them at once. Merely dropping the connection (a refresh, a lost
+   * network) keeps them in the room as offgrid, so leaving on purpose has to say so.
+   */
+  async leaveRoom(): Promise<void> {
+    await this.send(this.generation, 'LeaveRoom');
+    await this.leave();
+  }
+
   /** Picks a card at once and tells the room; a refused vote puts the previous pick back. */
   async vote(mark: string): Promise<void> {
     const gen = this.generation;
@@ -192,6 +203,8 @@ export class RoomStore {
     this.bound = true;
     this.hub.on(HUB_EVENTS.PersonJoined, (event: PersonJoinedEvent) => this.apply(() => this.personJoined(event)));
     this.hub.on(HUB_EVENTS.PersonExited, (event: PersonExitedEvent) => this.apply(() => this.personExited(event)));
+    this.hub.on(HUB_EVENTS.PersonOffgrid, (event: PersonOffgridEvent) => this.apply(() => this.personReplaced(event.person)));
+    this.hub.on(HUB_EVENTS.PersonBack, (event: PersonBackEvent) => this.apply(() => this.personReplaced(event.person)));
     this.hub.on(HUB_EVENTS.OwnershipTransferred, (event: OwnershipTransferredEvent) =>
       this.apply(() => this.ownerState.set(event.newOwner.guid)),
     );
@@ -341,6 +354,11 @@ export class RoomStore {
     if (vote !== null) {
       this.votesState.update((votes) => ({ ...votes, [person.guid]: vote }));
     }
+  }
+
+  /** An offgrid or returning person keeps their place in the list and their vote; only their own entry changes. */
+  private personReplaced(person: Person): void {
+    this.peopleState.update((people) => people.map((p) => (p.guid === person.guid ? person : p)));
   }
 
   private personTypeChanged(event: PersonTypeChangedEvent): void {

@@ -136,6 +136,22 @@ public class RoomResponseMappersTests
     }
 
     [Fact]
+    public void PersonOffgridEventMapper_MapsPerson()
+    {
+        var response = new PersonOffgridEventMapper(PersonMapper).Map(new PersonOffgridResult { RoomId = "room", Person = Ann });
+
+        Assert.Equal(Ann.Guid, response.Person.Guid);
+    }
+
+    [Fact]
+    public void PersonBackEventMapper_MapsThePersonWhoJoined()
+    {
+        var response = new PersonBackEventMapper(PersonMapper).Map(JoinResult());
+
+        Assert.Equal(Bob.Guid, response.Person.Guid);
+    }
+
+    [Fact]
     public void OwnershipTransferredEventMapper_MapsNewOwner()
     {
         Assert.Equal(Bob.Guid, new OwnershipTransferredEventMapper(PersonMapper).Map(Bob).NewOwner.Guid);

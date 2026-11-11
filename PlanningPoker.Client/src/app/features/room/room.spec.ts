@@ -88,6 +88,17 @@ describe('Room', () => {
     expect(element.textContent).toContain('(owner)');
   });
 
+  it('marks offgrid people in the participants table and leaves online people unmarked', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
+
+    const { element } = await render();
+
+    const rows = Array.from(element.querySelectorAll('tr[mat-row]'));
+    expect(rows.find((row) => row.textContent?.includes('Bob'))?.textContent).toContain('(offgrid)');
+    expect(rows.find((row) => row.textContent?.includes('Ann'))?.textContent).not.toContain('(offgrid)');
+  });
+
   it('asks for a name when there is no session, then saves it and joins', async () => {
     me.get.mockReturnValue(noSession());
     me.update.mockReturnValue(of(ANN));
@@ -506,6 +517,7 @@ describe('Room', () => {
     ).click();
     await settle(fixture);
 
+    expect(hub.invoke).toHaveBeenCalledWith('LeaveRoom');
     expect(hub.disconnect).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/');
   });

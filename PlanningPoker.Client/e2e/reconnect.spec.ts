@@ -25,7 +25,7 @@ const card = (page: Page, value: string) => page.getByRole('radio', { name: valu
 const pick = (page: Page, value: string) =>
   page.locator('label.card').filter({ hasText: new RegExp(`^\\s*${value}\\s*$`) }).click();
 
-test('a voter who loses the connection and comes back still has their vote shown', async ({ browser }) => {
+test('a voter who loses the connection stays listed with their vote and is the same person when they come back', async ({ browser }) => {
   const ann: BrowserContext = await browser.newContext();
   const bob: BrowserContext = await browser.newContext();
   const annPage = await ann.newPage();
@@ -52,7 +52,10 @@ test('a voter who loses the connection and comes back still has their vote shown
 
   // Closing the page side also closes the server side, and a non-1000 code makes SignalR reconnect automatically.
   await sockets[0]!.close({ code: 4000, reason: 'connection lost' });
-  await expect(row(bobPage, 'Ann')).toHaveCount(0);
+
+  // She is still online for the grace period, so nothing flickers on Bob's screen.
+  await expect(row(bobPage, 'Ann')).toBeVisible();
+  await expect(mark(bobPage, 'Ann')).toHaveText('▮');
 
   letReconnect();
 

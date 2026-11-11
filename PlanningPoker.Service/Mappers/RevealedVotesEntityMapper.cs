@@ -7,7 +7,7 @@ public class RevealedVotesEntityMapper : IRevealedVotesEntityMapper
 {
     public RevealedVotesEntity Map(RoomEntity room, IReadOnlyDictionary<Guid, string> personTypes)
     {
-        var voters = room.MemberGuids.Where(guid => TypeOf(personTypes, guid) != PersonTypes.Observer).ToList();
+        var voters = room.MemberGuids.Where(guid => TypeOf(personTypes, guid) != PersonTypes.Observer && !room.OffgridGuids.Contains(guid)).ToList();
         return new RevealedVotesEntity
         {
             EveryoneVoted = voters.Count > 0 && voters.All(room.Votes.ContainsKey),

@@ -9,10 +9,23 @@ public class RoomEntity
     public List<Guid> MemberGuids { get; set; } = [];
 
     /// <summary>
-    /// Open connections per member, in this room only. A member leaves when their set empties. Every member has at
-    /// least one connection; the creator is not a member until their first join.
+    /// Open connections per member, in this room only. A member whose set empties is dropped (see <see cref="DroppedAt"/>)
+    /// and only leaves when the sweep removes them; a connection-less member has no entry here. The creator is not a member
+    /// until their first join.
     /// </summary>
     public Dictionary<Guid, HashSet<string>> MemberConnections { get; set; } = [];
+
+    /// <summary>
+    /// When each member without a connection lost their last one, in UTC. The first drop wins and a join clears it. A
+    /// member is online for the grace period after it, offgrid after that, and removed once the removal window has passed.
+    /// </summary>
+    public Dictionary<Guid, DateTimeOffset> DroppedAt { get; set; } = [];
+
+    /// <summary>
+    /// Members whose grace period lapsed and who were announced as offgrid. They keep their vote, but the room no longer
+    /// waits for them: "everyone voted" is decided over the members not listed here.
+    /// </summary>
+    public HashSet<Guid> OffgridGuids { get; set; } = [];
 
     public Dictionary<Guid, string> Votes { get; set; } = [];
 

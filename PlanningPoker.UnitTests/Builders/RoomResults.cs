@@ -11,7 +11,8 @@ public static class RoomResults
         IReadOnlyList<Person>? people = null,
         bool resetCountdown = true,
         int countdownSeconds = 5,
-        bool personAdded = true)
+        bool personAdded = true,
+        bool wasOffgrid = false)
     {
         return new JoinRoomResult
         {
@@ -27,6 +28,7 @@ public static class RoomResults
             Cards = [new CardOption { Value = "1" }],
             VoteStatus = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = false },
             PersonAdded = personAdded,
+            WasOffgrid = wasOffgrid,
             ResetCountdown = resetCountdown
         };
     }

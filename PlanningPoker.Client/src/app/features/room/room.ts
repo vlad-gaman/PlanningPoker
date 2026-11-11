@@ -179,7 +179,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   protected leave(): void {
     this.generation++;
-    void this.store.leave();
+    void this.store.leaveRoom();
   }
 
   /** What a participant's mark cell shows: nothing for no vote or an observer, a block while hidden, the card once revealed. */

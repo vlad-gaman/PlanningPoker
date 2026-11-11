@@ -19,6 +19,19 @@ public interface IRoomService
     ServiceResponse<ExitRoomResult> Exit(Guid personGuid, string connectionId);
 
     /// <summary>
+    /// Closes this connection. When it was the member's last one in the room they are dropped, not removed: they stay a member
+    /// with their vote and are online for the grace period, then offgrid, and <see cref="SweepPresence"/> removes them once
+    /// the removal window has passed. A returning <see cref="Join"/> restores them. <c>not_in_room</c> means the connection is unknown.
+    /// </summary>
+    ServiceResponse Disconnect(Guid personGuid, string connectionId);
+
+    /// <summary>
+    /// Turns the people whose grace period lapsed offgrid, removes those offgrid for the whole removal window (with their
+    /// vote), and deletes rooms nobody has been online in for the empty-room lifetime. Called by the background sweep.
+    /// </summary>
+    PresenceSweepResult SweepPresence();
+
+    /// <summary>
     /// Stores or replaces the caller's vote in the room their connection is in. When that makes everyone voted, the
     /// result says which countdown to tick (or carries the votes when the countdown is 0 and they were revealed at once).
     /// </summary>

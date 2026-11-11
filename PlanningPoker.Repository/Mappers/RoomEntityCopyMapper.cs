@@ -12,6 +12,8 @@ public class RoomEntityCopyMapper(IRoomConfigurationEntityCopyMapper configurati
             OwnerGuid = source.OwnerGuid,
             MemberGuids = [.. source.MemberGuids],
             MemberConnections = source.MemberConnections.ToDictionary(pair => pair.Key, pair => new HashSet<string>(pair.Value)),
+            DroppedAt = new Dictionary<Guid, DateTimeOffset>(source.DroppedAt),
+            OffgridGuids = [.. source.OffgridGuids],
             Votes = new Dictionary<Guid, string>(source.Votes),
             DepartedVotes = new Dictionary<Guid, string>(source.DepartedVotes),
             VotingEnabled = source.VotingEnabled,

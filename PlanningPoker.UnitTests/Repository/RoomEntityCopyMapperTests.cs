@@ -24,6 +24,8 @@ public class RoomEntityCopyMapperTests
             MemberConnections = new Dictionary<Guid, HashSet<string>> { [owner] = ["c1"] },
             Votes = new Dictionary<Guid, string> { [owner] = "5" },
             DepartedVotes = new Dictionary<Guid, string> { [owner] = "3" },
+            DroppedAt = new Dictionary<Guid, DateTimeOffset> { [owner] = new DateTimeOffset(2026, 1, 2, 3, 4, 6, TimeSpan.Zero) },
+            OffgridGuids = [owner],
             Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7 }
         };
 
@@ -42,12 +44,16 @@ public class RoomEntityCopyMapperTests
         Assert.Equal(["c1"], copy.MemberConnections[owner]);
         Assert.Equal("5", copy.Votes[owner]);
         Assert.Equal("3", copy.DepartedVotes[owner]);
+        Assert.Equal(source.DroppedAt[owner], copy.DroppedAt[owner]);
+        Assert.Contains(owner, copy.OffgridGuids);
         Assert.Equal(9, copy.Configuration.CountdownSeconds);
         Assert.NotSame(source.MemberGuids, copy.MemberGuids);
         Assert.NotSame(source.MemberConnections, copy.MemberConnections);
         Assert.NotSame(source.MemberConnections[owner], copy.MemberConnections[owner]);
         Assert.NotSame(source.Votes, copy.Votes);
         Assert.NotSame(source.DepartedVotes, copy.DepartedVotes);
+        Assert.NotSame(source.DroppedAt, copy.DroppedAt);
+        Assert.NotSame(source.OffgridGuids, copy.OffgridGuids);
         Assert.NotSame(source.Configuration, copy.Configuration);
     }
 

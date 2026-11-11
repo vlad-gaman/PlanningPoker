@@ -105,6 +105,16 @@ export interface PersonExitedEvent {
   person: Person;
 }
 
+/** The person is still in the room with their vote, but has been without a connection for longer than the grace period. */
+export interface PersonOffgridEvent {
+  person: Person;
+}
+
+/** A person who was announced offgrid has a connection again. */
+export interface PersonBackEvent {
+  person: Person;
+}
+
 export interface OwnershipTransferredEvent {
   newOwner: Person;
 }
