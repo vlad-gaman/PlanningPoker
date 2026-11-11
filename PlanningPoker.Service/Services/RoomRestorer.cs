@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using PlanningPoker.Repository.Repositories;
 
-namespace PlanningPoker.Repository.Services;
+namespace PlanningPoker.Service.Services;
 
 public class RoomRestorer(IRoomStore store, IRoomRepository rooms, IPersonRepository people, ILogger<RoomRestorer> logger) : IRoomRestorer
 {

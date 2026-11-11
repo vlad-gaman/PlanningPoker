@@ -105,8 +105,14 @@ public sealed class SqliteRoomStore : IRoomStore
         {
             Initialize();
         }
-        catch (Exception exception) when (IsUnusableFile(exception) && SetAside(exception))
+        catch (Exception exception)
         {
+            // Not an exception filter: a filter runs before the failed connection is closed, and an open file cannot be renamed.
+            if (!IsUnusableFile(exception) || !SetAside(exception))
+            {
+                throw;
+            }
+
             Initialize();
         }
 

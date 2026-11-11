@@ -40,6 +40,14 @@ public static class ServiceServiceCollectionExtensions
         services.AddOptions<PresenceOptions>().BindConfiguration(PresenceConstants.ConfigurationSection);
         services.AddSingleton<IPresenceService, PresenceService>();
         services.AddHostedService<PresenceBackgroundService>();
+        services.AddSingleton<IRoomRestorer, RoomRestorer>();
+        return services;
+    }
+
+    /// <summary>Loads the stored rooms into memory. Call it once after the host is built and before it starts, so people reconnect to the rooms they left.</summary>
+    public static IServiceProvider RestoreRooms(this IServiceProvider services)
+    {
+        services.GetRequiredService<IRoomRestorer>().Restore();
         return services;
     }
 }

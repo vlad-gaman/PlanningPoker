@@ -20,17 +20,9 @@ public static class RepositoryServiceCollectionExtensions
         services.AddOptions<PersistenceOptions>().BindConfiguration(PersistenceConstants.ConfigurationSection);
         services.AddSingleton<IRoomChangeLog, RoomChangeLog>();
         services.AddSingleton<IRoomStore, SqliteRoomStore>();
-        services.AddSingleton<IRoomRestorer, RoomRestorer>();
         services.AddHostedService<RoomPersistenceWriter>();
         services.AddSingleton<IPersonRepository, PersonRepository>();
         services.AddSingleton<IRoomRepository, RoomRepository>();
-        return services;
-    }
-
-    /// <summary>Loads the stored rooms into memory. Call it once after the host is built and before it starts, so people reconnect to the rooms they left.</summary>
-    public static IServiceProvider RestoreRooms(this IServiceProvider services)
-    {
-        services.GetRequiredService<IRoomRestorer>().Restore();
         return services;
     }
 }

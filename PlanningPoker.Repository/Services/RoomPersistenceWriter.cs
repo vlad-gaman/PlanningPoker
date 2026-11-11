@@ -22,6 +22,9 @@ public class RoomPersistenceWriter(
     TimeProvider time,
     ILogger<RoomPersistenceWriter> logger) : BackgroundService
 {
+    /// <summary>Rooms whose last write failed; the next heartbeat marks them changed again so the store catches up once it works.</summary>
+    private readonly HashSet<string> _failed = [];
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
@@ -32,10 +35,13 @@ public class RoomPersistenceWriter(
         {
             // The host is stopping.
         }
-        finally
-        {
-            Flush();
-        }
+    }
+
+    /// <summary>Writes the changes still pending once the loops have ended, so nothing a request changed just before the stop is lost.</summary>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken);
+        Flush();
     }
 
     private async Task WriteChangesAsync(CancellationToken stoppingToken)
@@ -52,6 +58,11 @@ public class RoomPersistenceWriter(
         using var ticker = new PeriodicTimer(options.Value.HeartbeatInterval, time);
         while (await ticker.WaitForNextTickAsync(stoppingToken))
         {
+            foreach (var roomId in TakeFailed())
+            {
+                changeLog.MarkChanged(roomId);
+            }
+
             foreach (var roomId in rooms.Ids())
             {
                 if (rooms.Get(roomId) is { MemberConnections.Count: > 0 })
@@ -59,6 +70,16 @@ public class RoomPersistenceWriter(
                     changeLog.MarkChanged(roomId);
                 }
             }
+        }
+    }
+
+    private List<string> TakeFailed()
+    {
+        lock (_failed)
+        {
+            var failed = _failed.ToList();
+            _failed.Clear();
+            return failed;
         }
     }
 
@@ -87,7 +108,11 @@ public class RoomPersistenceWriter(
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Writing room {RoomId} to the store failed", roomId);
+                logger.LogError(exception, "Writing room {RoomId} to the store failed; it is tried again at the next heartbeat", roomId);
+                lock (_failed)
+                {
+                    _failed.Add(roomId);
+                }
             }
         }
     }

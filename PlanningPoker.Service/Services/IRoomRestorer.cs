@@ -1,4 +1,4 @@
-namespace PlanningPoker.Repository.Services;
+namespace PlanningPoker.Service.Services;
 
 public interface IRoomRestorer
 {

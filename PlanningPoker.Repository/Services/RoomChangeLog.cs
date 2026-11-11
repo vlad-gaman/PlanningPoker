@@ -4,7 +4,7 @@ namespace PlanningPoker.Repository.Services;
 
 public class RoomChangeLog : IRoomChangeLog
 {
-    private readonly Channel<string> _changes = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Channel<string> _changes = Channel.CreateUnbounded<string>(new UnboundedChannelOptions());
 
     public ChannelReader<string> Changes => _changes.Reader;
 
