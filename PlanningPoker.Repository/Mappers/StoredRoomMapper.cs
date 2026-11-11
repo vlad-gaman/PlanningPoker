@@ -22,6 +22,8 @@ public class StoredRoomMapper : IStoredRoomMapper
             }
         }
 
+        // Connections belong to the running process and mean nothing after a restart, so they are never stored.
+        room.MemberConnections = [];
         return new StoredRoom { Room = room, People = stored, SavedAt = savedAt };
     }
 }

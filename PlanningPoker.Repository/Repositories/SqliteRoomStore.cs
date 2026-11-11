@@ -105,7 +105,7 @@ public sealed class SqliteRoomStore : IRoomStore
         {
             Initialize();
         }
-        catch (Exception exception) when (SetAside(exception))
+        catch (Exception exception) when (IsUnusableFile(exception) && SetAside(exception))
         {
             Initialize();
         }
@@ -132,6 +132,12 @@ public sealed class SqliteRoomStore : IRoomStore
         {
             throw new InvalidDataException($"The room store has schema version {version}, this server reads {PersistenceConstants.SchemaVersion}.");
         }
+    }
+
+    /// <summary>Only a file that is not a database, is corrupt or holds another schema version is set aside; a busy or unreachable one is not, since it may be fine a moment later.</summary>
+    private static bool IsUnusableFile(Exception exception)
+    {
+        return exception is InvalidDataException or SqliteException { SqliteErrorCode: 11 or 26 };
     }
 
     /// <summary>Renames the unusable file so nothing is lost and a fresh one can be created. Returns false when there is no file to set aside.</summary>
