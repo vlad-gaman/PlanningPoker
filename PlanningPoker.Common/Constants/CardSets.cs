@@ -17,12 +17,12 @@ public static class CardSets
     [
         new() { Value = Fibonacci, Display = "Fibonacci" },
         new() { Value = ModifiedFibonacci, Display = "Modified Fibonacci" },
+        new() { Value = EsendexFibonacci, Display = "Esendex Fibonacci" },
         new() { Value = Linear, Display = "Linear (1-10)" },
         new() { Value = PowersOfTwo, Display = "Powers of 2" },
         new() { Value = TShirtSizes, Display = "T-Shirt Sizes" },
         new() { Value = TrafficLights, Display = "Traffic Lights" },
-        new() { Value = FistOfFive, Display = "Fist of Five" },
-        new() { Value = EsendexFibonacci, Display = "Esendex Fibonacci" }
+        new() { Value = FistOfFive, Display = "Fist of Five" }
     ];
 
     /// <summary>The cards of each set, in display order. A display of "art:NAME" names an illustration the client draws.</summary>
