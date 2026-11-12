@@ -24,6 +24,8 @@ public class RoomEntityCopyMapper(IRoomConfigurationEntityCopyMapper configurati
             IsDisposed = source.IsDisposed,
             RoundStartedAt = source.RoundStartedAt,
             CreatedAt = source.CreatedAt,
+            LastActivityAt = source.LastActivityAt,
+            AwaitingReturn = source.AwaitingReturn,
             Configuration = configurationMapper.Map(source.Configuration)
         };
     }

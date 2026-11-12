@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PlanningPoker.Repository.Models;
 
 public class RoomEntity
@@ -68,4 +70,17 @@ public class RoomEntity
     public DateTimeOffset CreatedAt { get; set; }
 
     public RoomConfigurationEntity Configuration { get; set; } = new();
+
+    /// <summary>
+    /// When the room last changed, in UTC: any change to the stored state counts, a connection coming or going included. The
+    /// abandoned sweep uses it to expire rooms nobody has touched for a long time.
+    /// </summary>
+    public DateTimeOffset LastActivityAt { get; set; }
+
+    /// <summary>
+    /// Set when the room was restored after a restart, until someone is connected again. The room is then not deleted for having
+    /// nobody online: its people get the whole removal window to come back. Never stored.
+    /// </summary>
+    [JsonIgnore]
+    public bool AwaitingReturn { get; set; }
 }

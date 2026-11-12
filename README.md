@@ -57,6 +57,7 @@ This application enables software development teams to conduct efficient, collab
 - **Health Checks** - 5-second intervals to detect disconnected users
 - **Auto-cleanup** - Removes inactive participants
 - **Room Disposal** - Rooms are disposed when empty
+- **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; on Azure App Service point it at the persistent mount, e.g. `Data Source=/home/data/planningpoker.db`, and keep staging slots on a different file
 - **Connection Recovery** - Automatic reconnection with exponential backoff
 
 ## Voting System

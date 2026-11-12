@@ -17,7 +17,7 @@ The time elapsed since the room's last reveal, clear or creation. Casting or cha
 _Avoid_: Vote timer, idle timer, activity timer
 
 **Abandoned**:
-A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and was created more than the abandon time ago. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. This has nothing to do with the round timer, which only measures the current round.
+A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and neither it was created nor anything in it changed within the abandon time. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. This has nothing to do with the round timer, which only measures the current round.
 _Avoid_: Idle, stale, expired, timed out
 
 **Online**:
@@ -31,6 +31,10 @@ _Avoid_: Away, disconnected, idle
 **Removed**:
 A person whose membership ended because they stayed offgrid for the removal window (10 minutes, the `Presence` appsettings section). Their vote is discarded and they can rejoin as a new person. Leaving a room on purpose removes the person at once.
 _Avoid_: Exited, kicked
+
+**Restored room**:
+A room that came back from the store after a server restart (SQLite file, `Persistence` appsettings section; on App Service point it at `/home`). Its people, votes and round state are kept and every person starts offgrid until they reconnect. A revealed round stays revealed; a countdown that was running is not resumed. A restored room is deleted once all its people are removed or it has had no activity for the `Sweep:AbandonedAfter` period (24 hours).
+_Avoid_: Recovered, reloaded
 
 **Voter**:
 A person who can vote in a round: a developer, a tester or an SRE.

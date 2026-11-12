@@ -11,6 +11,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+app.Services.RestoreRooms();
 
 app.UseControllerLayer();
 app.UseSwagger();
