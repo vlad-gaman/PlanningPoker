@@ -130,7 +130,7 @@ test('creating a room asks nothing more and reuses the settings the owner saved 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog').getByLabel('Countdown Duration').fill('9');
+  await page.getByRole('dialog').getByLabel('Countdown (seconds)').fill('9');
   await page.getByRole('dialog').getByRole('button', { name: 'Save Settings' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
@@ -139,7 +139,7 @@ test('creating a room asks nothing more and reuses the settings the owner saved 
   await page.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(GUID_ROOM_PATH);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog').getByLabel('Countdown Duration')).toHaveValue('9');
+  await expect(page.getByRole('dialog').getByLabel('Countdown (seconds)')).toHaveValue('9');
 });
 
 test('an invalid name is rejected when joining through a link', async ({ browser }) => {

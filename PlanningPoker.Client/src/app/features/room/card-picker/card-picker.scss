@@ -1,7 +1,5 @@
-// The deck: 72 x 96 (the vote card on a person's tile) on small screens, growing with the viewport up to 120 x 160 so
-// the card art stays legible on big ones.
+// The deck: cards sized by the shared --card-w (see styles.scss), the same as the vote cards on people's tiles.
 .cards {
-  --card-w: clamp(72px, 6.5vw, 120px);
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--card-w));
   justify-content: space-between;

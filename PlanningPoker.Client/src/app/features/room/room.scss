@@ -71,7 +71,7 @@
 // People tiles: avatar, name, role, then the vote card.
 .people {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(7.5rem, calc(var(--card-w) + 2rem)), 1fr));
   gap: 0.75rem;
   margin: 0 0 1.5rem;
   padding: 0;
@@ -143,20 +143,20 @@
   filter: grayscale(1);
 }
 
-// One box for every state of the vote card, so a hidden vote and its reveal are the same size: 72 x 96 with a 3px frame, the same as the deck cards.
+// One box for every state of the vote card, so a hidden vote and its reveal are the same size: --card-w wide, 3:4, with a 3px frame, the same as the deck cards.
 .mark {
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 72px;
-  height: 96px;
+  width: var(--card-w);
+  aspect-ratio: 3 / 4;
   margin-top: 0.5rem;
   border: 3px solid transparent;
   border-radius: 10px;
   background: var(--primary-color);
   color: #fff;
-  font-size: 2.1rem;
+  font-size: calc(var(--card-w) * 0.29);
   font-weight: 700;
 
   // No vote yet: an empty dashed slot of the same size.
@@ -166,8 +166,8 @@
   }
 
   img {
-    height: 2.4rem;
-    width: 2.4rem;
+    height: calc(var(--card-w) * 0.33);
+    width: calc(var(--card-w) * 0.33);
     // The fist-of-five images are black line art: the PNG is the mask and the fill is white on the card. The image
     // itself is pushed out of its box so only the recoloured mask shows.
     background-color: #fff;
@@ -178,8 +178,8 @@
   }
 
   app-esendex-card-art {
-    width: 2.6rem;
-    height: 3.6rem;
+    width: calc(var(--card-w) * 0.62);
+    aspect-ratio: 5 / 7;
   }
 
   // Voted but still hidden: a face-down card back. The block character stays as text for assistive tech.

@@ -4,6 +4,8 @@
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
 
 :root {
+  // Size of a vote card: the deck cards and the vote cards on people's tiles share it, growing on wide screens.
+  --card-w: clamp(72px, 6.5vw, 120px);
   --bg-color: #ffffff;
   --text-color: #212529;
   --border-color: #e5e5e5;

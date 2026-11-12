@@ -21,7 +21,7 @@ test('the Esendex Fibonacci set, chosen in room settings, draws its illustrated 
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Room settings' }).click();
-  await page.getByLabel('Card Set:').selectOption({ label: 'Esendex Fibonacci' });
+  await page.getByLabel('Card Set').selectOption({ label: 'Esendex Fibonacci' });
   await page.getByRole('button', { name: 'Save Settings' }).click();
 
   await page.getByLabel('Your name').fill('Ann');
@@ -37,23 +37,24 @@ test('the Esendex Fibonacci set, chosen in room settings, draws its illustrated 
     const img = card.locator('img');
     await expect(img).toHaveAttribute('alt', value);
     await expect(img).toHaveAttribute('src', `esendex/${file}.svg`);
-    await expect(card.locator('span')).toHaveCount(0);
+    // No plain-text label on the card face (the number lives on the hanging tag inside the art).
+    await expect(card.locator(':scope > span')).toHaveCount(0);
     await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
   }
 
   // Every illustration is visible in the other theme too.
-  await page.getByLabel('Theme').selectOption('dark');
+  await page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Dark' }).click();
   await expect(cards.locator('img')).toHaveCount(CARDS.length);
   for (const img of await cards.locator('img').all()) {
     await expect(img).toBeVisible();
   }
 
-  // A picked card shows its illustration in the participants table once the votes are shown.
+  // A picked card shows its illustration in the person's tile once the votes are shown.
   await cards
     .locator('label.card')
     .filter({ has: page.locator('input[value="30"]') })
     .click();
   await page.getByRole('button', { name: 'Show votes' }).click();
-  const mark = page.locator('tr[mat-row]').filter({ hasText: 'Ann' }).locator('.mark');
+  const mark = page.locator('li.person', { hasText: 'Ann' }).locator('.mark');
   await expect(mark.locator('img')).toHaveAttribute('alt', '30');
 });
