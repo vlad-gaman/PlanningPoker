@@ -11,7 +11,8 @@ import { Credits } from './features/credits/credits';
 import { Home } from './features/home/home';
 import { Room } from './features/room/room';
 
-const session = { ensureLoaded: vi.fn(), signedIn: vi.fn(), username: () => 'operator' };
+// The management page polls through the session, so the stand-in lets calls pass untouched.
+const session = { ensureLoaded: vi.fn(), signedIn: vi.fn(), username: () => 'operator', guardExpiry: <T>(source: T) => source };
 
 describe('routes', () => {
   let harness: RouterTestingHarness;
