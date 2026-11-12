@@ -307,7 +307,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   private async join(gen: number): Promise<void> {
     try {
-      await this.store.join(this.id());
+      await this.store.join(this.id(), this.myGuid());
       if (gen === this.generation) {
         this.phase.set('joined');
       }
