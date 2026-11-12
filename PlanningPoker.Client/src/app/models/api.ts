@@ -14,6 +14,12 @@ export const ERROR_CODES = {
   noSession: 'no_session',
   roomNotFound: 'room_not_found',
   validationFailed: 'validation_failed',
+  unauthorized: 'unauthorized',
+  adminInvalidCredentials: 'admin_invalid_credentials',
+  adminLoginLocked: 'admin_login_locked',
+  adminTotpRequired: 'admin_totp_required',
+  adminTotpInvalid: 'admin_totp_invalid',
+  adminLoginExpired: 'admin_login_expired',
 } as const;
 
 /** Metadata field name the server uses when a room id is malformed. */
