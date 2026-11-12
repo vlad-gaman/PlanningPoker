@@ -27,7 +27,14 @@ public class OperatorAuthServiceTests
             PasswordHash = configured ? _hashing.Hash(Password) : null,
             FailureDelay = failureDelay ?? TimeSpan.Zero
         });
-        return new OperatorAuthService(options, _hashing, new LoginLockoutService(options, _time), NullLogger<OperatorAuthService>.Instance, _issues);
+        return new OperatorAuthService(
+            options,
+            _hashing,
+            new LoginLockoutService(options, _time),
+            NullLogger<OperatorAuthService>.Instance,
+            _issues,
+            new TotpService(options, _time),
+            new TotpChallengeService(options, _time));
     }
 
     [Fact]

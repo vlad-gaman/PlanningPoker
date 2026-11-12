@@ -74,6 +74,24 @@ public class ServiceError
         return Create(ErrorCodes.AdminLoginLocked, "Too many failed sign-in attempts. Try again later.");
     }
 
+    /// <summary>The single definition of the error returned after a correct password when the code step is still to come. Carries the challenge for it.</summary>
+    public static ServiceError AdminTotpRequired(string challenge)
+    {
+        return Create(ErrorCodes.AdminTotpRequired, "Enter the code from your authenticator app.", ("challenge", challenge));
+    }
+
+    /// <summary>The single definition of the error returned for a wrong, reused or malformed authenticator code.</summary>
+    public static ServiceError AdminTotpInvalid()
+    {
+        return Create(ErrorCodes.AdminTotpInvalid, "The code is incorrect.");
+    }
+
+    /// <summary>The single definition of the error returned when the password step is too old or not genuine, so sign-in starts again.</summary>
+    public static ServiceError AdminLoginExpired()
+    {
+        return Create(ErrorCodes.AdminLoginExpired, "The sign-in step expired. Start again.");
+    }
+
     /// <summary>The single definition of the error returned when a state-changing admin request lacks a valid anti-forgery token.</summary>
     public static ServiceError AdminAntiforgeryInvalid()
     {

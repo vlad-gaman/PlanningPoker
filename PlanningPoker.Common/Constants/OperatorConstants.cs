@@ -11,5 +11,6 @@ public static class OperatorConstants
     public const int MaxFailedLogins = 5;
     public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan FailureDelay = TimeSpan.FromMilliseconds(500);
+    public static readonly TimeSpan ChallengeLifetime = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
 }

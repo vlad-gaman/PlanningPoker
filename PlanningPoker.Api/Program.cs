@@ -8,6 +8,11 @@ if (args.Contains(PasswordHashCommand.Switch))
     return PasswordHashCommand.Run(new PasswordHashingService(), Console.In, Console.Out, Console.Error);
 }
 
+if (args.Contains(TotpSecretCommand.Switch))
+{
+    return TotpSecretCommand.Run("operator", Console.Out);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRepositoryLayer();

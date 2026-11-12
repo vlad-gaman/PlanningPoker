@@ -46,6 +46,8 @@ public static class ServiceServiceCollectionExtensions
         services.AddOptions<OperatorOptions>().BindConfiguration(OperatorConstants.ConfigurationSection);
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
         services.AddSingleton<ILoginLockoutService, LoginLockoutService>();
+        services.AddSingleton<ITotpService, TotpService>();
+        services.AddSingleton<ITotpChallengeService, TotpChallengeService>();
         services.AddSingleton<IOperatorAuthService, OperatorAuthService>();
         services.AddOptions<IssueLogOptions>().BindConfiguration(IssueLogConstants.ConfigurationSection);
         services.AddSingleton<IIssueEntryMapper, IssueEntryMapper>();
