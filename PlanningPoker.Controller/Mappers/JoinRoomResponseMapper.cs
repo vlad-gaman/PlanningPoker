@@ -7,7 +7,8 @@ public class JoinRoomResponseMapper(
     IPersonResponseMapper personMapper,
     IVoteStatusResponseMapper voteStatusMapper,
     IRoomConfigurationResponseMapper configurationMapper,
-    ICardResponseMapper cardMapper) : IJoinRoomResponseMapper
+    ICardResponseMapper cardMapper,
+    IRoundResultResponseMapper roundResultMapper) : IJoinRoomResponseMapper
 {
     public JoinRoomResponse Map(JoinRoomResult result)
     {
@@ -18,7 +19,8 @@ public class JoinRoomResponseMapper(
             Cards = result.Cards.Select(cardMapper.Map).ToList(),
             MyMark = result.MyMark,
             OwnerGuid = result.Room.OwnerGuid,
-            Configuration = configurationMapper.Map(result.Room.Configuration)
+            Configuration = configurationMapper.Map(result.Room.Configuration),
+            RoundHistory = result.Room.RoundHistory.Select(roundResultMapper.Map).ToList()
         };
     }
 }

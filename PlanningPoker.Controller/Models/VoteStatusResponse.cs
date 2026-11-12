@@ -17,4 +17,7 @@ public class VoteStatusResponse
 
     /// <summary>The statistics of the revealed votes; null while voting is open.</summary>
     public VoteStatisticsResponse? Statistics { get; init; }
+
+    /// <summary>The room's revealed rounds, newest first, sent with the reveal so every client updates its history live; null while voting is open.</summary>
+    public IReadOnlyList<RoundResultResponse>? RoundHistory { get; init; }
 }

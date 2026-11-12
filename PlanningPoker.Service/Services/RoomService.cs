@@ -23,6 +23,7 @@ public class RoomService(
     IPersonMapper personMapper,
     IVoteStatusMapper voteStatusMapper,
     IRevealedVotesEntityMapper revealedMapper,
+    IRoundResultEntityMapper roundResultEntityMapper,
     IJoinRoomResultMapper joinRoomResultMapper,
     IExitRoomResultMapper exitRoomResultMapper,
     RoomIdentifierValidation identifierValidation,
@@ -383,10 +384,7 @@ public class RoomService(
                 return (Outcome: default, NeedsTypes: true);
             }
 
-            room.Revealed = frozen;
-            room.VotingEnabled = false;
-            room.RoundStartedAt = time.GetUtcNow();
-            room.Revision++;
+            RecordReveal(room, frozen);
             return (Outcome: (Member: true, Changed: true), NeedsTypes: false);
         }, out var outcome);
         if (!found)
@@ -643,10 +641,7 @@ public class RoomService(
             }
 
             room.CountdownRemaining = 0;
-            room.Revealed = frozen;
-            room.VotingEnabled = false;
-            room.RoundStartedAt = time.GetUtcNow();
-            room.Revision++;
+            RecordReveal(room, frozen);
             return (Outcome: (Outcome: TickOutcome.Revealed, Remaining: 0), NeedsTypes: false);
         }, out var tick);
         if (!found || tick.Outcome == TickOutcome.Stale)
@@ -743,10 +738,7 @@ public class RoomService(
                     return (Outcome: false, NeedsTypes: true);
                 }
 
-                room.Revealed = frozen;
-                room.VotingEnabled = false;
-                room.RoundStartedAt = time.GetUtcNow();
-                room.Revision++;
+                RecordReveal(room, frozen);
             }
             else
             {
@@ -764,6 +756,25 @@ public class RoomService(
         return seconds > 0
             ? new VotingFollowUp { Countdown = new CountdownStart { Revision = snapshot.Revision, Seconds = seconds } }
             : new VotingFollowUp { Revealed = RevealedStatus(snapshot.Id) };
+    }
+
+    /// <summary>
+    /// Freezes the round at its reveal: the votes are kept for the statistics, the round timer restarts, and the round is added to the
+    /// room's history (numbered, with the average of its votes). The oldest entries are dropped beyond the limit. Runs under the room lock.
+    /// </summary>
+    private void RecordReveal(RoomEntity room, RevealedVotesEntity frozen)
+    {
+        var now = time.GetUtcNow();
+        room.Revealed = frozen;
+        room.VotingEnabled = false;
+        room.RoundStartedAt = now;
+        room.Revision++;
+        room.RoundsRevealed++;
+        room.RoundHistory.Add(roundResultEntityMapper.Map(room.RoundsRevealed, frozen, now));
+        if (room.RoundHistory.Count > RoomConstraints.RoundHistoryLimit)
+        {
+            room.RoundHistory.RemoveRange(0, room.RoundHistory.Count - RoomConstraints.RoundHistoryLimit);
+        }
     }
 
     private VoteStatus? RevealedStatus(string roomId)

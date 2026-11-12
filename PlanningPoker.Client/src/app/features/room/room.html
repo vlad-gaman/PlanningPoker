@@ -115,6 +115,7 @@
             [disabled]="store.votingFinished() || isObserver() || !store.connected()"
             (markSelected)="store.vote($event)"
           />
+          <app-round-history [rounds]="store.roundHistory()" />
         </aside>
       </div>
     }

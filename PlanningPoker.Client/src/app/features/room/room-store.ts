@@ -21,6 +21,7 @@ import {
   RoomConfigurationUpdatedEvent,
   RoomConfiguration,
   RoomDisposedEvent,
+  RoundResult,
   VoteCastEvent,
   VoteStatistics,
   VoteStatus,
@@ -72,6 +73,7 @@ export class RoomStore {
   private readonly statisticsState = signal<VoteStatistics | null>(null);
   private readonly revealCountState = signal(0);
   private readonly roundStartedAtState = signal<number | null>(null);
+  private readonly roundHistoryState = signal<RoundResult[]>([]);
   private readonly connectedState = signal(true);
 
   private roomId = '';
@@ -107,6 +109,8 @@ export class RoomStore {
   readonly myMark = this.myMarkState.asReadonly();
   /** The statistics of the revealed votes; null while voting is open. */
   readonly statistics = this.statisticsState.asReadonly();
+  /** The room's revealed rounds, newest first: from the join snapshot, then renewed by every reveal. */
+  readonly roundHistory = this.roundHistoryState.asReadonly();
   /** When the current round began, as milliseconds since the epoch; null before the join snapshot. */
   readonly roundStartedAt = this.roundStartedAtState.asReadonly();
   /**
@@ -196,6 +200,7 @@ export class RoomStore {
     this.configurationState.set(null);
     this.cardsState.set([]);
     this.myMarkState.set(null);
+    this.roundHistoryState.set([]);
     this.revealCountState.set(0);
     this.applyVoteStatus({
       votes: {},
@@ -278,6 +283,7 @@ export class RoomStore {
     this.cardsState.set(response.cards);
     this.myMarkState.set(response.myMark ?? null);
     this.configurationState.set(response.configuration);
+    this.roundHistoryState.set(response.roundHistory ?? []);
     for (const change of queued) {
       if (gen !== this.generation) {
         return;
@@ -341,6 +347,9 @@ export class RoomStore {
 
   private votesShown(status: VoteStatus): void {
     this.applyVoteStatus(status);
+    if (status.roundHistory) {
+      this.roundHistoryState.set(status.roundHistory);
+    }
     this.revealCountState.update((count) => count + 1);
   }
 

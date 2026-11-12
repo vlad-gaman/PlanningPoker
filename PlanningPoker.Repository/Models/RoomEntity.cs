@@ -71,6 +71,15 @@ public class RoomEntity
 
     public RoomConfigurationEntity Configuration { get; set; } = new();
 
+    /// <summary>How many rounds this room has revealed so far; numbers the entries of <see cref="RoundHistory"/>.</summary>
+    public int RoundsRevealed { get; set; }
+
+    /// <summary>
+    /// The result of each revealed round, oldest first, capped to the last few. A round that is cleared without being
+    /// revealed leaves no entry. Stored with the room, so it survives a reconnect and a restart, and goes when the room does.
+    /// </summary>
+    public List<RoundResultEntity> RoundHistory { get; set; } = [];
+
     /// <summary>
     /// When the room last changed, in UTC: any change to the stored state counts, a connection coming or going included. The
     /// abandoned sweep uses it to expire rooms nobody has touched for a long time.

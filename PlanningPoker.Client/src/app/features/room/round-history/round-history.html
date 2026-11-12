@@ -1,0 +1,20 @@
+<section class="history" aria-label="Round history">
+  <h2>Round history</h2>
+  @if (rounds().length > 0) {
+    <ol>
+      @for (result of rounds(); track result.round) {
+        <li>
+          <span class="round">Round {{ result.round }}</span>
+          <time class="when" [attr.datetime]="result.revealedAt">{{ result.revealedAt | date: 'HH:mm' }}</time>
+          @if (result.averageMark !== null) {
+            <span class="average">{{ result.averageMark | number: '1.0-2' }}</span>
+          } @else {
+            <span class="average none" aria-label="No average">&ndash;</span>
+          }
+        </li>
+      }
+    </ol>
+  } @else {
+    <p class="empty">No rounds revealed yet.</p>
+  }
+</section>

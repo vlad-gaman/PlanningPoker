@@ -44,6 +44,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IGroupStatisticsResponseMapper, GroupStatisticsResponseMapper>();
         services.AddSingleton<IVoteStatisticsResponseMapper, VoteStatisticsResponseMapper>();
         services.AddSingleton<IVoteStatusResponseMapper, VoteStatusResponseMapper>();
+        services.AddSingleton<IRoundResultResponseMapper, RoundResultResponseMapper>();
         services.AddSingleton<IJoinRoomResponseMapper, JoinRoomResponseMapper>();
         services.AddSingleton<IPersonJoinedEventMapper, PersonJoinedEventMapper>();
         services.AddSingleton<IPersonExitedEventMapper, PersonExitedEventMapper>();

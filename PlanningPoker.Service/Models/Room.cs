@@ -9,4 +9,7 @@ public class Room
     public bool VotingEnabled { get; init; }
 
     public RoomConfiguration Configuration { get; init; } = default!;
+
+    /// <summary>The revealed rounds, newest first.</summary>
+    public IReadOnlyList<RoundResult> RoundHistory { get; init; } = [];
 }

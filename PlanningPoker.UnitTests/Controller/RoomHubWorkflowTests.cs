@@ -44,7 +44,7 @@ public class RoomHubWorkflowTests
             new RoomConfigurationValidation(),
             new TransferTargetValidation(),
             new RoomConfigurationRequestMapper(),
-            new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper()),
+            new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
             NullLogger<RoomHub>.Instance)
         {
