@@ -29,7 +29,7 @@ A person who is still a member of the room but has had no connection for longer 
 _Avoid_: Away, disconnected, idle
 
 **Removed**:
-A person whose membership ended because they stayed offgrid for the removal window (10 minutes, the `Presence` appsettings section). Their vote is discarded and they can rejoin as a new person. Leaving a room on purpose removes the person at once.
+A person whose membership ended because they stayed offgrid for the removal window (10 minutes, the `Presence` appsettings section). Their vote is discarded and they can rejoin as a new person. Leaving a room on purpose removes the person at once. An **Operator** can also remove a person at once, online or offgrid; that is **removed by operator**, and only the removed person is told it was an operator.
 _Avoid_: Exited, kicked
 
 **Restored room**:
@@ -55,3 +55,7 @@ _Avoid_: Host, admin, creator (the creator is only the owner until someone else 
 **Member**:
 A person who has joined a room and has at least one open connection to it. Creating a room does not make the creator a member; their first successful join does. A member leaves when their last connection closes, and the room is disposed when its last member leaves.
 _Avoid_: Participant, user
+
+**Operator**:
+The single person who looks after the running app: they see the live rooms and people, and can close a room or remove a person, through the management page. An operator is not a member of any room and never votes; they cannot see votes. Closing a room tells everyone in it that an operator closed it.
+_Avoid_: Admin, user, moderator, owner (the owner belongs to one room)
