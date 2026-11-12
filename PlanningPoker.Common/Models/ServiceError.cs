@@ -32,6 +32,12 @@ public class ServiceError
         return Create(ErrorCodes.RoomNotFound, "The room does not exist.", ("room_id", roomId));
     }
 
+    /// <summary>The single definition of the error returned when a person is not a member of the room.</summary>
+    public static ServiceError PersonNotFound(string roomId, Guid personId)
+    {
+        return Create(ErrorCodes.PersonNotFound, "The person is not in the room.", ("room_id", roomId), ("person_id", personId.ToString()));
+    }
+
     /// <summary>The single definition of the error returned when a connection is not a member of any room.</summary>
     public static ServiceError NotInRoom()
     {

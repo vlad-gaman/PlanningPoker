@@ -103,6 +103,8 @@ export interface VotesClearedEvent {
 
 export interface PersonExitedEvent {
   person: Person;
+  /** Set only when the Operator removed the person (`removedByOperator`). */
+  reason?: string | null;
 }
 
 /** The person is still in the room with their vote, but has been without a connection for longer than the grace period. */
@@ -133,6 +135,8 @@ export interface RoomConfigurationUpdatedEvent {
 
 export interface RoomDisposedEvent {
   roomId: string;
+  /** Set only when the Operator closed the room (`closedByOperator`). */
+  reason?: string | null;
 }
 
 export const DEFAULT_ROOM_CONFIGURATION: RoomConfiguration = {

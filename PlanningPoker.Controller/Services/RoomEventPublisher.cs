@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Controller.Constants;
 using PlanningPoker.Controller.Hubs;
 using PlanningPoker.Controller.Mappers;
@@ -20,7 +21,7 @@ public class RoomEventPublisher(
     IVoteStatusResponseMapper voteStatusResponseMapper,
     IPersonTypeChangedEventMapper personTypeChangedEventMapper,
     IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper,
-    IVotesClearedEventMapper votesClearedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier, IRoomPresenceNotifier
+    IVotesClearedEventMapper votesClearedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier, IRoomPresenceNotifier, IRoomAdminNotifier
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
@@ -83,6 +84,23 @@ public class RoomEventPublisher(
         if (result.RoomDisposed)
         {
             await group.SendAsync(HubEvents.RoomDisposed, roomDisposedEventMapper.Map(result.RoomId));
+        }
+
+        // A person the Operator removed hears about it above, then stops receiving the room's events.
+        await RemoveFromGroupAsync(result.RoomId, result.ConnectionIds);
+    }
+
+    async Task IRoomAdminNotifier.RoomClosedAsync(string roomId, IReadOnlyList<string> connectionIds)
+    {
+        await hub.Clients.Group(roomId).SendAsync(HubEvents.RoomDisposed, roomDisposedEventMapper.Map(roomId, RoomEventReasons.ClosedByOperator));
+        await RemoveFromGroupAsync(roomId, connectionIds);
+    }
+
+    private async Task RemoveFromGroupAsync(string roomId, IReadOnlyList<string> connectionIds)
+    {
+        foreach (var connectionId in connectionIds)
+        {
+            await hub.Groups.RemoveFromGroupAsync(connectionId, roomId);
         }
     }
 
