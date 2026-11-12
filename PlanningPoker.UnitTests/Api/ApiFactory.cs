@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using PlanningPoker.Common.Constants;
 
 namespace PlanningPoker.UnitTests.Api;
 
@@ -24,6 +25,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>True when the store file outlives the host, so that another host can boot on it.</summary>
     protected virtual bool KeepStore => false;
 
+    /// <summary>The <c>Https:Redirect</c> setting. The tests talk plain HTTP to a Production host, so they switch the redirect off; null leaves it unset.</summary>
+    protected virtual bool? HttpsRedirect => false;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Outside Development the static web assets manifest is ignored, so a wwwroot left in the API project by a
@@ -31,6 +35,10 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment(EnvironmentName);
         builder.UseSetting(WebHostDefaults.WebRootKey, WebRoot);
         builder.UseSetting("Persistence:ConnectionString", $"Data Source={StorePath}");
+        if (HttpsRedirect is { } redirect)
+        {
+            builder.UseSetting($"{HttpsConstants.ConfigurationSection}:Redirect", redirect.ToString());
+        }
     }
 
     protected override void Dispose(bool disposing)

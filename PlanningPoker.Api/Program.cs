@@ -18,12 +18,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRepositoryLayer();
 builder.Services.AddServiceLayer();
 builder.Services.AddControllerLayer();
+builder.Services.AddHttpsEnforcement();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 app.Services.RestoreRooms();
 
+app.UseHttpsEnforcement();
 app.UseControllerLayer();
 app.UseSwagger();
 app.UseSwaggerUI();
