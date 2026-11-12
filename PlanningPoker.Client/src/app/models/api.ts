@@ -13,6 +13,7 @@ export interface ApiResponse<T> {
 export const ERROR_CODES = {
   noSession: 'no_session',
   roomNotFound: 'room_not_found',
+  personNotFound: 'person_not_found',
   validationFailed: 'validation_failed',
   unauthorized: 'unauthorized',
   adminInvalidCredentials: 'admin_invalid_credentials',

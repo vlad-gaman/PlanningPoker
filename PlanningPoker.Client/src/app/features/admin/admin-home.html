@@ -6,4 +6,80 @@
       <button class="secondary-button" type="button" (click)="signOut()">Sign out</button>
     </div>
   </header>
+
+  @if (store.refreshFailed()) {
+    <p class="banner" role="status">Could not refresh. Trying again&hellip;</p>
+  }
+  @if (store.actionError(); as message) {
+    <p class="banner error" role="alert">{{ message }}</p>
+  }
+
+  @if (store.overview(); as overview) {
+    <div class="tiles">
+      <div class="tile">
+        <b>{{ overview.stats.rooms.total }}</b>Rooms
+        <small>{{ overview.stats.rooms.voting }} voting &middot; {{ overview.stats.rooms.revealed }} revealed &middot; {{ overview.stats.rooms.restored }} restored</small>
+      </div>
+      <div class="tile"><b>{{ overview.stats.people.online }}</b>Online</div>
+      <div class="tile"><b>{{ overview.stats.people.offgrid }}</b>Offgrid</div>
+      <div class="tile"><b>{{ uptime(overview.stats.uptimeSeconds) }}</b>Uptime</div>
+      <div class="tile"><b>{{ overview.stats.roomsRestoredAtStart }}</b>Restored at start</div>
+      <div class="tile"><b>{{ overview.stats.abandonedRoomsSweptLast24Hours }}</b>Swept (24 h)</div>
+      <div class="tile" [class.warn]="overview.stats.failedLoginsLast24Hours > 0">
+        <b>{{ overview.stats.failedLoginsLast24Hours }}</b>Failed sign-ins (24 h)
+      </div>
+      <div class="tile store" [class.warn]="overview.stats.lastStoreWrite.succeeded === false">
+        @if (overview.stats.lastStoreWrite.at) {
+          <b>{{ overview.stats.lastStoreWrite.at | date: 'HH:mm:ss' }}</b>
+          Last store write
+          <small>{{ overview.stats.lastStoreWrite.succeeded ? 'saved' : overview.stats.lastStoreWrite.failedRooms + ' failed' }}</small>
+        } @else {
+          <b>none yet</b>Last store write
+        }
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="rooms">
+        @for (room of overview.rooms; track room.id) {
+          <article class="card">
+            <div class="head">
+              <h2>{{ room.id }}</h2>
+              <span class="state {{ room.state }}">{{ room.state }}</span>
+              <button class="danger-button" type="button" (click)="closeRoom(room)">Close room</button>
+            </div>
+            <p class="meta">Created {{ room.createdAt | date: 'd MMM HH:mm' }} &middot; active {{ room.lastActivityAt | date: 'd MMM HH:mm' }}</p>
+            <ul class="chips">
+              @for (person of room.people; track person.id) {
+                <li [class.offgrid]="person.status === 'offgrid'">
+                  <span class="name">{{ person.name }}</span>
+                  <small>{{ role(person) }}@if (person.isOwner) {, owner}</small>
+                  @if (person.status === 'offgrid') {
+                    <small class="seen">offgrid@if (person.lastSeenAt) { since {{ person.lastSeenAt | date: 'HH:mm' }}}</small>
+                  }
+                  <button type="button" [attr.aria-label]="'Remove ' + person.name" (click)="removePerson(room, person)">&times;</button>
+                </li>
+              }
+            </ul>
+          </article>
+        } @empty {
+          <p class="muted">No live rooms.</p>
+        }
+      </div>
+
+      <aside class="feed">
+        <h2>Issues <small>{{ store.errorCount() }} {{ store.errorCount() === 1 ? 'error' : 'errors' }}</small></h2>
+        @for (issue of overview.issues; track issue.id) {
+          <div class="item {{ issue.level }}">
+            <span>{{ issue.time | date: 'd MMM HH:mm' }} &middot; {{ issue.source }}</span>
+            {{ issue.message }}
+          </div>
+        } @empty {
+          <p class="muted">Nothing logged.</p>
+        }
+      </aside>
+    </div>
+  } @else {
+    <p class="muted">Loading&hellip;</p>
+  }
 </section>
