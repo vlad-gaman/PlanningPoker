@@ -16,6 +16,7 @@ A **real-time collaborative Planning Poker application** used by software develo
 - [Technical Architecture](#technical-architecture)
 - [Performance & Scalability](#performance--scalability)
 - [Monitoring](#monitoring)
+- [Management page](#management-page)
 - [Getting Started](#getting-started)
 - [API Endpoints](#api-endpoints)
 
@@ -230,6 +231,53 @@ The scrape also carries the ASP.NET Core, SignalR and .NET runtime metrics, for 
 
 ### Development
 With no token configured, `/metrics` is open in the Development environment. With a token configured it is enforced. In any other environment with no token, every request gets `401` and a warning is logged at startup.
+
+## Management page
+
+The **Operator** (see `GLOSSARY.md`) looks after the running app from the management page at `/admin`. Nothing in the public pages links to it. It shows the live rooms with their people, stats, and the recent errors and events, and lets the Operator close a room or remove a person (both ask first). It never shows votes.
+
+### Settings
+Set these in the App Service configuration and mark each as a **deployment slot setting**, so staging and production keep their own. Never put them in an `appsettings*.json` file.
+
+| Setting | Meaning | If unset |
+| --- | --- | --- |
+| `Operator__Username` | The Operator's username. | Nobody can sign in; a warning is logged at startup. |
+| `Operator__PasswordHash` | The hash of the Operator's password (see below). | Nobody can sign in; a warning is logged at startup. |
+| `Operator__TotpSecret` | The Base32 secret of the Operator's authenticator app. | No second step: the password alone signs in. |
+
+Optional tuning (the defaults are shown): `Operator__MaxFailures` (`5`), `Operator__LockoutDuration` (`00:15:00`), `Operator__FailureDelay` (`00:00:00.5`), `Operator__SessionLifetime` (`00:30:00`), `Operator__ChallengeLifetime` (`00:05:00`, how long the password step stays valid while the code is entered).
+
+A `Operator__TotpSecret` that is set but not valid Base32 turns the second step on and no code is accepted, so sign-in is refused until it is fixed.
+
+### Generate the password hash
+The password is read from standard input, never from an argument, so it stays out of the shell history. Put the printed line in `Operator__PasswordHash`.
+
+```
+echo "the password" | dotnet run --project PlanningPoker.Api -- --hash-password
+```
+
+In PowerShell: `"the password" | dotnet run --project PlanningPoker.Api -- --hash-password`.
+
+### Generate the authenticator secret (optional)
+```
+dotnet run --project PlanningPoker.Api -- --generate-totp-secret
+```
+It prints the secret for `Operator__TotpSecret` and an `otpauth://` address. Add the account to an authenticator app by scanning a QR code of that address, or by typing the secret in (SHA-1, 6 digits, 30 seconds).
+
+### Signing in
+- **Two steps with an authenticator:** username and password first, then a separate screen for the 6-digit code. If the first step is more than 5 minutes old, sign-in starts again.
+- **A code works once.** Using it again, or an earlier one, is refused.
+- **Lockout:** 5 failed attempts (a wrong password or a wrong code) from one address, or 5 in total for the Operator account, lock sign-in for 15 minutes. Each failure also waits half a second. The counters are in memory, so a restart clears them. Failed sign-ins, and who signed in, are written to the issues log.
+- **Session:** a cookie that is Secure (outside Development), HttpOnly and SameSite=Strict, valid for 30 minutes since the last use. Every action sends an anti-forgery token. When the session ends the page returns to the sign-in page and says so.
+
+### HTTPS
+Turn on **HTTPS Only** for the web app and for the staging slot in App Service. The app also applies the forwarded headers (so it sees the real scheme and client address), sends HSTS for 7 days and redirects plain HTTP to HTTPS, all outside Development. Set `Https__Redirect=false` only for a host that is not reached through TLS at all. The Operator cookie is Secure outside Development, so signing in works over HTTPS only. In Development everything keeps working over plain HTTP.
+
+### Issues log
+Warnings, errors, startup restores, sweeps and the Operator's own actions are kept in the same SQLite file as the rooms: at most 500 entries and nothing older than 7 days (`IssueLog__MaxEntries`, `IssueLog__MaxAge`, `IssueLog__MaxMessageLength`). Messages are cut to one line without query strings or vote values, and the client address is kept only for failed sign-ins.
+
+### What people in a room see
+Closing a room shows everyone in it "This room was closed by an operator." and sends them home. Removing a person shows that person "You were removed by an operator." and sends them home; everyone else just sees them leave.
 
 ## Getting Started
 
