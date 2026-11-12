@@ -1,0 +1,15 @@
+using PlanningPoker.Repository.Models;
+
+namespace PlanningPoker.Repository.Repositories;
+
+/// <summary>Durable storage for the issues log.</summary>
+public interface IIssueStore
+{
+    void Add(IssueEntry entry);
+
+    /// <summary>The newest entries first.</summary>
+    IReadOnlyList<IssueEntry> Recent(int limit);
+
+    /// <summary>Removes entries older than the cutoff, then the oldest ones beyond <paramref name="maxEntries"/>.</summary>
+    void Prune(DateTimeOffset olderThan, int maxEntries);
+}

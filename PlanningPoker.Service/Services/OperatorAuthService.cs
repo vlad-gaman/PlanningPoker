@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
 using PlanningPoker.Service.Models;
 
@@ -14,6 +15,7 @@ public class OperatorAuthService : IOperatorAuthService
     private readonly IPasswordHashingService _hashing;
     private readonly ILoginLockoutService _lockout;
     private readonly ILogger<OperatorAuthService> _logger;
+    private readonly IIssueLog _issues;
 
     // Verified when nothing is configured, so every failure costs about the same time.
     private readonly string _decoyHash;
@@ -22,12 +24,14 @@ public class OperatorAuthService : IOperatorAuthService
         IOptions<OperatorOptions> options,
         IPasswordHashingService hashing,
         ILoginLockoutService lockout,
-        ILogger<OperatorAuthService> logger)
+        ILogger<OperatorAuthService> logger,
+        IIssueLog issues)
     {
         _options = options;
         _hashing = hashing;
         _lockout = lockout;
         _logger = logger;
+        _issues = issues;
         _decoyHash = hashing.Hash(Guid.NewGuid().ToString("N"));
     }
 
@@ -39,6 +43,7 @@ public class OperatorAuthService : IOperatorAuthService
         if (_lockout.IsLocked(ipAddress))
         {
             _logger.LogWarning("Operator sign-in refused for {IpAddress}: locked out.", ipAddress);
+            _issues.RecordFailedLogin(ipAddress, locked: true);
             return ServiceResponse<OperatorIdentity>.Failure(ServiceError.AdminLoginLocked());
         }
 
@@ -50,11 +55,13 @@ public class OperatorAuthService : IOperatorAuthService
         {
             _lockout.RecordSuccess(ipAddress);
             _logger.LogInformation("Operator signed in from {IpAddress}.", ipAddress);
+            _issues.Record(IssueLevel.Info, IssueLogConstants.AdminSource, "Operator signed in");
             return ServiceResponse<OperatorIdentity>.Success(new OperatorIdentity { Username = settings.Username! });
         }
 
         _lockout.RecordFailure(ipAddress);
         _logger.LogWarning("Operator sign-in failed from {IpAddress}.", ipAddress);
+        _issues.RecordFailedLogin(ipAddress, locked: false);
         if (settings.FailureDelay > TimeSpan.Zero)
         {
             await Task.Delay(settings.FailureDelay);
