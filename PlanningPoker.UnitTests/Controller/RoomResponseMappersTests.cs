@@ -101,7 +101,7 @@ public class RoomResponseMappersTests
     [Fact]
     public void JoinRoomResponseMapper_MapsPeopleOwnerStatusAndConfiguration()
     {
-        var mapper = new JoinRoomResponseMapper(PersonMapper, ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper());
+        var mapper = new JoinRoomResponseMapper(PersonMapper, ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper());
 
         var response = mapper.Map(JoinResult());
 

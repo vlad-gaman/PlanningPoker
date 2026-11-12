@@ -113,6 +113,38 @@ describe('Room', () => {
     expect(element.textContent).not.toContain('operator');
   });
 
+  it('shows the round history of the room beside the cards', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({
+      ...JOIN_RESPONSE,
+      roundHistory: [
+        { round: 2, averageMark: 4.5, revealedAt: '2026-03-01T10:30:00+00:00' },
+        { round: 1, averageMark: null, revealedAt: '2026-03-01T10:00:00+00:00' },
+      ],
+    });
+
+    const { element } = await render();
+    const history = element.querySelector('.rail app-round-history')!;
+
+    expect(Array.from(history.querySelectorAll('li .round')).map((item) => item.textContent)).toEqual(['Round 2', 'Round 1']);
+    expect(history.querySelector('li .average')?.textContent?.trim()).toBe('4.5');
+  });
+
+  it('adds a round to the history for everyone when the votes are revealed', async () => {
+    me.get.mockReturnValue(of(ANN));
+    const { fixture, element } = await render();
+    expect(element.querySelector('app-round-history')?.textContent).toContain('No rounds revealed yet.');
+
+    hub.emit(HUB_EVENTS.VotesShown, {
+      ...revealed(STATISTICS),
+      roundHistory: [{ round: 1, averageMark: 5, revealedAt: '2026-03-01T10:00:00+00:00' }],
+    });
+    await settle(fixture);
+
+    expect(element.querySelector('app-round-history li .round')?.textContent).toBe('Round 1');
+    expect(element.querySelector('app-round-history li .average')?.textContent?.trim()).toBe('5');
+  });
+
   it('flags offgrid people on their tile and leaves online people unflagged', async () => {
     me.get.mockReturnValue(of(ANN));
     hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });

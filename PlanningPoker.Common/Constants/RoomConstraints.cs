@@ -12,4 +12,7 @@ public static class RoomConstraints
 
     /// <summary>How often a reveal re-reads the member types when someone joined meanwhile, before it freezes with what it has.</summary>
     public const int TypeResolutionRounds = 3;
+
+    /// <summary>How many revealed rounds a room remembers in its history; the oldest go first.</summary>
+    public const int RoundHistoryLimit = 50;
 }

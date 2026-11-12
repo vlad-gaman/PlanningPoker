@@ -7,6 +7,6 @@ public static class ResponseMappers
 {
     public static VoteStatusResponseMapper VoteStatus()
     {
-        return new VoteStatusResponseMapper(new VoteStatisticsResponseMapper(new GroupStatisticsResponseMapper(new MarkShareResponseMapper())));
+        return new VoteStatusResponseMapper(new VoteStatisticsResponseMapper(new GroupStatisticsResponseMapper(new MarkShareResponseMapper())), new RoundResultResponseMapper());
     }
 }

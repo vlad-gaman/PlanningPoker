@@ -5,7 +5,7 @@ using PlanningPoker.Service.Services;
 
 namespace PlanningPoker.Service.Mappers;
 
-public class VoteStatusMapper(IVoteStatisticsMapper statisticsMapper, ICardSetService cardSets) : IVoteStatusMapper
+public class VoteStatusMapper(IVoteStatisticsMapper statisticsMapper, ICardSetService cardSets, IRoundResultMapper roundResultMapper) : IVoteStatusMapper
 {
     public VoteStatus Map(RoomEntity room, IReadOnlyCollection<Person> members)
     {
@@ -20,7 +20,8 @@ public class VoteStatusMapper(IVoteStatisticsMapper statisticsMapper, ICardSetSe
             VotingFinished = !room.VotingEnabled,
             RoundStartedAt = room.RoundStartedAt,
             Countdown = room.VotingEnabled && room.CountdownRunning ? room.CountdownRemaining : null,
-            Statistics = room.VotingEnabled || room.Revealed is null ? null : statisticsMapper.Map(room.Revealed, CardOrder(room))
+            Statistics = room.VotingEnabled || room.Revealed is null ? null : statisticsMapper.Map(room.Revealed, CardOrder(room)),
+            RoundHistory = room.VotingEnabled ? null : roundResultMapper.MapNewestFirst(room.RoundHistory)
         };
     }
 

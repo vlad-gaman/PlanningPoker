@@ -300,6 +300,71 @@ describe('RoomStore', () => {
     expect(TestBed.inject(FlashMessageService).message()).toBeNull();
   });
 
+  describe('round history', () => {
+    const FIRST = { round: 1, averageMark: 3, revealedAt: '2026-01-01T12:05:00+00:00' };
+    const SECOND = { round: 2, averageMark: null, revealedAt: '2026-01-01T12:20:00+00:00' };
+
+    it('starts with the history from the join snapshot', async () => {
+      hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, roundHistory: [SECOND, FIRST] });
+      const second = TestBed.inject(RoomStore);
+
+      await second.join('room-1');
+
+      expect(second.roundHistory()).toEqual([SECOND, FIRST]);
+    });
+
+    it('is empty for a room that has revealed nothing', () => {
+      expect(store.roundHistory()).toEqual([]);
+    });
+
+    it('is empty when an older server sends no history', async () => {
+      const withoutHistory: Partial<typeof JOIN_RESPONSE> = { ...JOIN_RESPONSE };
+      delete withoutHistory.roundHistory;
+      hub.invoke.mockResolvedValueOnce(withoutHistory);
+      const second = TestBed.inject(RoomStore);
+
+      await second.join('room-1');
+
+      expect(second.roundHistory()).toEqual([]);
+    });
+
+    it('is renewed, for everyone, by a reveal', () => {
+      hub.emit(HUB_EVENTS.VotesShown, { ...revealed(STATISTICS), roundHistory: [FIRST] });
+
+      expect(store.roundHistory()).toEqual([FIRST]);
+
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
+      hub.emit(HUB_EVENTS.VotesShown, { ...revealed(STATISTICS), roundHistory: [SECOND, FIRST] });
+
+      expect(store.roundHistory()).toEqual([SECOND, FIRST]);
+    });
+
+    it('keeps the history when the votes are cleared or a vote status arrives without one', () => {
+      hub.emit(HUB_EVENTS.VotesShown, { ...revealed(STATISTICS), roundHistory: [FIRST] });
+
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
+      hub.emit(HUB_EVENTS.VoteStatusUpdate, { ...JOIN_RESPONSE.voteStatus, votes: { [ANN.guid]: 'hide' } });
+
+      expect(store.roundHistory()).toEqual([FIRST]);
+    });
+
+    it('keeps the history when a reveal arrives without one', () => {
+      hub.emit(HUB_EVENTS.VotesShown, { ...revealed(STATISTICS), roundHistory: [FIRST] });
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+
+      expect(store.roundHistory()).toEqual([FIRST]);
+    });
+
+    it('is forgotten on close', async () => {
+      hub.emit(HUB_EVENTS.VotesShown, { ...revealed(STATISTICS), roundHistory: [FIRST] });
+
+      await store.close();
+
+      expect(store.roundHistory()).toEqual([]);
+    });
+  });
+
   it('ignores a disposal of another room', () => {
     hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'other' });
 

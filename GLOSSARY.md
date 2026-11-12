@@ -8,6 +8,10 @@ A web app where a team estimates work by voting with cards in a shared room and 
 One cycle in a room: people vote, the votes are revealed, then cleared to start the next round.
 _Avoid_: Game, session
 
+**Round history**:
+The list, newest first, of the rounds a room has revealed, each with its round number and the average of its votes (a dash when no vote was a number). A round that is cleared without a reveal is not listed. It belongs to the room: everyone in the room sees it, it survives a reconnect and a server restart, and it goes when the room does. It keeps the last 50 rounds and never shows who voted what.
+_Avoid_: Past votes, vote log, archive
+
 **Reveal**:
 The moment the votes in a room are shown to everyone, either after the countdown or when forced.
 _Avoid_: Flip, show-down

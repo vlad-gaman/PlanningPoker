@@ -59,6 +59,16 @@ export interface VoteStatistics {
   consensus: boolean;
 }
 
+/** One revealed round in the room's history (PlanningPoker.Controller/Models/RoundResultResponse.cs). */
+export interface RoundResult {
+  /** Which revealed round of the room this was: 1 for the first reveal. */
+  round: number;
+  /** The mean of the numeric votes; null when no vote was numeric. */
+  averageMark: number | null;
+  /** When the votes were revealed (ISO 8601). */
+  revealedAt: string;
+}
+
 export interface VoteStatus {
   /** Person guid to mark; every mark is "hide" until the votes are revealed. */
   votes: Record<string, string>;
@@ -70,6 +80,8 @@ export interface VoteStatus {
   roundStartedAt: string;
   /** Present once the votes are revealed, until they are cleared. */
   statistics: VoteStatistics | null;
+  /** The room's revealed rounds, newest first, sent with a reveal; absent while voting is open. */
+  roundHistory?: RoundResult[] | null;
 }
 
 export interface JoinRoomResponse {
@@ -79,6 +91,8 @@ export interface JoinRoomResponse {
   myMark: string | null;
   ownerGuid: string;
   configuration: RoomConfiguration;
+  /** The room's revealed rounds, newest first. */
+  roundHistory: RoundResult[];
 }
 
 export interface PersonJoinedEvent {

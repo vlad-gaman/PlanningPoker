@@ -18,4 +18,7 @@ public class VoteStatus
 
     /// <summary>Derived from the votes frozen at the reveal; null while voting is open.</summary>
     public VoteStatistics? Statistics { get; init; }
+
+    /// <summary>The room's revealed rounds, newest first, including the one just revealed; null while voting is open (the join snapshot carries it then).</summary>
+    public IReadOnlyList<RoundResult>? RoundHistory { get; init; }
 }

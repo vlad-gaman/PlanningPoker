@@ -50,6 +50,7 @@ export const JOIN_RESPONSE = {
     showFireworks: true,
     maxParticipants: 50,
   },
+  roundHistory: [],
 };
 
 /** Statistics of two votes, 3 and 5, both developers. */

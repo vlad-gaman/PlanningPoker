@@ -31,6 +31,7 @@ import { CardPicker, cardArt, cardImage, cardText } from './card-picker/card-pic
 import { EsendexCardArt } from './card-picker/esendex-card-art';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
 import { Results } from './results/results';
+import { RoundHistory } from './round-history/round-history';
 import { RoundTimer } from './round-timer/round-timer';
 import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
@@ -47,6 +48,7 @@ const DISCONNECTED_MESSAGE = 'You are disconnected from the server. Trying to re
     Results,
     ReactiveFormsModule,
     PersonFields,
+    RoundHistory,
     RoundTimer,
   ],
   providers: [RoomStore, RoomHubClient],

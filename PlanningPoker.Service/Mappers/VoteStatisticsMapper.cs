@@ -1,5 +1,5 @@
-using System.Globalization;
 using PlanningPoker.Common.Constants;
+using PlanningPoker.Common.Models;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Service.Models;
 
@@ -7,8 +7,6 @@ namespace PlanningPoker.Service.Mappers;
 
 public class VoteStatisticsMapper : IVoteStatisticsMapper
 {
-    private const NumberStyles NumericMark = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
-
     public VoteStatistics Map(RevealedVotesEntity revealed, IReadOnlyList<string> cardOrder)
     {
         var votes = revealed.Votes.Values.Where(vote => vote.PersonType != PersonTypes.Observer).ToList();
@@ -33,7 +31,7 @@ public class VoteStatisticsMapper : IVoteStatisticsMapper
             .Select(group => (Mark: group.Key, Count: group.Count()))
             .ToList();
         var top = counts.Count == 0 ? 0 : counts.Max(entry => entry.Count);
-        var numeric = votes.Select(vote => TryParse(vote.Mark)).OfType<decimal>().ToList();
+        var numeric = votes.Select(vote => MarkValue.TryParse(vote.Mark)).OfType<decimal>().ToList();
 
         return new GroupStatistics
         {
@@ -57,10 +55,5 @@ public class VoteStatisticsMapper : IVoteStatisticsMapper
         }
 
         return int.MaxValue;
-    }
-
-    private static decimal? TryParse(string mark)
-    {
-        return decimal.TryParse(mark, NumericMark, CultureInfo.InvariantCulture, out var value) ? value : null;
     }
 }

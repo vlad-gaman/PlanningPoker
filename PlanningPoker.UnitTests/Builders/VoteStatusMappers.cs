@@ -8,6 +8,6 @@ public static class VoteStatusMappers
 {
     public static VoteStatusMapper Create()
     {
-        return new VoteStatusMapper(new VoteStatisticsMapper(), new CardSetService());
+        return new VoteStatusMapper(new VoteStatisticsMapper(), new CardSetService(), new RoundResultMapper());
     }
 }

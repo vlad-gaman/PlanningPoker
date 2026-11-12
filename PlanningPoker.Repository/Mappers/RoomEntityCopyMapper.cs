@@ -26,7 +26,9 @@ public class RoomEntityCopyMapper(IRoomConfigurationEntityCopyMapper configurati
             CreatedAt = source.CreatedAt,
             LastActivityAt = source.LastActivityAt,
             AwaitingReturn = source.AwaitingReturn,
-            Configuration = configurationMapper.Map(source.Configuration)
+            Configuration = configurationMapper.Map(source.Configuration),
+            RoundsRevealed = source.RoundsRevealed,
+            RoundHistory = [.. source.RoundHistory.Select(result => new RoundResultEntity { Round = result.Round, AverageMark = result.AverageMark, RevealedAt = result.RevealedAt })]
         };
     }
 }
