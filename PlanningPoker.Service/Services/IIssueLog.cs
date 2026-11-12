@@ -17,6 +17,9 @@ public interface IIssueLog
     /// <summary>The newest entries first; none when the store cannot be read.</summary>
     IReadOnlyList<IssueEntry> Recent(int limit);
 
+    /// <summary>How many failed or refused Operator sign-ins were recorded since the given time; zero when the store cannot be read.</summary>
+    int CountFailedLogins(DateTimeOffset since);
+
     /// <summary>Applies the retention limits: nothing older than the maximum age, at most the maximum number of entries.</summary>
     void Prune();
 }

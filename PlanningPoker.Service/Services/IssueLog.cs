@@ -42,6 +42,19 @@ public class IssueLog(
         }
     }
 
+    public int CountFailedLogins(DateTimeOffset since)
+    {
+        try
+        {
+            return store.CountFailedLogins(since);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "The issues log cannot be counted");
+            return 0;
+        }
+    }
+
     public void Prune()
     {
         try

@@ -7,7 +7,7 @@ using PlanningPoker.Service.Models;
 namespace PlanningPoker.Service.Services;
 
 /// <summary>Runs <see cref="ISweepService.Sweep"/> on every tick of the configured interval until the host stops.</summary>
-public class SweepBackgroundService(ISweepService sweep, IOptions<SweepOptions> options, TimeProvider time, IIssueLog issues, ILogger<SweepBackgroundService> logger) : BackgroundService
+public class SweepBackgroundService(ISweepService sweep, IOptions<SweepOptions> options, TimeProvider time, IIssueLog issues, IServerStatistics statistics, ILogger<SweepBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -31,6 +31,7 @@ public class SweepBackgroundService(ISweepService sweep, IOptions<SweepOptions> 
         try
         {
             var result = sweep.Sweep();
+            statistics.RecordSweep(result.Rooms, result.People);
             if (result.Rooms > 0 || result.People > 0)
             {
                 logger.LogInformation("Swept {Rooms} rooms and {People} people", result.Rooms, result.People);

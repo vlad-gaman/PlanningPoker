@@ -60,6 +60,18 @@ public sealed class SqliteIssueStore : IIssueStore
         }
     }
 
+    public int CountFailedLogins(DateTimeOffset since)
+    {
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM issues WHERE ip IS NOT NULL AND time >= $since";
+            command.Parameters.AddWithValue("$since", since.ToUnixTimeMilliseconds());
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+    }
+
     public void Prune(DateTimeOffset olderThan, int maxEntries)
     {
         lock (_gate)

@@ -37,6 +37,16 @@ public sealed class FakeIssueStore : IIssueStore
         return [.. Entries.OrderByDescending(entry => entry.Id).Take(limit)];
     }
 
+    public int CountFailedLogins(DateTimeOffset since)
+    {
+        if (Failing)
+        {
+            throw new IOException("The store is down.");
+        }
+
+        return Entries.Count(entry => entry.IpAddress is not null && entry.Time >= since);
+    }
+
     public void Prune(DateTimeOffset olderThan, int maxEntries)
     {
         if (Failing)

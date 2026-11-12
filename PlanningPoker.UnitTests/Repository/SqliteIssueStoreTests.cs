@@ -86,6 +86,24 @@ public sealed class SqliteIssueStoreTests : IDisposable
     }
 
     [Fact]
+    public void CountFailedLogins_CountsOnlyEntriesWithAnAddressAtOrAfterTheTime()
+    {
+        var store = Create();
+        store.Add(Entry("too old", Now.AddHours(-30), "203.0.113.1"));
+        store.Add(Entry("counted", Now.AddHours(-2), "203.0.113.2"));
+        store.Add(Entry("counted too", Now, "203.0.113.3"));
+        store.Add(Entry("no address", Now));
+
+        Assert.Equal(2, store.CountFailedLogins(Now.AddHours(-24)));
+    }
+
+    [Fact]
+    public void CountFailedLogins_NothingStored_IsZero()
+    {
+        Assert.Equal(0, Create().CountFailedLogins(Now.AddHours(-24)));
+    }
+
+    [Fact]
     public void ASecondStoreOnTheSameFile_SeesTheEntries()
     {
         Create().Add(Entry("kept across instances"));
