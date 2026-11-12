@@ -4,14 +4,20 @@ import { HubEvent } from '../models/hub-events';
 export function fakeHub(joinResponse: unknown = undefined) {
   const handlers = new Map<string, (event: unknown) => void>();
   let reconnected: (() => void) | undefined;
+  let reconnecting: (() => void) | undefined;
+  let closed: (() => void) | undefined;
   return {
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn().mockResolvedValue(undefined),
     on: vi.fn((method: string, handler: (event: unknown) => void) => handlers.set(method, handler)),
     onReconnected: vi.fn((handler: () => void) => (reconnected = handler)),
+    onReconnecting: vi.fn((handler: () => void) => (reconnecting = handler)),
+    onClosed: vi.fn((handler: () => void) => (closed = handler)),
     invoke: vi.fn().mockResolvedValue(joinResponse),
     emit: (method: HubEvent, event: unknown) => handlers.get(method)?.(event),
     reconnect: () => reconnected?.(),
+    dropConnection: () => reconnecting?.(),
+    closeConnection: () => closed?.(),
   };
 }
 

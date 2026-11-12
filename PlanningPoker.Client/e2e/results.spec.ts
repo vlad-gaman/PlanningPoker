@@ -32,10 +32,10 @@ async function join(page: Page, roomUrl: string, name: string, role?: string): P
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
   if (role) {
-    await page.getByLabel('Role').selectOption({ label: role });
+    await page.locator('.role-picker label', { hasText: role }).click();
   }
   await page.getByRole('button', { name: 'Join room' }).click();
-  await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();
+  await expect(page.locator('li.person').filter({ hasText: name })).toBeVisible();
 }
 
 const pick = (page: Page, value: string) =>
@@ -43,50 +43,45 @@ const pick = (page: Page, value: string) =>
     .locator('label.card')
     .filter({ hasText: new RegExp(`^\\s*${value}\\s*$`) })
     .click();
-const charts = (page: Page) => page.locator('app-results-chart');
+const results = (page: Page) => page.locator('app-results');
 const fireworks = (page: Page) => page.locator('app-fireworks canvas');
-const averages = (page: Page) => page.locator('app-results-chart .average .value');
+const verdict = (page: Page) => results(page).locator('.verdict .label');
+const average = (page: Page) => results(page).locator('.ring .average');
+const groups = (page: Page) => results(page).locator('.groups li');
 
 async function closeAll(people: Person[]): Promise<void> {
   await Promise.all(people.map(({ context }) => context.close()));
 }
 
-test('different votes reveal four charts with the averages, and Clear votes removes them', async ({
+test('different votes reveal the hero with the average and a split verdict, and Clear votes removes it', async ({
   browser,
 }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann');
   await join(bob.page, roomUrl, 'Bob', 'Tester');
-  await expect(charts(ann.page)).toHaveCount(0);
+  await expect(results(ann.page)).toHaveCount(0);
 
   await pick(ann.page, '3');
   await pick(bob.page, '5');
 
   for (const { page } of [ann, bob]) {
-    await expect(charts(page)).toHaveCount(4);
-    await expect(page.locator('app-results figcaption')).toHaveText([
-      'All votes',
-      'Developers votes',
-      'Testers votes',
-      'SRE votes',
-    ]);
-    await expect(averages(page)).toHaveText(['4', '3', '5', '']);
-    await expect(page.locator('app-results canvas').first()).toHaveAttribute(
-      'aria-label',
-      'All votes: 3 50%, 5 50%',
-    );
+    await expect(results(page)).toHaveCount(1);
+    await expect(average(page)).toHaveText('4');
+    await expect(verdict(page)).toHaveText('Split vote');
+    await expect(results(page).locator('.segment')).toHaveText([/3\s*1/, /5\s*1/]);
+    await expect(groups(page)).toHaveText([/Developers avg\s*3/, /Testers avg\s*5/]);
   }
   await expect(fireworks(ann.page)).toHaveCount(0);
 
   await bob.page.getByRole('button', { name: 'Clear votes' }).click();
-  await expect(charts(ann.page)).toHaveCount(0);
-  await expect(charts(bob.page)).toHaveCount(0);
+  await expect(results(ann.page)).toHaveCount(0);
+  await expect(results(bob.page)).toHaveCount(0);
 
   await closeAll([ann, bob]);
 });
 
-test('an SRE vote gets its own chart and counts in the All average', async ({ browser }) => {
+test('an SRE vote shows in its own group average and counts in the overall average', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann');
@@ -96,20 +91,14 @@ test('an SRE vote gets its own chart and counts in the All average', async ({ br
   await pick(bob.page, '5');
 
   for (const { page } of [ann, bob]) {
-    await expect(charts(page)).toHaveCount(4);
-    await expect(page.locator('app-results figcaption')).toHaveText([
-      'All votes',
-      'Developers votes',
-      'Testers votes',
-      'SRE votes',
-    ]);
-    await expect(averages(page)).toHaveText(['4', '3', '', '5']);
+    await expect(average(page)).toHaveText('4');
+    await expect(groups(page)).toHaveText([/Developers avg\s*3/, /SREs avg\s*5/]);
   }
 
   await closeAll([ann, bob]);
 });
 
-test('a consensus launches the fireworks, and Clear votes removes them', async ({ browser }) => {
+test('a consensus is unanimous and launches the fireworks, and Clear votes removes them', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann');
@@ -118,7 +107,8 @@ test('a consensus launches the fireworks, and Clear votes removes them', async (
   await pick(ann.page, '5');
   await pick(bob.page, '5');
 
-  await expect(charts(ann.page)).toHaveCount(4);
+  await expect(verdict(ann.page)).toHaveText('Unanimous');
+  await expect(results(ann.page).locator('.detail')).toContainText('100% agree on 5');
   await expect(fireworks(ann.page)).toHaveCount(1);
   await expect(fireworks(bob.page)).toHaveCount(1);
 
@@ -138,13 +128,13 @@ test('a room with fireworks turned off shows none on consensus', async ({ browse
   await pick(ann.page, '5');
   await pick(bob.page, '5');
 
-  await expect(charts(ann.page)).toHaveCount(4);
+  await expect(verdict(ann.page)).toHaveText('Unanimous');
   await expect(fireworks(ann.page)).toHaveCount(0);
 
   await closeAll([ann, bob]);
 });
 
-test('a fist of five room charts the cards as images without text labels', async ({ browser }) => {
+test('a fist of five room shows the cards as images without text labels', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann', { cardSet: 'fist-of-five' });
@@ -153,18 +143,16 @@ test('a fist of five room charts the cards as images without text labels', async
   await ann.page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
   await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
 
-  await expect(charts(ann.page)).toHaveCount(4);
-  // The labels are images drawn on the canvas, so the page offers the marks only through the chart's text alternative.
-  await expect(ann.page.locator('app-results canvas').first()).toHaveAttribute(
-    'aria-label',
-    'All votes: 2 50%, 4 50%',
-  );
-  await expect(averages(ann.page)).toHaveText(['3', '3', '', '']);
+  await expect(average(ann.page)).toHaveText('3');
+  // Each split segment is an image carrying its mark as the alternative text, not a text label.
+  await expect(results(ann.page).locator('.segment img')).toHaveCount(2);
+  await expect(results(ann.page).locator('.segment img').first()).toHaveAttribute('alt', /^[24]$/);
+  await expect(results(ann.page).locator('.segment b')).toHaveCount(0);
 
   await closeAll([ann, bob]);
 });
 
-test('a late joiner sees the same charts and no fireworks', async ({ browser }) => {
+test('a late joiner sees the same results and no fireworks', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const cat = await newPerson(browser);
@@ -176,16 +164,14 @@ test('a late joiner sees the same charts and no fireworks', async ({ browser }) 
 
   await join(cat.page, roomUrl, 'Cat');
 
-  await expect(charts(cat.page)).toHaveCount(4);
-  await expect(averages(cat.page)).toHaveText(['5', '5', '', '']);
+  await expect(verdict(cat.page)).toHaveText('Unanimous');
+  await expect(average(cat.page)).toHaveText('5');
   await expect(fireworks(cat.page)).toHaveCount(0);
 
   await closeAll([ann, bob, cat]);
 });
 
-test('the results look right in dark mode and on a phone without sideways scrolling', async ({
-  browser,
-}) => {
+test('the results look right in dark mode and on a phone without sideways scrolling', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann');
@@ -196,7 +182,7 @@ test('the results look right in dark mode and on a phone without sideways scroll
   await pick(ann.page, '3');
   await pick(bob.page, '8');
 
-  await expect(charts(ann.page)).toHaveCount(4);
+  await expect(results(ann.page)).toHaveCount(1);
   await expect(ann.page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const overflow = await ann.page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -213,30 +199,18 @@ const FIST_THEMES = [
   { name: 'Auto with a light system', stored: null, scheme: 'light', theme: 'light' },
 ] as const;
 
-/** The average brightness of the card images drawn under a chart's axis, or null while none is drawn yet. */
-const labelStripBrightness = (page: Page) =>
-  charts(page)
-    .first()
-    .locator('canvas')
-    .evaluate((canvas: HTMLCanvasElement) => {
-      // The images sit just under the axis; the bars are coloured and the canvas is otherwise transparent, so the
-      // opaque grey pixels in the lower part of the canvas are the images.
-      const strip = Math.round(60 * (canvas.height / canvas.clientHeight));
-      const { data } = canvas.getContext('2d')!.getImageData(0, canvas.height - strip, canvas.width, strip);
-      let sum = 0;
-      let count = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        const grey = Math.abs(data[i] - data[i + 1]) < 8 && Math.abs(data[i + 1] - data[i + 2]) < 8;
-        if (data[i + 3] > 200 && grey) {
-          sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
-          count++;
-        }
-      }
-      return count === 0 ? null : sum / count;
-    });
+/** The mask styling of one card image: a flat fill under a mask, no padding. */
+const imageStyle = (element: Element) => {
+  const computed = getComputedStyle(element);
+  return {
+    background: computed.backgroundColor,
+    mask: computed.maskImage || computed.webkitMaskImage,
+    padding: computed.padding,
+  };
+};
 
 for (const { name, stored, scheme, theme } of FIST_THEMES) {
-  test(`fist of five images follow the ${theme} theme text colour with ${name}`, async ({ browser }) => {
+  test(`fist of five images are recoloured for the ${theme} theme with ${name}`, async ({ browser }) => {
     const context = await browser.newContext({ colorScheme: scheme, viewport: { width: 360, height: 800 } });
     const page = await context.newPage();
     if (stored) {
@@ -249,39 +223,29 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
 
     await page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
     await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
-    await expect(charts(page)).toHaveCount(4);
+    await expect(results(page)).toHaveCount(1);
 
-    // (a) The picker and the vote column are recoloured by a mask over the text colour, with no backing tile.
+    // Cards on the page surface follow the theme text colour; cards on a coloured surface (the selected card, the
+    // vote card, the split bar) are white. Every one is a mask with no backing tile.
     const textColor = await page.evaluate(() => getComputedStyle(document.body).color);
-    for (const selector of ['label.card img', '.mark img']) {
+    const expectations = [
+      { selector: 'label.card:not(.selected) img', color: textColor },
+      { selector: 'label.card.selected img', color: 'rgb(255, 255, 255)' },
+      { selector: '.mark img', color: 'rgb(255, 255, 255)' },
+      { selector: '.segment img', color: 'rgb(255, 255, 255)' },
+    ];
+    for (const { selector, color } of expectations) {
       const images = page.locator(selector);
       await expect(images.first()).toBeVisible();
       for (const image of await images.all()) {
-        const style = await image.evaluate((element) => {
-          const computed = getComputedStyle(element);
-          return {
-            background: computed.backgroundColor,
-            mask: computed.maskImage || computed.webkitMaskImage,
-            padding: computed.padding,
-          };
-        });
-        expect(style.background).toBe(textColor);
+        const style = await image.evaluate(imageStyle);
+        expect(style.background).toBe(color);
         expect(style.mask).toContain('url(');
         expect(style.padding).toBe('0px');
       }
     }
 
-    // (b) The chart's label strip holds light pixels in dark mode and dark pixels in light mode.
-    await expect.poll(() => labelStripBrightness(page)).not.toBeNull();
-    const brightness = await labelStripBrightness(page);
-    expect(brightness).not.toBeNull();
-    if (theme === 'dark') {
-      expect(brightness!).toBeGreaterThan(180);
-    } else {
-      expect(brightness!).toBeLessThan(80);
-    }
-
-    // (d) Six cards wrapping on a 360px screen never scroll sideways.
+    // Six cards wrapping on a 360px screen never scroll sideways.
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
@@ -291,26 +255,7 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
   });
 }
 
-test('the chart label images change colour when the theme changes while results are showing', async ({
-  browser,
-}) => {
-  const ann = await newPerson(browser);
-  const bob = await newPerson(browser);
-  const roomUrl = await createRoom(ann.page, 'Ann', { cardSet: 'fist-of-five' });
-  await join(bob.page, roomUrl, 'Bob');
-  await ann.page.getByRole('radio', { name: '2', exact: true }).check({ force: true });
-  await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
-  await expect(charts(ann.page)).toHaveCount(4);
-
-  await ann.page.getByLabel('Theme').selectOption('light');
-  await expect.poll(async () => (await labelStripBrightness(ann.page)) ?? 255).toBeLessThan(80);
-  await ann.page.getByLabel('Theme').selectOption('dark');
-  await expect.poll(async () => (await labelStripBrightness(ann.page)) ?? 0).toBeGreaterThan(180);
-
-  await closeAll([ann, bob]);
-});
-
-test('the highest mark is named under the average, and a tie names none', async ({ browser }) => {
+test('a tie names no leader and an agreement names the winning mark', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann');
@@ -318,77 +263,42 @@ test('the highest mark is named under the average, and a tie names none', async 
 
   await pick(ann.page, '5');
   await pick(bob.page, '5');
-  await expect(charts(ann.page)).toHaveCount(4);
-  await expect(charts(ann.page).first().locator('.most')).toHaveText('Most votes: 5');
-  await expect(charts(ann.page).first().locator('.most .value')).toHaveText('5');
+  await expect(results(ann.page).locator('.detail')).toContainText('agree on 5');
 
   await ann.page.getByRole('button', { name: 'Clear votes' }).click();
-  await expect(charts(ann.page)).toHaveCount(0);
+  await expect(results(ann.page)).toHaveCount(0);
   await pick(ann.page, '3');
   await pick(bob.page, '5');
-  await expect(charts(ann.page)).toHaveCount(4);
-  // 3 and 5 tie in All.
-  await expect(charts(ann.page).first().locator('.most')).toHaveCount(0);
+  // 3 and 5 tie.
+  await expect(results(ann.page).locator('.detail')).toContainText('Top share 50%');
+  await expect(results(ann.page).locator('.detail')).not.toContainText('agree on');
 
   await closeAll([ann, bob]);
 });
 
-test('a group without votes says "No votes" and draws no canvas', async ({ browser }) => {
+test('a hidden vote is a card back the same size as the revealed card', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
   const roomUrl = await createRoom(ann.page, 'Ann');
   await join(bob.page, roomUrl, 'Bob');
+  const annCard = bob.page.locator('li.person', { hasText: 'Ann' }).locator('.mark');
 
   await pick(ann.page, '3');
+  await expect(annCard).toHaveClass(/back/);
+  const hidden = (await annCard.boundingBox())!;
+
   await pick(bob.page, '5');
+  await expect(annCard).not.toHaveClass(/back/);
+  await expect(annCard).toHaveText('3');
+  const revealed = (await annCard.boundingBox())!;
 
-  await expect(charts(ann.page)).toHaveCount(4);
-  // Testers and SRE are empty.
-  await expect(ann.page.locator('app-results .no-votes')).toHaveText(['No votes', 'No votes']);
-  await expect(ann.page.locator('app-results canvas')).toHaveCount(2);
-  await expect(charts(ann.page).nth(2).locator('canvas')).toHaveCount(0);
-  await expect(charts(ann.page).nth(3).locator('canvas')).toHaveCount(0);
-  await expect(charts(ann.page).nth(2).locator('.average .value')).toHaveText('');
+  expect(revealed.width).toBeCloseTo(hidden.width, 0);
+  expect(revealed.height).toBeCloseTo(hidden.height, 0);
 
-  await closeAll([ann, bob]);
-});
-
-test('the chart colour is #1b6ec2 in light mode and #4dabf7 in dark mode', async ({ browser }) => {
-  const ann = await newPerson(browser);
-  const chartColor = () =>
-    ann.page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue('--chart-color-primary').trim(),
-    );
-  await createRoom(ann.page, 'Ann');
-
-  await ann.page.getByLabel('Theme').selectOption('light');
-  await expect.poll(chartColor).toBe('#1b6ec2');
-  await ann.page.getByLabel('Theme').selectOption('dark');
-  await expect.poll(chartColor).toBe('#4dabf7');
-
-  await closeAll([ann]);
-});
-
-test('the charts are at most 176px tall on a desktop and never scroll sideways on a 375px phone', async ({
-  browser,
-}) => {
-  const ann = await newPerson(browser);
-  const bob = await newPerson(browser);
-  const roomUrl = await createRoom(ann.page, 'Ann');
-  await join(bob.page, roomUrl, 'Bob');
-  await pick(ann.page, '3');
-  await pick(bob.page, '5');
-  await expect(charts(ann.page)).toHaveCount(4);
-
-  const box = ann.page.locator('app-results .canvas-box').first();
-  expect((await box.boundingBox())!.height).toBeLessThanOrEqual(176);
-
-  await ann.page.setViewportSize({ width: 375, height: 812 });
-  expect((await box.boundingBox())!.height).toBeLessThanOrEqual(176);
-  const overflow = await ann.page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
+  // The deck card you pick from is that same size too.
+  const deck = (await bob.page.locator('label.card').first().boundingBox())!;
+  expect(deck.width).toBeCloseTo(revealed.width, 0);
+  expect(deck.height).toBeCloseTo(revealed.height, 0);
 
   await closeAll([ann, bob]);
 });

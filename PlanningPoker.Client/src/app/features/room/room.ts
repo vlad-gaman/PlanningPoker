@@ -13,12 +13,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
+import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -37,6 +36,8 @@ import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './ro
 
 type Phase = 'loading' | 'name' | 'joined';
 
+const DISCONNECTED_MESSAGE = 'You are disconnected from the server. Trying to reconnect…';
+
 @Component({
   selector: 'app-room',
   imports: [
@@ -47,8 +48,6 @@ type Phase = 'loading' | 'name' | 'joined';
     ReactiveFormsModule,
     PersonFields,
     RoundTimer,
-    MatButtonModule,
-    MatTableModule,
   ],
   providers: [RoomStore, RoomHubClient],
   templateUrl: './room.html',
@@ -66,10 +65,15 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly roomDefaults = inject(RoomDefaultsService);
 
   protected readonly personTypes = PERSON_TYPES;
-  protected readonly columns = ['name', 'role', 'mark'];
   protected readonly cardImage = cardImage;
+
+  /** The short role tag on a tile. */
+  protected roleShort(type: string): string {
+    return { dev: 'DEV', test: 'QA', sre: 'SRE', obs: 'OBS' }[type] ?? type;
+  }
   protected readonly phase = signal<Phase>('loading');
   protected readonly error = signal<string | null>(null);
+  protected readonly copied = signal<'name' | 'link' | null>(null);
 
   protected readonly form = createPersonForm(inject(FormBuilder));
 
@@ -90,9 +94,34 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected readonly myPersonType = computed(
     () => this.store.people().find((person) => person.guid === this.myGuid())?.personType ?? null,
   );
+  /** People who have cast a vote this round; observers never vote. */
+  protected readonly voterCount = computed(
+    () =>
+      this.store
+        .people()
+        .filter((person) => person.personType !== 'obs' && this.store.votes()[person.guid] !== undefined).length,
+  );
   protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
+    const popup = inject(ErrorPopupService);
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        popup.show(message);
+      }
+    });
+    // Losing the server shows a popup that stays until the connection is back.
+    effect(() => {
+      if (this.phase() !== 'joined') {
+        return;
+      }
+      if (this.store.connected()) {
+        popup.dismiss();
+      } else {
+        popup.show(DISCONNECTED_MESSAGE, true);
+      }
+    });
     // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
     // in consensus, if the room has them on; they stop as soon as the votes are gone.
     effect(() => {
@@ -156,6 +185,25 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     void this.store.showVotes();
   }
 
+  /** Puts the room name, or the full room URL, on the clipboard and says so for a moment. */
+  private roomUrl(): string {
+    return `${location.origin}/room/${encodeURIComponent(this.id())}`;
+  }
+
+  protected async copy(what: 'name' | 'link'): Promise<void> {
+    const text = what === 'name' ? this.id() : this.roomUrl();
+    if (!(await writeClipboard(text))) {
+      return;
+    }
+    this.copied.set(what);
+    setTimeout(() => this.copied.set(null), 1500);
+  }
+
+  /** Offgrid people look disabled; so does your own tile while your connection to the server is down. */
+  protected isOffgrid(person: Person): boolean {
+    return person.isOffgrid === true || (!this.store.connected() && person.guid === this.myGuid());
+  }
+
   protected changeRole(personType: PersonType): void {
     void this.store.changePersonType(personType);
   }
@@ -182,14 +230,24 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     void this.store.leaveRoom();
   }
 
-  /** What a participant's mark cell shows: nothing for no vote or an observer, a block while hidden, the card once revealed. */
-  protected markOf(person: Person): { text: string; image: string | null; art: string | null; alt: string } {
+  /**
+   * What a participant's mark card shows: an empty slot for no vote or an observer, a face-down card while hidden
+   * (the block stays as its text for assistive tech), the card itself once revealed.
+   */
+  protected markOf(person: Person): {
+    text: string;
+    image: string | null;
+    art: string | null;
+    alt: string;
+    hidden: boolean;
+    revealed: boolean;
+  } {
     const mark = this.store.votes()[person.guid];
     if (mark === undefined || person.personType === 'obs') {
-      return { text: '', image: null, art: null, alt: '' };
+      return { text: '', image: null, art: null, alt: '', hidden: false, revealed: false };
     }
     if (mark === HIDDEN_MARK && !this.store.votingFinished()) {
-      return { text: '▮', image: null, art: null, alt: '' };
+      return { text: '▮', image: null, art: null, alt: '', hidden: true, revealed: false };
     }
     const card = this.store.cards().find((option) => option.value === mark);
     return {
@@ -197,7 +255,14 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       image: card ? cardImage(card) : null,
       art: card ? cardArt(card) : null,
       alt: mark,
+      hidden: false,
+      revealed: true,
     };
+  }
+
+  /** The letter an avatar shows. */
+  protected initial(person: Person): string {
+    return person.name.trim().charAt(0).toUpperCase();
   }
 
   protected roleLabel(type: string): string {
@@ -261,6 +326,30 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       }
       this.error.set(errorMessage(error));
       this.phase.set('name');
+    }
+  }
+}
+
+/**
+ * Copies text to the clipboard. The async clipboard API needs a secure context (HTTPS or localhost), so over plain
+ * HTTP on the local network it falls back to a hidden textarea and the legacy copy command.
+ */
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+    try {
+      return document.execCommand('copy');
+    } finally {
+      field.remove();
     }
   }
 }

@@ -68,6 +68,7 @@ export class RoomStore {
   private readonly statisticsState = signal<VoteStatistics | null>(null);
   private readonly revealCountState = signal(0);
   private readonly roundStartedAtState = signal<number | null>(null);
+  private readonly connectedState = signal(true);
 
   private roomId = '';
   private bound = false;
@@ -81,6 +82,8 @@ export class RoomStore {
   /** While a JoinRoom call is in flight, hub events are queued here and replayed after its snapshot is applied. */
   private buffered: (() => void)[] | null = null;
 
+  /** False while the connection to the server is down (trying to get back) or closed. */
+  readonly connected = this.connectedState.asReadonly();
   readonly people = this.peopleState.asReadonly();
   /** `people` with observers after voters, for the participants table only. */
   readonly orderedPeople = computed(() => orderPeople(this.peopleState()));
@@ -177,6 +180,7 @@ export class RoomStore {
     this.stopWatchingTabs?.();
     this.stopWatchingTabs = null;
     this.open = false;
+    this.connectedState.set(true);
     this.bound = false;
     this.buffered = null;
     await this.hub.disconnect();
@@ -221,7 +225,16 @@ export class RoomStore {
     this.hub.on(HUB_EVENTS.CountdownUpdate, (event: CountdownEvent) => this.apply(() => this.countdownUpdate(event)));
     this.hub.on(HUB_EVENTS.CountdownReset, () => this.apply(() => this.countdownState.set(null)));
     this.hub.on(HUB_EVENTS.VotesCleared, (event: VotesClearedEvent) => this.apply(() => this.votesCleared(event)));
-    this.hub.onReconnected(() => void this.rejoin());
+    this.hub.onReconnecting(() => this.connectedState.set(false));
+    this.hub.onClosed(() => {
+      if (this.open) {
+        this.connectedState.set(false);
+      }
+    });
+    this.hub.onReconnected(() => {
+      this.connectedState.set(true);
+      void this.rejoin();
+    });
   }
 
   /** Runs a hub event now, or queues it when the join snapshot has not been applied yet. */

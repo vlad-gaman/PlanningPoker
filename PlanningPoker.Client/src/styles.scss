@@ -4,6 +4,8 @@
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
 
 :root {
+  // Size of a vote card: the deck cards and the vote cards on people's tiles share it, growing on wide screens.
+  --card-w: clamp(72px, 6.5vw, 120px);
   --bg-color: #ffffff;
   --text-color: #212529;
   --border-color: #e5e5e5;
@@ -18,8 +20,6 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --shadow-color: rgba(0, 0, 0, 0.05);
   --navbar-bg: #fff;
   --footer-bg: #fff;
-  --chart-color-primary: #1b6ec2;
-  --chart-color-success: #28a745;
   --coffee-bg: #ffdd00;
   --coffee-filter: none;
   // The Esendex Fibonacci illustrations: the physical cards' purple, white, grey and ink.
@@ -52,6 +52,18 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --esendex-die-deep: #c4c8c8;
   --esendex-top-face: #f5f8fb;
   --esendex-metal-deep: #8f9284;
+  --panel-bg: #f8f9fb;
+  --verdict-good: #1e8e3e;
+  --verdict-mid: #b57e00;
+  --verdict-bad: #d93025;
+  --avatar-from: #1b6ec2;
+  --avatar-to: #7a4fd6;
+  --seg-1: #1b6ec2;
+  --seg-2: #7a4fd6;
+  --seg-3: #c2417f;
+  --seg-4: #c77a1b;
+  --seg-5: #1e8e3e;
+  --seg-6: #1c8ca8;
   color-scheme: light;
 }
 
@@ -70,8 +82,6 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --shadow-color: rgba(0, 0, 0, 0.3);
   --navbar-bg: #1a1a1a;
   --footer-bg: #1a1a1a;
-  --chart-color-primary: #4dabf7;
-  --chart-color-success: #51cf66;
   --coffee-bg: #ffdd00;
   --coffee-filter: brightness(0.95) contrast(1.05);
   --esendex-purple: #9566c6;
@@ -103,6 +113,18 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --esendex-die-deep: #9aa1a8;
   --esendex-top-face: #e6ebf0;
   --esendex-metal-deep: #3f443e;
+  --panel-bg: #232323;
+  --verdict-good: #51cf66;
+  --verdict-mid: #ffd43b;
+  --verdict-bad: #ff8787;
+  --avatar-from: #4dabf7;
+  --avatar-to: #9775fa;
+  --seg-1: #4dabf7;
+  --seg-2: #9775fa;
+  --seg-3: #f783ac;
+  --seg-4: #ffa94d;
+  --seg-5: #51cf66;
+  --seg-6: #3bc9db;
   color-scheme: dark;
 }
 
@@ -184,6 +206,147 @@ a {
 
   &:hover {
     color: var(--primary-hover);
+  }
+}
+
+// Cards, labelled fields and buttons of the home page and the room's name step.
+.panel {
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--panel-bg);
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .hint {
+    margin: -0.5rem 0 1rem;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+
+  label {
+    color: var(--muted-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}
+
+.input {
+  box-sizing: border-box;
+  height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.primary-button,
+.secondary-button {
+  height: 42px;
+  padding: 0 1.25rem;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.primary-button {
+  border: 1px solid var(--primary-hover);
+  background: var(--primary-color);
+  color: #fff;
+
+  &:hover {
+    background: var(--primary-hover);
+  }
+}
+
+.secondary-button {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+
+  &:hover {
+    background: var(--card-hover-bg);
+  }
+}
+
+// Each role has a colour, used by the role picker, the corner tag and the avatar ring.
+[data-role] {
+  --role: var(--muted-color);
+
+  &[data-role='dev'] { --role: #3b82f6; }
+  &[data-role='test'] { --role: #16a34a; }
+  &[data-role='sre'] { --role: #d97706; }
+  &[data-role='obs'] { --role: #7c7c8a; }
+}
+
+// Role picker: one segmented control, shared by the room and the name fields. The radios stay in the layout for keyboard use.
+.role-picker {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+
+  label {
+    position: relative;
+    padding: 4px 12px;
+    border-radius: 8px;
+    color: var(--muted-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: var(--text-color);
+    }
+
+    &:has(input:checked) {
+      background: var(--role);
+      color: #fff;
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
   }
 }
 
@@ -327,4 +490,11 @@ a {
 // The old settings panel dimmed the page by half.
 .cdk-overlay-dark-backdrop {
   background: rgba(0, 0, 0, 0.5);
+}
+
+// The popup for failures (ErrorPopupService): red, on top of everything, readable in both themes.
+.error-popup {
+  --mat-snack-bar-container-color: #b3261e;
+  --mat-snack-bar-supporting-text-color: #fff;
+  --mat-snack-bar-button-color: #fff;
 }

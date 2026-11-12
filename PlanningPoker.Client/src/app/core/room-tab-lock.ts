@@ -2,6 +2,13 @@ import { Injectable } from '@angular/core';
 
 const CHANNEL_NAME = 'planning-poker-room-tab';
 
+/** crypto.randomUUID only exists in secure contexts (HTTPS or localhost), not over plain HTTP on the local network. */
+function newTabId(): string {
+  return typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 function noop(): void {
   // Nothing to stop: there is no channel to listen on.
 }
@@ -12,7 +19,7 @@ function noop(): void {
  */
 @Injectable({ providedIn: 'root' })
 export class RoomTabLock {
-  private readonly tabId = crypto.randomUUID();
+  private readonly tabId = newTabId();
   private readonly channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(CHANNEL_NAME);
 
   /** Tells the other tabs of this browser that this tab now shows the room. */

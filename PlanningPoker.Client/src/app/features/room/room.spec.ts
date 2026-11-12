@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
+import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -18,7 +19,6 @@ import {
   revealed,
 } from '../../testing/fake-hub.testing';
 import { FireworksLauncher } from './fireworks/fireworks-launcher';
-import { ChartFactory } from './results/chart-factory';
 import { HUB_EVENTS } from '../../models/hub-events';
 import { ROOM_NOT_FOUND_MESSAGE, RoomStore } from './room-store';
 import { Room } from './room';
@@ -34,6 +34,7 @@ describe('Room', () => {
   const fireworks = { launch: vi.fn(), dispose: vi.fn() };
   const launcher = { create: vi.fn() };
   const dialog = { open: vi.fn() };
+  const popup = { show: vi.fn(), dismiss: vi.fn() };
   let hub: ReturnType<typeof fakeHub>;
   let navigate: ReturnType<typeof vi.spyOn>;
 
@@ -45,6 +46,8 @@ describe('Room', () => {
     fireworks.dispose.mockReset();
     launcher.create.mockReset();
     dialog.open.mockReset();
+    popup.show.mockReset();
+    popup.dismiss.mockReset();
     launcher.create.mockReturnValue(fireworks);
     TestBed.configureTestingModule({
       providers: [
@@ -52,10 +55,7 @@ describe('Room', () => {
         { provide: MeService, useValue: me },
         { provide: FireworksLauncher, useValue: launcher },
         { provide: MatDialog, useValue: dialog },
-        {
-          provide: ChartFactory,
-          useValue: { create: () => ({ draw: vi.fn(), destroy: vi.fn() }) },
-        },
+        { provide: ErrorPopupService, useValue: popup },
       ],
     });
     // The room provides its own hub client at component level, so the fake replaces it there.
@@ -85,18 +85,48 @@ describe('Room', () => {
     expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
     expect(element.querySelector('form')).toBeNull();
     expect(element.textContent).toContain('Ann');
-    expect(element.textContent).toContain('(owner)');
+    expect(element.querySelector('.person .crown')).not.toBeNull();
+    expect(element.textContent).not.toContain('(owner)');
   });
 
-  it('marks offgrid people in the participants table and leaves online people unmarked', async () => {
+  it('flags offgrid people on their tile and leaves online people unflagged', async () => {
     me.get.mockReturnValue(of(ANN));
     hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
 
     const { element } = await render();
 
-    const rows = Array.from(element.querySelectorAll('tr[mat-row]'));
-    expect(rows.find((row) => row.textContent?.includes('Bob'))?.textContent).toContain('(offgrid)');
-    expect(rows.find((row) => row.textContent?.includes('Ann'))?.textContent).not.toContain('(offgrid)');
+    const rows = Array.from(element.querySelectorAll('.person'));
+    expect(rows.find((row) => row.textContent?.includes('Bob'))?.getAttribute('title')).toContain('Not connected');
+    expect(rows.find((row) => row.textContent?.includes('Ann'))?.getAttribute('title')).toBeNull();
+  });
+
+  it('greys out the tile of an offgrid person', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
+
+    const { element } = await render();
+
+    const tiles = Array.from(element.querySelectorAll('.person'));
+    expect(tiles.find((tile) => tile.textContent?.includes('Bob'))?.classList).toContain('offgrid-person');
+    expect(tiles.find((tile) => tile.textContent?.includes('Ann'))?.classList).not.toContain('offgrid-person');
+  });
+
+  it('tells you when you lose the server, greys out your own tile and clears it when you are back', async () => {
+    me.get.mockReturnValue(of(ANN));
+    const { fixture, element } = await render();
+    expect(popup.show).not.toHaveBeenCalled();
+
+    hub.dropConnection();
+    await settle(fixture);
+
+    expect(popup.show).toHaveBeenCalledWith(expect.stringContaining('disconnected from the server'), true);
+    expect(element.querySelector('.person')?.classList).toContain('offgrid-person');
+
+    hub.reconnect();
+    await settle(fixture);
+
+    expect(popup.dismiss).toHaveBeenCalled();
+    expect(element.querySelector('.person')?.classList).not.toContain('offgrid-person');
   });
 
   it('asks for a name when there is no session, then saves it and joins', async () => {
@@ -113,7 +143,7 @@ describe('Room', () => {
 
     expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
     expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
-    expect(element.querySelector('table')).not.toBeNull();
+    expect(element.querySelector('.people')).not.toBeNull();
   });
 
   it('does not save a name that is too short', async () => {
@@ -206,15 +236,57 @@ describe('Room', () => {
     expect(hub.disconnect).toHaveBeenCalled();
     expect(hub.invoke).toHaveBeenLastCalledWith('JoinRoom', 'room-2');
     expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([]);
-    expect(element.querySelector('table')).toBeNull();
+    expect(element.querySelector('.people')).toBeNull();
     expect(element.textContent).not.toContain('Bob');
 
     respond(JOIN_RESPONSE);
     await settle(fixture);
 
     expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([ANN]);
-    expect(element.querySelector('table')).not.toBeNull();
+    expect(element.querySelector('.people')).not.toBeNull();
     expect(element.textContent).not.toContain('Bob');
+  });
+
+  it('copies the room name and the full room link', async () => {
+    me.get.mockReturnValue(of(ANN));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const { fixture, element } = await render();
+    const [name, link] = Array.from(element.querySelectorAll<HTMLButtonElement>('.copy'));
+
+    name.click();
+    link.click();
+    await settle(fixture);
+
+    expect(writeText).toHaveBeenNthCalledWith(1, 'room-1');
+    expect(writeText).toHaveBeenNthCalledWith(2, `${location.origin}/room/room-1`);
+    vi.unstubAllGlobals();
+  });
+
+  it('falls back to the legacy copy command when the clipboard API is unavailable', async () => {
+    me.get.mockReturnValue(of(ANN));
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('insecure')) } });
+    const exec = vi.fn().mockReturnValue(true);
+    document.execCommand = exec;
+    const { fixture, element } = await render();
+
+    element.querySelector<HTMLButtonElement>('.copy')?.click();
+    await settle(fixture);
+
+    expect(exec).toHaveBeenCalledWith('copy');
+    vi.unstubAllGlobals();
+  });
+
+  it('tags each tile with its short role and role colour key', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    const { element } = await render();
+
+    const tiles = [...element.querySelectorAll('li.person')];
+    expect(tiles.map((tile) => [tile.getAttribute('data-role'), tile.getAttribute('data-short')])).toEqual([
+      ['dev', 'DEV'],
+      ['test', 'QA'],
+    ]);
   });
 
   it('does not join the old room when the id changes while the name check is pending', async () => {
@@ -234,7 +306,7 @@ describe('Room', () => {
 
     expect(hub.invoke).toHaveBeenCalledOnce();
     expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-2');
-    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.people')).not.toBeNull();
   });
 
   it('ignores the snapshot of the old room when its JoinRoom answers after the id changed', async () => {
@@ -253,7 +325,7 @@ describe('Room', () => {
     await settle(fixture);
 
     expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([ANN]);
-    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.people')).not.toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Bob');
   });
 
@@ -267,7 +339,7 @@ describe('Room', () => {
     }
 
     function markOf(element: HTMLElement, name: string): string {
-      const row = Array.from(element.querySelectorAll('tr.mat-mdc-row')).find((r) => r.textContent?.includes(name));
+      const row = Array.from(element.querySelectorAll('li.person')).find((r) => r.textContent?.includes(name));
       return row?.querySelector('.mark')?.textContent?.trim() ?? '';
     }
 
@@ -412,12 +484,12 @@ describe('Room', () => {
       expect(element.querySelector('app-fireworks')).not.toBeNull();
     });
 
-    it('shows the four charts once the votes are revealed, and removes them when cleared', async () => {
+    it('shows the results once the votes are revealed, and removes them when cleared', async () => {
       const { fixture, element } = await render();
 
       hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
       await settle(fixture);
-      expect(element.querySelectorAll('app-results-chart').length).toBe(4);
+      expect(element.querySelector('app-results')).not.toBeNull();
 
       hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: '2026-01-01T12:10:00+00:00' });
       await settle(fixture);
@@ -429,7 +501,7 @@ describe('Room', () => {
 
       const { element } = await render();
 
-      expect(element.querySelectorAll('app-results-chart').length).toBe(4);
+      expect(element.querySelector('app-results')).not.toBeNull();
     });
 
     it('launches fireworks when a live reveal ends in consensus', async () => {

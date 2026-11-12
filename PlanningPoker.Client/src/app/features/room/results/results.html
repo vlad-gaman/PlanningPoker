@@ -1,6 +1,50 @@
 <section class="results" aria-label="Results">
-  <app-results-chart title="All votes" [group]="statistics().all" [cards]="cards()" />
-  <app-results-chart title="Developers votes" [group]="statistics().developers" [cards]="cards()" />
-  <app-results-chart title="Testers votes" [group]="statistics().testers" [cards]="cards()" />
-  <app-results-chart title="SRE votes" [group]="statistics().sres" [cards]="cards()" />
+  <div class="hero">
+    <div class="ring" [attr.data-tone]="verdict().tone" [style.--share]="agreement()">
+      <span class="average">{{ average() }}</span>
+      <span class="caption">average</span>
+    </div>
+    <div class="verdict" [attr.data-tone]="verdict().tone">
+      <span class="label">{{ verdict().label }}</span>
+      <span class="detail">
+        @if (leader(); as winner) {
+          {{ agreement() }}% agree on
+          @if (winner.image; as src) {
+            <img class="mark-image" [src]="src" [alt]="winner.mark" [style.--mark-mask]="'url(' + src + ')'" />
+          } @else {
+            <b>{{ winner.text }}</b>
+          }
+        } @else {
+          Top share {{ agreement() }}%
+        }
+        @if (range()) {
+          · range {{ range() }}
+        }
+        · {{ voters() }} {{ voters() === 1 ? 'vote' : 'votes' }}
+      </span>
+    </div>
+  </div>
+
+  <ul class="split" aria-label="How the votes split">
+    @for (segment of segments(); track segment.mark; let index = $index) {
+      <li class="segment" [style.flex-grow]="segment.count" [style.background]="'var(--seg-' + (index % 6 + 1) + ')'">
+        @if (segment.image; as src) {
+          <img class="mark-image" [src]="src" [alt]="segment.mark" [style.--mark-mask]="'url(' + src + ')'" />
+        } @else {
+          <b>{{ segment.text }}</b>
+        }
+        <small>{{ segment.count }}</small>
+      </li>
+    }
+  </ul>
+
+  @if (groups().length > 0) {
+    <ul class="groups" aria-label="Averages by role">
+      @for (item of groups(); track item.label) {
+        <li>
+          {{ item.label }} avg <b class="group-average">{{ item.average }}</b>
+        </li>
+      }
+    </ul>
+  }
 </section>

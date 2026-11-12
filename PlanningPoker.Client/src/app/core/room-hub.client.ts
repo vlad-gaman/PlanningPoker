@@ -41,6 +41,16 @@ export class RoomHubClient {
     this.connection?.on(method, handler as (...args: unknown[]) => void);
   }
 
+  /** Runs when the connection drops and the automatic reconnect starts trying. */
+  onReconnecting(handler: () => void): void {
+    this.connection?.onreconnecting(() => handler());
+  }
+
+  /** Runs when the connection is closed for good (it was stopped, or reconnecting gave up). */
+  onClosed(handler: () => void): void {
+    this.connection?.onclose(() => handler());
+  }
+
   /** Runs after the automatic reconnect succeeded; the server has forgotten the old connection by then. */
   onReconnected(handler: () => void): void {
     this.connection?.onreconnected(() => handler());

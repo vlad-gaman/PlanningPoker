@@ -17,7 +17,8 @@ public class SessionCookieService : ISessionCookieService
         response.Cookies.Append(SessionConstants.CookieName, personGuid.ToString(), new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            // Browsers drop a Secure cookie over plain HTTP, which would break the app on the local network.
+            Secure = response.HttpContext.Request.IsHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/"
         });

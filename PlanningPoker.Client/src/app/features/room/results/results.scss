@@ -1,5 +1,159 @@
 .results {
+  padding: 1.25rem;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--panel-bg);
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+// The ring fills with the agreement: --share is 0 to 100.
+.ring {
+  --tone: var(--verdict-bad);
+
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: conic-gradient(var(--tone) calc(var(--share) * 1%), var(--border-color) 0);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    background: var(--panel-bg);
+  }
+
+  &[data-tone='good'] {
+    --tone: var(--verdict-good);
+  }
+
+  &[data-tone='mid'] {
+    --tone: var(--verdict-mid);
+  }
+}
+
+.average,
+.caption {
+  position: relative;
+}
+
+.average {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.caption {
+  margin-top: 4px;
+  color: var(--muted-color);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.verdict {
+  --tone: var(--verdict-bad);
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &[data-tone='good'] {
+    --tone: var(--verdict-good);
+  }
+
+  &[data-tone='mid'] {
+    --tone: var(--verdict-mid);
+  }
+
+  .label {
+    color: var(--tone);
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  .detail {
+    color: var(--muted-color);
+    font-size: 0.9rem;
+
+    b {
+      color: var(--text-color);
+    }
+  }
+}
+
+.split {
+  display: flex;
+  gap: 3px;
+  height: 54px;
+  margin: 0;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  list-style: none;
+}
+
+.segment {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  color: #fff;
+  line-height: 1.1;
+
+  b {
+    font-size: 1.15rem;
+  }
+
+  small {
+    opacity: 0.85;
+    font-size: 0.7rem;
+  }
+}
+
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  color: var(--muted-color);
+  font-size: 0.9rem;
+  list-style: none;
+
+  b {
+    margin-left: 0.25rem;
+    color: var(--text-color);
+    font-size: 1.1rem;
+  }
+}
+
+.mark-image {
+  height: 1.25rem;
+  width: 1.25rem;
+  vertical-align: middle;
+  // Line-art cards: the PNG is the mask. Inside a coloured segment the fill is white; in the detail line it is the text colour.
+  background-color: var(--text-color);
+  -webkit-mask: var(--mark-mask) center / contain no-repeat;
+  mask: var(--mark-mask) center / contain no-repeat;
+  object-fit: none;
+  object-position: 9999px 0;
+}
+
+.segment .mark-image {
+  background-color: #fff;
 }

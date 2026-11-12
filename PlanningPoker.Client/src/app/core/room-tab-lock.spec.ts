@@ -26,4 +26,17 @@ describe('RoomTabLock', () => {
 
     expect(taken).not.toHaveBeenCalled();
   });
+
+  it('still tells tabs apart where crypto.randomUUID is missing, as over plain HTTP', async () => {
+    vi.stubGlobal('crypto', {});
+    const oldTab = new RoomTabLock();
+    const newTab = new RoomTabLock();
+    vi.unstubAllGlobals();
+    const taken = vi.fn();
+    const stop = oldTab.onTaken('room-1', taken);
+
+    newTab.claim('room-1');
+    await vi.waitFor(() => expect(taken).toHaveBeenCalledOnce());
+    stop();
+  });
 });

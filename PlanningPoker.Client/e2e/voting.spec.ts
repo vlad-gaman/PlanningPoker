@@ -27,13 +27,13 @@ async function join(page: Page, roomUrl: string, name: string, role?: string): P
   await page.goto(roomUrl);
   await page.getByLabel('Your name').fill(name);
   if (role) {
-    await page.getByLabel('Role').selectOption({ label: role });
+    await page.locator('.role-picker label', { hasText: role }).click();
   }
   await page.getByRole('button', { name: 'Join room' }).click();
-  await expect(page.locator('tr[mat-row]').filter({ hasText: name })).toBeVisible();
+  await expect(page.locator('li.person').filter({ hasText: name })).toBeVisible();
 }
 
-const mark = (page: Page, name: string) => page.locator('tr[mat-row]').filter({ hasText: name }).locator('.mark');
+const mark = (page: Page, name: string) => page.locator('li.person').filter({ hasText: name }).locator('.mark');
 const card = (page: Page, value: string) => page.getByRole('radio', { name: value, exact: true });
 const pick = (page: Page, value: string) => page.locator('label.card').filter({ hasText: new RegExp(`^\\s*${value}\\s*$`) }).click();
 const countdown = (page: Page) => page.locator('.countdown');

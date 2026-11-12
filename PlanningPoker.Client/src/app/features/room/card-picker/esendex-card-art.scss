@@ -1,8 +1,10 @@
 // The drawing fills its host: the card picker sizes an art card to 5:7, the table sizes its mark.
 :host {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
+  container-type: inline-size;
 }
 
 img {
@@ -10,4 +12,107 @@ img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+// A price tag hung off the card's top edge: .string is the loop it hangs from, .tag the shaped label, .face what is
+// written on it (the number, or the tilted cup for the coffee card). The tag is clipped to its shape, so the string
+// sits outside it. The cup is sized to the face, so it always fits.
+.bubble {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  filter: drop-shadow(0 1cqw 1cqw rgba(0, 0, 0, 0.4));
+}
+
+.string {
+  position: absolute;
+  top: -6cqw;
+  left: 50%;
+  width: 9cqw;
+  height: 9cqw;
+  margin-left: -4.5cqw;
+  border: 0.9cqw solid var(--esendex-light);
+  border-radius: 50%;
+}
+
+.tag {
+  position: absolute;
+  inset: 0;
+}
+
+.face {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+
+  b {
+    font-weight: 900;
+
+    // Three digits ("100") shrink to stay on the tag.
+    &.long {
+      font-size: 0.7em;
+    }
+  }
+}
+
+.cup {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+// A paper label with chamfered top corners and a stitched border, hanging off the top-left corner.
+.bubble {
+  top: -12cqw;
+  left: -8cqw;
+  width: 36cqw;
+  height: 42cqw;
+  transform: rotate(-11deg);
+}
+.tag {
+  background: var(--esendex-paper);
+  clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 100%, 0 100%, 0 14%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 2.5cqw;
+    border: 0.8cqw dashed var(--esendex-purple);
+    border-radius: 3cqw;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    top: 4.5cqw;
+    left: 50%;
+    width: 4cqw;
+    height: 4cqw;
+    margin-left: -2cqw;
+    border-radius: 50%;
+    background: var(--esendex-light);
+    box-shadow: inset 0 0 0 0.8cqw var(--esendex-purple);
+  }
+}
+.face {
+  inset: 12cqw 5cqw 5cqw;
+  color: var(--esendex-purple);
+  font-size: 18cqw;
+}
+.cup {
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bubble {
+    animation: swing 2.8s ease-in-out infinite;
+  }
+}
+
+@keyframes swing {
+  50% {
+    rotate: -5deg;
+  }
 }

@@ -22,15 +22,15 @@ describe('App', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('shows the logo and name as a link home, and the theme select instead of a cycle button', () => {
+  it('shows the logo and name as a link home, and the theme picker instead of a cycle button', () => {
     const root = render();
 
     const brand = root.querySelector('header a') as HTMLAnchorElement;
     expect(brand.getAttribute('href')).toBe('/');
     expect(brand.textContent).toContain('Planning Poker');
     expect(brand.querySelector('img')?.getAttribute('alt')).toBe('Planning Poker logo');
-    expect(root.querySelector('header app-theme-select select')).not.toBeNull();
-    expect(root.querySelector('header button')).toBeNull();
+    expect(root.querySelector('header app-theme-select [role="radiogroup"]')).not.toBeNull();
+    expect(root.querySelector('header button:not([role="radio"])')).toBeNull();
   });
 
   it('has the copyright with the current year and a Credits link in the footer', () => {

@@ -21,12 +21,21 @@ describe('PersonFields', () => {
     const input = element().querySelector(`#${label.htmlFor}`) as HTMLInputElement;
     expect(label.textContent).toContain('Your Name:');
     expect(input).toBeTruthy();
-    expect(Array.from(element().querySelectorAll('option')).map((o) => o.textContent?.trim())).toEqual([
+    expect(Array.from(element().querySelectorAll('.role-picker label')).map((o) => o.textContent?.trim())).toEqual([
       'Developer',
       'Tester',
       'SRE',
       'Observer',
     ]);
+  });
+
+  it('selects the role through the segmented picker', () => {
+    const tester = element().querySelector('.role-picker label[data-role="test"] input') as HTMLInputElement;
+    tester.click();
+    fixture.detectChanges();
+
+    expect(form.controls.personType.value).toBe('test');
+    expect(element().querySelector('.role-picker label[data-role="dev"] input:checked')).toBeNull();
   });
 
   it('writes typed values to the form', () => {

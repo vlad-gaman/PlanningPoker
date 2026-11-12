@@ -5,7 +5,7 @@ test('app loads at the root', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Planning Poker' })).toBeVisible();
 });
 
-test('saving a name issues an HttpOnly, Secure, SameSite=Lax pp_session cookie', async ({ page, context }) => {
+test('saving a name issues an HttpOnly, SameSite=Lax pp_session cookie (not Secure over plain HTTP)', async ({ page, context }) => {
   await page.goto('/');
   const response = await page.request.put('/api/me', { data: { name: 'Ann', personType: 'dev' } });
   expect(response.status()).toBe(200);
@@ -13,7 +13,8 @@ test('saving a name issues an HttpOnly, Secure, SameSite=Lax pp_session cookie',
   const cookie = (await context.cookies()).find((c) => c.name === 'pp_session');
   expect(cookie).toBeDefined();
   expect(cookie?.httpOnly).toBe(true);
-  expect(cookie?.secure).toBe(true);
+  // The app is served over plain HTTP here (and on the LAN), so the cookie is Secure only when the request is HTTPS.
+  expect(cookie?.secure).toBe(false);
   expect(cookie?.sameSite).toBe('Lax');
   expect(cookie?.expires).toBe(-1);
 });

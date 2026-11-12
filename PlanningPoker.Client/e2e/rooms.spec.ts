@@ -10,7 +10,7 @@ async function newPerson(browser: Browser): Promise<{ context: BrowserContext; p
 }
 
 async function chooseRole(page: Page, role: string): Promise<void> {
-  await page.getByLabel('Role').selectOption({ label: role });
+  await page.locator('.role-picker label', { hasText: role }).click();
 }
 
 async function createRoom(page: Page, name: string, options: { funName: boolean }): Promise<string> {
@@ -31,14 +31,14 @@ async function joinByLink(page: Page, roomUrl: string, name: string, role?: stri
   await page.getByRole('button', { name: 'Join room' }).click();
 }
 
-const rows = (page: Page) => page.locator('tr[mat-row]');
+const rows = (page: Page) => page.locator('li.person');
 
 test('creating a room with a fun name shows the owner as the only participant', async ({ page }) => {
   await createRoom(page, 'Ann', { funName: true });
 
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText('Ann');
-  await expect(rows(page).first()).toContainText('(owner)');
+  await expect(rows(page).first().locator('.crown')).toBeVisible();
 });
 
 test('creating a room without a fun name uses a GUID', async ({ page }) => {
@@ -81,7 +81,7 @@ test('ownership moves to another member when the owner leaves', async ({ browser
 
   await expect(rows(bob.page)).toHaveCount(1);
   await expect(rows(bob.page).first()).toContainText('Bob');
-  await expect(rows(bob.page).first()).toContainText('(owner)');
+  await expect(rows(bob.page).first().locator('.crown')).toBeVisible();
 
   await Promise.all([ann, bob].map(({ context }) => context.close()));
 });
@@ -130,7 +130,7 @@ test('creating a room asks nothing more and reuses the settings the owner saved 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog').getByLabel('Countdown Duration').fill('9');
+  await page.getByRole('dialog').getByLabel('Countdown (seconds)').fill('9');
   await page.getByRole('dialog').getByRole('button', { name: 'Save Settings' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
@@ -139,7 +139,7 @@ test('creating a room asks nothing more and reuses the settings the owner saved 
   await page.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(GUID_ROOM_PATH);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog').getByLabel('Countdown Duration')).toHaveValue('9');
+  await expect(page.getByRole('dialog').getByLabel('Countdown (seconds)')).toHaveValue('9');
 });
 
 test('an invalid name is rejected when joining through a link', async ({ browser }) => {
@@ -181,7 +181,8 @@ test('a room whose creator never joins is owned by the first person in and disap
   await joinByLink(bob.page, roomUrl, 'Bob');
 
   await expect(rows(bob.page)).toHaveCount(1);
-  await expect(rows(bob.page).first()).toContainText('Bob (owner)');
+  await expect(rows(bob.page).first()).toContainText('Bob');
+  await expect(rows(bob.page).first().locator('.crown')).toBeVisible();
   await expect(bob.page.getByRole('button', { name: 'Settings' })).toBeVisible();
 
   await bob.page.getByRole('button', { name: 'Leave room' }).click();
@@ -204,10 +205,21 @@ test('a creator who opens the room after someone else joins as a regular member'
   await expect(rows(ann.page)).toHaveCount(2);
 
   await expect(rows(bob.page)).toHaveCount(2);
-  await expect(rows(bob.page).filter({ hasText: 'Bob' })).toContainText('(owner)');
-  await expect(rows(bob.page).filter({ hasText: 'Ann' })).not.toContainText('(owner)');
+  await expect(rows(bob.page).filter({ hasText: 'Bob' }).locator('.crown')).toBeVisible();
+  await expect(rows(bob.page).filter({ hasText: 'Ann' }).locator('.crown')).toHaveCount(0);
   await expect(bob.page.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(ann.page.getByRole('button', { name: 'Settings' })).toHaveCount(0);
 
   await Promise.all([ann, bob].map(({ context }) => context.close()));
+});
+
+test('the selected role in the role picker takes the colour of that role', async ({ page }) => {
+  await createRoom(page, 'Ann', { funName: true });
+  const colourOf = (name: string) =>
+    page.locator('.role-picker label', { hasText: name }).evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  const developer = await colourOf('Developer');
+  await page.locator('.role-picker label', { hasText: 'Tester' }).click();
+  await expect.poll(() => colourOf('Tester')).not.toBe(developer);
+  expect(await colourOf('Developer')).not.toBe(await colourOf('Tester'));
 });

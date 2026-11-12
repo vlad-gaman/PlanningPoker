@@ -11,6 +11,7 @@ public class SessionCookieServiceTests
     public void Write_SetsHttpOnlySecureLaxSessionCookie()
     {
         var context = new DefaultHttpContext();
+        context.Request.Scheme = "https";
         var guid = Guid.NewGuid();
 
         _service.Write(context.Response, guid);
@@ -23,6 +24,17 @@ public class SessionCookieServiceTests
         Assert.Contains("path=/", header);
         Assert.DoesNotContain("expires", header);
         Assert.DoesNotContain("max-age", header);
+    }
+
+    [Fact]
+    public void Write_OverPlainHttp_OmitsSecureSoTheBrowserKeepsTheCookie()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+
+        _service.Write(context.Response, Guid.NewGuid());
+
+        Assert.DoesNotContain("secure", context.Response.Headers.SetCookie.ToString().ToLowerInvariant());
     }
 
     [Fact]

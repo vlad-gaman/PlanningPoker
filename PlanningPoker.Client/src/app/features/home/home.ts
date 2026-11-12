@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../core/api-request-error';
+import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -41,6 +42,16 @@ export class Home implements OnInit, OnDestroy {
   protected readonly joinForm = this.builder.nonNullable.group({
     room: ['', Validators.required],
   });
+
+  constructor() {
+    const popup = inject(ErrorPopupService);
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        popup.show(message);
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     try {
