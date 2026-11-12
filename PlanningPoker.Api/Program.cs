@@ -1,6 +1,12 @@
 using PlanningPoker.Controller.Extensions;
 using PlanningPoker.Repository.Extensions;
 using PlanningPoker.Service.Extensions;
+using PlanningPoker.Service.Services;
+
+if (args.Contains(PasswordHashCommand.Switch))
+{
+    return PasswordHashCommand.Run(new PasswordHashingService(), Console.In, Console.Out, Console.Error);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,5 +31,6 @@ if (app.Environment.WebRootFileProvider.GetFileInfo("index.html").Exists)
 }
 
 app.Run();
+return 0;
 
 public partial class Program;

@@ -68,6 +68,9 @@ public static class ControllerLayerExtensions
         services.AddSingleton<TransferTargetValidation>();
         services.AddOptions<MetricsOptions>().BindConfiguration(MetricsConstants.ConfigurationSection);
         services.AddSingleton<MetricsTokenValidation>();
+        services.AddSingleton<AdminLoginRequestValidation>();
+        services.AddSingleton<IAdminSessionResponseMapper, AdminSessionResponseMapper>();
+        services.AddOperatorAuthentication();
         services.AddOpenTelemetry().WithMetrics(metrics =>
         {
             metrics.ConfigureResource(resource => resource.AddService(MetricsConstants.ServiceName));
@@ -84,6 +87,7 @@ public static class ControllerLayerExtensions
         app.UseMiddleware<ExceptionHandlingMiddleware>();
         app.UseMiddleware<JsonOnlyMiddleware>();
         app.UseMiddleware<SessionPersonMiddleware>();
+        app.UseOperatorAuthentication();
         return app;
     }
 
@@ -95,6 +99,13 @@ public static class ControllerLayerExtensions
         {
             endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ControllerLayerExtensions))
                 .LogWarning("{Setting} is not set, so {Route} answers 401 to every request.", $"{MetricsConstants.ConfigurationSection}:ScrapeToken", RoutePrefixes.Metrics);
+        }
+
+        if (!endpoints.ServiceProvider.GetRequiredService<IOperatorAuthService>().IsConfigured)
+        {
+            endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ControllerLayerExtensions))
+                .LogWarning("{Username} and {PasswordHash} are not both set, so the Operator cannot sign in to the management page.",
+                    $"{OperatorConstants.ConfigurationSection}:Username", $"{OperatorConstants.ConfigurationSection}:PasswordHash");
         }
 
         // Prometheus text outside /api, so it is exempt from the "every REST endpoint is in Swagger" rule.

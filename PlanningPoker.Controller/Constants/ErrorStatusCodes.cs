@@ -15,7 +15,11 @@ public static class ErrorStatusCodes
         [ErrorCodes.NotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.RoomNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.RoomIdGenerationFailed] = StatusCodes.Status409Conflict,
-        [ErrorCodes.NotRoomOwner] = StatusCodes.Status403Forbidden
+        [ErrorCodes.NotRoomOwner] = StatusCodes.Status403Forbidden,
+        [ErrorCodes.Forbidden] = StatusCodes.Status403Forbidden,
+        [ErrorCodes.AdminInvalidCredentials] = StatusCodes.Status401Unauthorized,
+        [ErrorCodes.AdminLoginLocked] = StatusCodes.Status429TooManyRequests,
+        [ErrorCodes.AdminAntiforgeryInvalid] = StatusCodes.Status403Forbidden
     };
 
     public const int Fallback = StatusCodes.Status500InternalServerError;

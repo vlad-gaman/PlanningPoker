@@ -11,6 +11,10 @@ public static class ErrorCodes
     public const string RoomNotFound = "room_not_found";
     public const string RoomIdGenerationFailed = "room_id_generation_failed";
     public const string NotRoomOwner = "not_room_owner";
+    public const string Forbidden = "forbidden";
+    public const string AdminInvalidCredentials = "admin_invalid_credentials";
+    public const string AdminLoginLocked = "admin_login_locked";
+    public const string AdminAntiforgeryInvalid = "admin_antiforgery_invalid";
 
     // Hub-only: returned from RoomHub methods, never from REST, so they have no entry in the REST status table.
     public const string NotInRoom = "not_in_room";

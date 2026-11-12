@@ -61,4 +61,34 @@ public class ServiceError
     {
         return Create(ErrorCodes.ValidationFailed, $"The field '{field}' is invalid.", ("field", field), ("reason", reason));
     }
+
+    /// <summary>The single definition of the error returned for a failed Operator sign-in; the same for an unknown user and a wrong password.</summary>
+    public static ServiceError AdminInvalidCredentials()
+    {
+        return Create(ErrorCodes.AdminInvalidCredentials, "The username or password is incorrect.");
+    }
+
+    /// <summary>The single definition of the error returned while sign-in is locked after repeated failures.</summary>
+    public static ServiceError AdminLoginLocked()
+    {
+        return Create(ErrorCodes.AdminLoginLocked, "Too many failed sign-in attempts. Try again later.");
+    }
+
+    /// <summary>The single definition of the error returned when a state-changing admin request lacks a valid anti-forgery token.</summary>
+    public static ServiceError AdminAntiforgeryInvalid()
+    {
+        return Create(ErrorCodes.AdminAntiforgeryInvalid, "The anti-forgery token is missing or invalid.");
+    }
+
+    /// <summary>The single definition of the error returned when a signed-in caller may not use an endpoint.</summary>
+    public static ServiceError Forbidden()
+    {
+        return Create(ErrorCodes.Forbidden, "You may not do this.");
+    }
+
+    /// <summary>The single definition of the error returned when an endpoint needs the Operator and there is no valid sign-in.</summary>
+    public static ServiceError Unauthorized()
+    {
+        return Create(ErrorCodes.Unauthorized, "Sign in is required.");
+    }
 }
