@@ -1,7 +1,9 @@
-// The deck: cards the exact size of the vote card on a person's tile (72 x 96, 3px frame), so picking and revealing match.
+// The deck: 72 x 96 (the vote card on a person's tile) on small screens, growing with the viewport up to 120 x 160 so
+// the card art stays legible on big ones.
 .cards {
+  --card-w: clamp(72px, 6.5vw, 120px);
   display: grid;
-  grid-template-columns: repeat(auto-fill, 72px);
+  grid-template-columns: repeat(auto-fill, var(--card-w));
   justify-content: space-between;
   gap: 0.75rem 0.5rem;
   margin-bottom: 1rem;
@@ -13,13 +15,13 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 72px;
-  height: 96px;
+  width: var(--card-w);
+  aspect-ratio: 3 / 4;
   border: 3px solid var(--border-color);
   border-radius: 10px;
   background: var(--card-bg);
   color: var(--text-color);
-  font-size: 2.1rem;
+  font-size: calc(var(--card-w) * 0.29);
   font-weight: 700;
   cursor: pointer;
   user-select: none;
@@ -109,8 +111,8 @@
   }
 
   img {
-    height: 2.4rem;
-    width: 2.4rem;
+    height: calc(var(--card-w) * 0.33);
+    width: calc(var(--card-w) * 0.33);
     // The fist-of-five images are black line art: the PNG is the mask and the fill is the theme's text colour. The
     // image itself is pushed out of its box so only the recoloured mask shows.
     background-color: var(--text-color);

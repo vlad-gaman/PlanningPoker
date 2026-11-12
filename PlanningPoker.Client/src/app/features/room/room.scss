@@ -42,22 +42,12 @@
   margin: 2rem auto;
 }
 
-// People and results on the left, the card deck and actions in a rail on the right.
+// People and results, with the card deck in a full-width panel below them so the cards lay out in a row.
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 17rem;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-
-    // The deck comes first on a phone so a vote is one tap away.
-    .rail {
-      order: -1;
-      position: static;
-    }
-  }
 }
 
 .head {
@@ -249,8 +239,6 @@
 }
 
 .rail {
-  position: sticky;
-  top: 1rem;
   padding: 1rem;
   border: 1px solid var(--border-color);
   border-radius: 16px;
