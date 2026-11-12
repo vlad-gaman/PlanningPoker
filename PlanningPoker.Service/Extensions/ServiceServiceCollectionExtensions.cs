@@ -41,6 +41,10 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IPresenceService, PresenceService>();
         services.AddHostedService<PresenceBackgroundService>();
         services.AddSingleton<IRoomRestorer, RoomRestorer>();
+        services.AddOptions<OperatorOptions>().BindConfiguration(OperatorConstants.ConfigurationSection);
+        services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
+        services.AddSingleton<ILoginLockoutService, LoginLockoutService>();
+        services.AddSingleton<IOperatorAuthService, OperatorAuthService>();
         return services;
     }
 
