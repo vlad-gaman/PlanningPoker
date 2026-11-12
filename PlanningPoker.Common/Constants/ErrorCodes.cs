@@ -9,6 +9,7 @@ public static class ErrorCodes
     public const string Unauthorized = "unauthorized";
     public const string NotFound = "not_found";
     public const string RoomNotFound = "room_not_found";
+    public const string PersonNotFound = "person_not_found";
     public const string RoomIdGenerationFailed = "room_id_generation_failed";
     public const string NotRoomOwner = "not_room_owner";
     public const string Forbidden = "forbidden";

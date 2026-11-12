@@ -4,5 +4,5 @@ namespace PlanningPoker.Controller.Mappers;
 
 public interface IRoomDisposedEventMapper
 {
-    RoomDisposedEvent Map(string roomId);
+    RoomDisposedEvent Map(string roomId, string? reason = null);
 }

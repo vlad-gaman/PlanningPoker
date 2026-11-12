@@ -7,6 +7,6 @@ public class PersonExitedEventMapper(IPersonResponseMapper personMapper) : IPers
 {
     public PersonExitedEvent Map(ExitRoomResult result)
     {
-        return new PersonExitedEvent { Person = personMapper.Map(result.Person) };
+        return new PersonExitedEvent { Person = personMapper.Map(result.Person), Reason = result.Reason };
     }
 }

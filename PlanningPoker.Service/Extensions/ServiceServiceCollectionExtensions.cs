@@ -57,6 +57,7 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IAdminRoomMapper, AdminRoomMapper>();
         services.AddSingleton<IAdminOverviewMapper, AdminOverviewMapper>();
         services.AddSingleton<IAdminOverviewService, AdminOverviewService>();
+        services.AddSingleton<IAdminActionService, AdminActionService>();
         services.AddSingleton<ILoggerProvider, IssueLoggerProvider>();
         return services;
     }
