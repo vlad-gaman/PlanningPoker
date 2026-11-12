@@ -5,8 +5,17 @@ import { ApiRequestError } from './api-request-error';
 
 export type HubConnectionFactory = () => signalR.HubConnection;
 
+const MAX_RECONNECT_DELAY_MS = 30_000;
+
+/** Retries without end, backing off from 1 s up to 30 s, so a client outlasts a server restart however long it takes. */
+export const reconnectDelayMs = (previousRetryCount: number): number =>
+  Math.min(MAX_RECONNECT_DELAY_MS, 1000 * 2 ** previousRetryCount);
+
 export const defaultHubConnectionFactory: HubConnectionFactory = () =>
-  new signalR.HubConnectionBuilder().withUrl('/hubs/room').withAutomaticReconnect().build();
+  new signalR.HubConnectionBuilder()
+    .withUrl('/hubs/room')
+    .withAutomaticReconnect({ nextRetryDelayInMilliseconds: (context) => reconnectDelayMs(context.previousRetryCount) })
+    .build();
 
 /** Wraps the SignalR connection; hub invocations that return an ApiResponse are unwrapped. Each room provides its own. */
 @Injectable()

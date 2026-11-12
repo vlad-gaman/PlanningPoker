@@ -1,4 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using PlanningPoker.Common.Constants;
+using PlanningPoker.Repository.Models;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Repositories;
 
@@ -11,6 +15,12 @@ public static class RepositoryServiceCollectionExtensions
         services.AddSingleton<IRoomConfigurationEntityCopyMapper, RoomConfigurationEntityCopyMapper>();
         services.AddSingleton<IRevealedVotesEntityCopyMapper, RevealedVotesEntityCopyMapper>();
         services.AddSingleton<IRoomEntityCopyMapper, RoomEntityCopyMapper>();
+        services.AddSingleton<IStoredRoomMapper, StoredRoomMapper>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddOptions<PersistenceOptions>().BindConfiguration(PersistenceConstants.ConfigurationSection);
+        services.AddSingleton<IRoomChangeLog, RoomChangeLog>();
+        services.AddSingleton<IRoomStore, SqliteRoomStore>();
+        services.AddHostedService<RoomPersistenceWriter>();
         services.AddSingleton<IPersonRepository, PersonRepository>();
         services.AddSingleton<IRoomRepository, RoomRepository>();
         return services;

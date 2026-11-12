@@ -698,4 +698,43 @@ public class PresenceServiceTests
 
         Assert.Equal(guest, Assert.Single(sweep.Removed).Person.Guid);
     }
+
+    // --- restored rooms ---
+
+    [Fact]
+    public void SweepPresence_RestoredRoomWhoseMembersHaveNotReturned_IsKeptUntilTheyAreRemoved()
+    {
+        var (roomId, people) = RoomWith(PersonTypes.Developer, PersonTypes.Developer);
+        _presence.Disconnect(people[0], "c1");
+        _presence.Disconnect(people[1], "c2");
+        _rooms.Update(roomId, room => room.AwaitingReturn = true, out _);
+
+        SweepAfter(Grace + Grace + TimeSpan.FromMinutes(1));
+        Assert.NotNull(_rooms.Get(roomId));
+
+        SweepAfter(Window);
+        Assert.Null(_rooms.Get(roomId));
+    }
+
+    [Fact]
+    public void SweepPresence_RestoredRoomOnceSomeoneIsConnected_StopsAwaitingReturn()
+    {
+        var (roomId, _) = RoomWith(PersonTypes.Developer);
+        _rooms.Update(roomId, room => room.AwaitingReturn = true, out _);
+
+        SweepAfter(TimeSpan.FromSeconds(1));
+
+        Assert.False(_rooms.Get(roomId)!.AwaitingReturn);
+    }
+
+    [Fact]
+    public void SweepPresence_RoomNotRestored_IsDeletedWhenNobodyIsOnline()
+    {
+        var (roomId, people) = RoomWith(PersonTypes.Developer);
+        _presence.Disconnect(people[0], "c1");
+
+        SweepAfter(Grace + Grace + TimeSpan.FromSeconds(1));
+
+        Assert.Null(_rooms.Get(roomId));
+    }
 }

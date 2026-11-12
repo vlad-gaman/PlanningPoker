@@ -6,3 +6,6 @@ obj/
 # Client build copied into the API
 /PlanningPoker.Api/wwwroot/
 /publish/
+*.db
+*.db-journal
+*.db.unreadable-*

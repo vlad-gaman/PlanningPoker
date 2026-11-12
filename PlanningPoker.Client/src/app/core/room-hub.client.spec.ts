@@ -1,6 +1,6 @@
 import { HubConnection, HubConnectionState } from '@microsoft/signalr';
 import { ApiRequestError } from './api-request-error';
-import { RoomHubClient } from './room-hub.client';
+import { reconnectDelayMs, RoomHubClient } from './room-hub.client';
 
 function fakeConnection(invokeResult?: unknown) {
   return {
@@ -117,5 +117,13 @@ describe('RoomHubClient', () => {
     expect(second.stop).not.toHaveBeenCalled();
     await client.disconnect();
     expect(second.stop).toHaveBeenCalledOnce();
+  });
+});
+
+describe('reconnectDelayMs', () => {
+  it('backs off from one second and never gives up or exceeds thirty seconds', () => {
+    expect([0, 1, 2, 3].map(reconnectDelayMs)).toEqual([1000, 2000, 4000, 8000]);
+    expect(reconnectDelayMs(5)).toBe(30_000);
+    expect(reconnectDelayMs(500)).toBe(30_000);
   });
 });
