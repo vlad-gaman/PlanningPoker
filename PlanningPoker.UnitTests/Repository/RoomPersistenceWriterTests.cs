@@ -110,6 +110,20 @@ public class RoomPersistenceWriterTests
         Assert.True(_store.Rooms.Count == 1, string.Join(" | ", _logger.Collector.GetSnapshot().Select(r => r.Message + r.Exception)) + " pending=" + _log.Changes.Count);
     }
 
+    [Fact]
+    public async Task Stop_StampsRoomsWithSomeoneConnectedWithTheTimeOfTheStop()
+    {
+        var owner = AddRoom();
+        _rooms.Update("r", room => room.MemberConnections[owner] = ["c1"], out _);
+        _writer.Flush();
+        await _writer.StartAsync(CancellationToken.None);
+        _time.Advance(TimeSpan.FromSeconds(7));
+
+        await _writer.StopAsync(CancellationToken.None);
+
+        Assert.Equal(_time.GetUtcNow(), _store.Rooms["r"].SavedAt);
+    }
+
     private static async Task Eventually(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);

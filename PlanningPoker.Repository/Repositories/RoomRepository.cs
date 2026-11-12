@@ -13,6 +13,9 @@ namespace PlanningPoker.Repository.Repositories;
 public class RoomRepository(IRoomEntityCopyMapper mapper, IRoomChangeLog? changeLog = null, TimeProvider? time = null) : IRoomRepository
 {
     private readonly ConcurrentDictionary<string, RoomEntity> _rooms = new();
+
+    /// <summary>The serialized state of each room as of its last change, so an update serializes the room once, after the change, to see whether it differs.</summary>
+    private readonly ConcurrentDictionary<string, string> _fingerprints = new();
     private readonly TimeProvider _time = time ?? TimeProvider.System;
 
     public RoomEntity? Get(string roomId)
@@ -41,7 +44,12 @@ public class RoomRepository(IRoomEntityCopyMapper mapper, IRoomChangeLog? change
             return false;
         }
 
-        changeLog?.MarkChanged(room.Id);
+        if (changeLog is not null)
+        {
+            _fingerprints[room.Id] = JsonSerializer.Serialize(copy);
+            changeLog.MarkChanged(room.Id);
+        }
+
         return true;
     }
 
@@ -52,6 +60,7 @@ public class RoomRepository(IRoomEntityCopyMapper mapper, IRoomChangeLog? change
             return false;
         }
 
+        _fingerprints.TryRemove(roomId, out _);
         changeLog?.MarkChanged(roomId);
         return true;
     }
@@ -71,12 +80,16 @@ public class RoomRepository(IRoomEntityCopyMapper mapper, IRoomChangeLog? change
 
         lock (room)
         {
-            var before = changeLog is null ? null : JsonSerializer.Serialize(room);
             result = mutate(room);
-            if (before is not null && JsonSerializer.Serialize(room) != before)
+            if (changeLog is not null && _fingerprints.TryGetValue(roomId, out var before))
             {
-                room.LastActivityAt = _time.GetUtcNow();
-                changeLog!.MarkChanged(roomId);
+                var after = JsonSerializer.Serialize(room);
+                if (after != before)
+                {
+                    room.LastActivityAt = _time.GetUtcNow();
+                    _fingerprints[roomId] = JsonSerializer.Serialize(room);
+                    changeLog.MarkChanged(roomId);
+                }
             }
 
             return true;

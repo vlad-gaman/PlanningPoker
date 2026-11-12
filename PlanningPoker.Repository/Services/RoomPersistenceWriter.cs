@@ -41,6 +41,9 @@ public class RoomPersistenceWriter(
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         await base.StopAsync(cancellationToken);
+
+        // A graceful stop knows exactly when the people still connected were last online: now.
+        MarkConnectedRoomsChanged();
         Flush();
     }
 
@@ -63,12 +66,17 @@ public class RoomPersistenceWriter(
                 changeLog.MarkChanged(roomId);
             }
 
-            foreach (var roomId in rooms.Ids())
+            MarkConnectedRoomsChanged();
+        }
+    }
+
+    private void MarkConnectedRoomsChanged()
+    {
+        foreach (var roomId in rooms.Ids())
+        {
+            if (rooms.Get(roomId) is { MemberConnections.Count: > 0 })
             {
-                if (rooms.Get(roomId) is { MemberConnections.Count: > 0 })
-                {
-                    changeLog.MarkChanged(roomId);
-                }
+                changeLog.MarkChanged(roomId);
             }
         }
     }

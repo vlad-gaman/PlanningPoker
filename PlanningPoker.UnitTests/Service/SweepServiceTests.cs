@@ -20,7 +20,7 @@ public class SweepServiceTests
 
     public SweepServiceTests()
     {
-        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), time: _time);
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), new PlanningPoker.Repository.Services.RoomChangeLog(), _time);
     }
 
     private SweepService CreateService(IRoomRepository? rooms = null, IPersonRepository? people = null)
@@ -302,5 +302,30 @@ public class SweepServiceTests
         Assert.Equal(TimeSpan.FromHours(24), options.AbandonedAfter);
         Assert.Equal(TimeSpan.FromMinutes(10), options.Interval);
         Assert.Equal("Sweep", SweepConstants.ConfigurationSection);
+    }
+
+    [Fact]
+    public void Sweep_OldRoomThatChangedRecently_IsKept()
+    {
+        var roomId = AddRoom(Guid.NewGuid(), Ago(Ttl * 3));
+        _rooms.Update(roomId, room => room.VotingEnabled = true, out _);
+        _time.Advance(Ttl - TimeSpan.FromHours(1));
+
+        var result = CreateService().Sweep();
+
+        Assert.Equal(0, result.Rooms);
+        Assert.NotNull(_rooms.Get(roomId));
+    }
+
+    [Fact]
+    public void Sweep_RoomWhoseLastChangeIsOlderThanTtl_IsRemoved()
+    {
+        var roomId = AddRoom(Guid.NewGuid(), Ago(Ttl * 3));
+        _time.Advance(Ttl + TimeSpan.FromSeconds(1));
+
+        var result = CreateService().Sweep();
+
+        Assert.Equal(1, result.Rooms);
+        Assert.Null(_rooms.Get(roomId));
     }
 }

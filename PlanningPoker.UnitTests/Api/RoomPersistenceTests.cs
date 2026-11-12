@@ -150,6 +150,40 @@ public sealed class RoomPersistenceTests : IDisposable
     }
 
     [Fact]
+    public async Task Restart_SamePersonJoiningFromTwoTabs_StaysOnePersonInTheRoom()
+    {
+        var first = Boot();
+        var (roomId, annCookie, ann, bob) = await OpenRoom(first);
+        await ann.DisposeAsync();
+        await bob.DisposeAsync();
+        await first.DisposeAsync();
+
+        await using var second = Boot();
+        await Rejoin(second, annCookie, roomId);
+        var joinedAgain = await Rejoin(second, annCookie, roomId);
+
+        Assert.Equal(2, joinedAgain.GetProperty("people").GetArrayLength());
+        Assert.False(Person(joinedAgain, "Ann").GetProperty("isOffgrid").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Restart_RoomNotTouchedForLongerThanTheAbandonedTime_IsNotKept()
+    {
+        var first = Boot();
+        var (roomId, _, ann, bob) = await OpenRoom(first);
+        await ann.DisposeAsync();
+        await bob.DisposeAsync();
+        await first.DisposeAsync();
+
+        await using var second = Boot(TimeSpan.FromDays(2));
+        await TestSession.WaitUntilAsync(async () =>
+        {
+            second.Time.Advance(TimeSpan.FromSeconds(2));
+            return !await RoomExists(second, roomId);
+        }, TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
     public async Task CorruptStore_StartsCleanWithNoRoomsAndKeepsWorking()
     {
         await File.WriteAllTextAsync(_store, "this is not a sqlite database");
