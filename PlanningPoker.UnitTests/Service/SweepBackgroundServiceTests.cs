@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
+using PlanningPoker.UnitTests.Fakes;
 
 namespace PlanningPoker.UnitTests.Service;
 
@@ -41,9 +42,9 @@ public class SweepBackgroundServiceTests
         }
     }
 
-    private static SweepBackgroundService Create(ISweepService sweep, FakeTimeProvider time, ILogger<SweepBackgroundService>? logger = null)
+    private static SweepBackgroundService Create(ISweepService sweep, FakeTimeProvider time, ILogger<SweepBackgroundService>? logger = null, IIssueLog? issues = null)
     {
-        return new SweepBackgroundService(sweep, Options.Create(new SweepOptions { Interval = Interval }), time, logger ?? NullLogger<SweepBackgroundService>.Instance);
+        return new SweepBackgroundService(sweep, Options.Create(new SweepOptions { Interval = Interval }), time, issues ?? new FakeIssueLog(), logger ?? NullLogger<SweepBackgroundService>.Instance);
     }
 
     /// <summary>
@@ -167,5 +168,29 @@ public class SweepBackgroundServiceTests
         await AdvanceUntil(time, () => throwing.Calls >= 2);
 
         await service.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public void RunOnce_ASweepThatRemovedSomething_RecordsItAndPrunesTheLog()
+    {
+        var issues = new FakeIssueLog();
+        var service = Create(new CountingSweep(() => new SweepResult { Rooms = 2, People = 3 }), new FakeTimeProvider(), issues: issues);
+
+        service.RunOnce();
+
+        Assert.Equal([(PlanningPoker.Common.Models.IssueLevel.Info, "Sweep", "Swept 2 rooms and 3 people")], issues.Recorded);
+        Assert.Equal(1, issues.Prunes);
+    }
+
+    [Fact]
+    public void RunOnce_ASweepThatRemovedNothing_RecordsNothingButStillPrunes()
+    {
+        var issues = new FakeIssueLog();
+        var service = Create(new CountingSweep(), new FakeTimeProvider(), issues: issues);
+
+        service.RunOnce();
+
+        Assert.Empty(issues.Recorded);
+        Assert.Equal(1, issues.Prunes);
     }
 }

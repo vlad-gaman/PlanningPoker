@@ -5,6 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
+using PlanningPoker.UnitTests.Fakes;
 
 namespace PlanningPoker.UnitTests.Service;
 
@@ -15,6 +16,7 @@ public class OperatorAuthServiceTests
     private const string Address = "203.0.113.7";
 
     private readonly PasswordHashingService _hashing = new();
+    private readonly FakeIssueLog _issues = new();
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
 
     private OperatorAuthService Create(bool configured = true, TimeSpan? failureDelay = null)
@@ -25,7 +27,7 @@ public class OperatorAuthServiceTests
             PasswordHash = configured ? _hashing.Hash(Password) : null,
             FailureDelay = failureDelay ?? TimeSpan.Zero
         });
-        return new OperatorAuthService(options, _hashing, new LoginLockoutService(options, _time), NullLogger<OperatorAuthService>.Instance);
+        return new OperatorAuthService(options, _hashing, new LoginLockoutService(options, _time), NullLogger<OperatorAuthService>.Instance, _issues);
     }
 
     [Fact]
@@ -127,5 +129,40 @@ public class OperatorAuthServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.True(stopwatch.ElapsedMilliseconds < 2000);
+    }
+
+    [Fact]
+    public async Task Authenticate_ASuccess_RecordsAnInfoEntryWithoutTheAddress()
+    {
+        await Create().AuthenticateAsync(Username, Password, Address);
+
+        var entry = Assert.Single(_issues.Recorded);
+        Assert.Equal(PlanningPoker.Common.Models.IssueLevel.Info, entry.Level);
+        Assert.Equal(IssueLogConstants.AdminSource, entry.Source);
+        Assert.DoesNotContain(Address, entry.Message);
+        Assert.Empty(_issues.FailedLogins);
+    }
+
+    [Fact]
+    public async Task Authenticate_AFailure_RecordsAFailedLoginWithTheAddress()
+    {
+        await Create().AuthenticateAsync(Username, "nope", Address);
+
+        Assert.Equal([(Address, false)], _issues.FailedLogins);
+        Assert.Empty(_issues.Recorded);
+    }
+
+    [Fact]
+    public async Task Authenticate_WhenLocked_RecordsALockedFailedLogin()
+    {
+        var service = Create();
+        for (var attempt = 0; attempt < OperatorConstants.MaxFailedLogins; attempt++)
+        {
+            await service.AuthenticateAsync(Username, "nope", Address);
+        }
+
+        await service.AuthenticateAsync(Username, Password, Address);
+
+        Assert.Equal((Address, true), _issues.FailedLogins[^1]);
     }
 }

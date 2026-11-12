@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using PlanningPoker.Common.Models;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Models;
@@ -45,13 +47,23 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
         services.AddSingleton<ILoginLockoutService, LoginLockoutService>();
         services.AddSingleton<IOperatorAuthService, OperatorAuthService>();
+        services.AddOptions<IssueLogOptions>().BindConfiguration(IssueLogConstants.ConfigurationSection);
+        services.AddSingleton<IIssueEntryMapper, IssueEntryMapper>();
+        services.AddSingleton<IIssueRedactor, IssueRedactor>();
+        services.AddSingleton<IIssueLog, IssueLog>();
+        services.AddSingleton<ILoggerProvider, IssueLoggerProvider>();
         return services;
     }
 
     /// <summary>Loads the stored rooms into memory. Call it once after the host is built and before it starts, so people reconnect to the rooms they left.</summary>
     public static IServiceProvider RestoreRooms(this IServiceProvider services)
     {
-        services.GetRequiredService<IRoomRestorer>().Restore();
+        var restored = services.GetRequiredService<IRoomRestorer>().Restore();
+        if (restored > 0)
+        {
+            services.GetRequiredService<IIssueLog>().Record(IssueLevel.Info, "Startup", $"Restored {restored} rooms from the store");
+        }
+
         return services;
     }
 }

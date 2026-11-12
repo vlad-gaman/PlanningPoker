@@ -20,6 +20,7 @@ public static class RepositoryServiceCollectionExtensions
         services.AddOptions<PersistenceOptions>().BindConfiguration(PersistenceConstants.ConfigurationSection);
         services.AddSingleton<IRoomChangeLog, RoomChangeLog>();
         services.AddSingleton<IRoomStore, SqliteRoomStore>();
+        services.AddSingleton<IIssueStore, SqliteIssueStore>();
         services.AddHostedService<RoomPersistenceWriter>();
         services.AddSingleton<IPersonRepository, PersonRepository>();
         services.AddSingleton<IRoomRepository, RoomRepository>();
