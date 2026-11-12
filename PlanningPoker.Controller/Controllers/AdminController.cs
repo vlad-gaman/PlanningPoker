@@ -27,7 +27,7 @@ public class AdminController(
     IAdminSessionResponseMapper sessionMapper,
     IApiResponseMapper apiResponseMapper) : ApiControllerBase(apiResponseMapper)
 {
-    /// <summary>Signs the Operator in. Failures say only that the username or password is wrong, or that sign-in is locked.</summary>
+    /// <summary>The password step. With an authenticator configured a correct password answers 401 <c>admin_totp_required</c> with a challenge for <c>login/totp</c>. Failures say only that the username or password is wrong, or that sign-in is locked.</summary>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType<ApiResponse<AdminSessionResponse>>(StatusCodes.Status200OK)]
@@ -42,16 +42,25 @@ public class AdminController(
             return ToResult(ServiceResponse<OperatorIdentity>.Failure(validated), _ => sessionMapper.MapSignedOut());
         }
 
-        var result = await auth.AuthenticateAsync(request.Username, request.Password, HttpContext.Connection.RemoteIpAddress?.ToString());
-        if (!result.IsSuccess)
+        return await SignIn(await auth.AuthenticateAsync(request.Username, request.Password, HttpContext.Connection.RemoteIpAddress?.ToString()));
+    }
+
+    /// <summary>The code step of a sign-in with an authenticator: the challenge from the password step and a current code.</summary>
+    [HttpPost("login/totp")]
+    [AllowAnonymous]
+    [ProducesResponseType<ApiResponse<AdminSessionResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> LoginTotp([FromBody] AdminTotpRequest request)
+    {
+        var validated = validation.Validate(request);
+        if (!validated.IsSuccess)
         {
-            return ToResult(result, identity => sessionMapper.MapSignedIn(identity.Username, string.Empty));
+            return ToResult(ServiceResponse<OperatorIdentity>.Failure(validated), _ => sessionMapper.MapSignedOut());
         }
 
-        var principal = CreatePrincipal(result.Data!);
-        await HttpContext.SignInAsync(OperatorConstants.AuthenticationScheme, principal);
-        HttpContext.User = principal;
-        return ToResult(result, identity => sessionMapper.MapSignedIn(identity.Username, IssueCsrfToken()));
+        return await SignIn(await auth.CompleteTotpAsync(request.Challenge, request.Code, HttpContext.Connection.RemoteIpAddress?.ToString()));
     }
 
     /// <summary>The current Operator session. When signed in, includes a fresh anti-forgery token.</summary>
@@ -82,6 +91,19 @@ public class AdminController(
         await HttpContext.SignOutAsync(OperatorConstants.AuthenticationScheme);
         Response.Cookies.Delete(OperatorConstants.XsrfCookieName);
         return ToResult(ServiceResponse<AdminSessionResponse>.Success(sessionMapper.MapSignedOut()), session => session);
+    }
+
+    private async Task<IActionResult> SignIn(ServiceResponse<OperatorIdentity> result)
+    {
+        if (!result.IsSuccess)
+        {
+            return ToResult(result, identity => sessionMapper.MapSignedIn(identity.Username, string.Empty));
+        }
+
+        var principal = CreatePrincipal(result.Data!);
+        await HttpContext.SignInAsync(OperatorConstants.AuthenticationScheme, principal);
+        HttpContext.User = principal;
+        return ToResult(result, identity => sessionMapper.MapSignedIn(identity.Username, IssueCsrfToken()));
     }
 
     private static ClaimsPrincipal CreatePrincipal(OperatorIdentity identity)

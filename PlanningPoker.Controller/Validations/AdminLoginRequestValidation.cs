@@ -15,13 +15,21 @@ public class AdminLoginRequestValidation
         return errors.Count == 0 ? ServiceResponse.Success() : ServiceResponse.Failure([.. errors]);
     }
 
-    private static void Check(List<ServiceError> errors, string field, string? value)
+    public ServiceResponse Validate(AdminTotpRequest request)
+    {
+        var errors = new List<ServiceError>();
+        Check(errors, "challenge", request.Challenge, 1024);
+        Check(errors, "code", request.Code, 16);
+        return errors.Count == 0 ? ServiceResponse.Success() : ServiceResponse.Failure([.. errors]);
+    }
+
+    private static void Check(List<ServiceError> errors, string field, string? value, int maxLength = MaxLength)
     {
         if (string.IsNullOrEmpty(value))
         {
             errors.Add(ServiceError.ValidationFailed(field, "required"));
         }
-        else if (value.Length > MaxLength)
+        else if (value.Length > maxLength)
         {
             errors.Add(ServiceError.ValidationFailed(field, "too_long"));
         }

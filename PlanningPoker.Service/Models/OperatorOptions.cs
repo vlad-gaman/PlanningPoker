@@ -10,6 +10,12 @@ public class OperatorOptions
     /// <summary>The Operator's password hash (ASP.NET Core Identity format). Never stored in appsettings files.</summary>
     public string? PasswordHash { get; set; }
 
+    /// <summary>The Base32 secret of the Operator's authenticator app. Never stored in appsettings files. Unset means no second step.</summary>
+    public string? TotpSecret { get; set; }
+
+    /// <summary>How long the password step stays valid while the code is entered.</summary>
+    public TimeSpan ChallengeLifetime { get; set; } = OperatorConstants.ChallengeLifetime;
+
     /// <summary>Failed sign-ins (per IP address, and for the Operator account) that trigger a lockout.</summary>
     public int MaxFailures { get; set; } = OperatorConstants.MaxFailedLogins;
 

@@ -38,6 +38,33 @@ public class AdminLoginRequestValidationTests
     }
 }
 
+public class AdminTotpRequestValidationTests
+{
+    private readonly AdminLoginRequestValidation _validation = new();
+
+    [Fact]
+    public void Validate_BothFieldsPresent_Succeeds()
+    {
+        Assert.True(_validation.Validate(new AdminTotpRequest { Challenge = "abc.def", Code = "123456" }).IsSuccess);
+    }
+
+    [Fact]
+    public void Validate_MissingFields_ReportsEachOne()
+    {
+        var result = _validation.Validate(new AdminTotpRequest { Challenge = "", Code = null! });
+
+        Assert.Equal(["challenge", "code"], result.Errors.Select(error => error.Metadata["field"]));
+    }
+
+    [Fact]
+    public void Validate_AnOverlongCode_IsTooLong()
+    {
+        var result = _validation.Validate(new AdminTotpRequest { Challenge = "abc.def", Code = new string('1', 17) });
+
+        Assert.Equal("too_long", result.Errors.Single().Metadata["reason"]);
+    }
+}
+
 public class AdminSessionResponseMapperTests
 {
     private readonly AdminSessionResponseMapper _mapper = new();
