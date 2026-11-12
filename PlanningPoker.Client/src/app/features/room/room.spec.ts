@@ -89,6 +89,30 @@ describe('Room', () => {
     expect(element.textContent).not.toContain('(owner)');
   });
 
+  it('sends the visitor home with the operator message when an operator removes them', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    await render();
+
+    hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe('You were removed by an operator.');
+  });
+
+  it('keeps the visitor in the room when an operator removes someone else', async () => {
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    const { fixture, element } = await render();
+
+    hub.emit(HUB_EVENTS.PersonExited, { person: BOB, reason: 'removedByOperator' });
+    await settle(fixture);
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
+    expect(element.textContent).not.toContain('operator');
+  });
+
   it('flags offgrid people on their tile and leaves online people unflagged', async () => {
     me.get.mockReturnValue(of(ANN));
     hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });

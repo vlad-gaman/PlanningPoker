@@ -15,7 +15,15 @@ import {
   fakeHub,
   revealed,
 } from '../../testing/fake-hub.testing';
-import { ROOM_DISPOSED_MESSAGE, ROOM_OPENED_ELSEWHERE_MESSAGE, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
+import {
+  REMOVED_BY_OPERATOR_MESSAGE,
+  ROOM_CLOSED_BY_OPERATOR_MESSAGE,
+  ROOM_DISPOSED_MESSAGE,
+  ROOM_OPENED_ELSEWHERE_MESSAGE,
+  ROOM_NOT_FOUND_MESSAGE,
+  RoomStore,
+  isRoomGone,
+} from './room-store';
 
 const CLEARED_AT = '2026-01-01T12:10:00+00:00';
 
@@ -228,6 +236,68 @@ describe('RoomStore', () => {
     expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_DISPOSED_MESSAGE);
     expect(hub.disconnect).toHaveBeenCalledOnce();
     expect(store.people()).toEqual([]);
+  });
+
+  it('goes home with the operator message when an operator closed the room', async () => {
+    hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'room-1', reason: 'closedByOperator' });
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_CLOSED_BY_OPERATOR_MESSAGE);
+    expect(hub.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the ordinary message when the disposal has a null reason', async () => {
+    hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'room-1', reason: null });
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_DISPOSED_MESSAGE);
+  });
+
+  it('ignores an operator closure of another room', () => {
+    hub.emit(HUB_EVENTS.RoomDisposed, { roomId: 'other', reason: 'closedByOperator' });
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
+  });
+
+  it('sends the removed person home with the operator message', async () => {
+    await store.join('room-1', ANN.guid);
+
+    hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+    expect(TestBed.inject(FlashMessageService).message()).toBe(REMOVED_BY_OPERATOR_MESSAGE);
+    expect(hub.disconnect).toHaveBeenCalled();
+  });
+
+  it('shows another person an ordinary exit when the operator removed someone else', async () => {
+    await store.join('room-1', ANN.guid);
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+    expect(store.people().map((person) => person.guid)).toContain(BOB.guid);
+
+    hub.emit(HUB_EVENTS.PersonExited, { person: BOB, reason: 'removedByOperator' });
+
+    expect(store.people().map((person) => person.guid)).not.toContain(BOB.guid);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
+  });
+
+  it('shows nothing about an operator when an ordinary exit has no reason', async () => {
+    await store.join('room-1', ANN.guid);
+    hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
+
+    hub.emit(HUB_EVENTS.PersonExited, { person: BOB });
+    hub.emit(HUB_EVENTS.PersonExited, { person: BOB, reason: null });
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
+  });
+
+  it('does not send anyone home for a removal when it does not know who the person is', () => {
+    hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
   });
 
   it('ignores a disposal of another room', () => {

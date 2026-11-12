@@ -32,6 +32,10 @@ export const ROOM_NOT_FOUND_MESSAGE = 'That room does not exist (any more).';
 export const HIDDEN_MARK = 'hide';
 export const ROOM_OPENED_ELSEWHERE_MESSAGE = 'This room was opened in another tab, so it is no longer shown here.';
 export const ROOM_DISPOSED_MESSAGE = 'The room was closed because everyone left.';
+export const ROOM_CLOSED_BY_OPERATOR_MESSAGE = 'This room was closed by an operator.';
+export const REMOVED_BY_OPERATOR_MESSAGE = 'You were removed by an operator.';
+/** Why the server sent a RoomDisposed or PersonExited that was not the ordinary one. Must match PlanningPoker.Common/Constants/RoomEventReasons.cs. */
+export const EVENT_REASONS = { closedByOperator: 'closedByOperator', removedByOperator: 'removedByOperator' } as const;
 
 /** Milliseconds since the epoch for the server's ISO stamp; null when it is missing or unreadable. */
 function parseStamp(stamp: string | undefined): number | null {
@@ -71,6 +75,8 @@ export class RoomStore {
   private readonly connectedState = signal(true);
 
   private roomId = '';
+  /** The guid of the person using this client, when the caller knows it; only an Operator removal of that person sends them home. */
+  private myGuid: string | null = null;
   private bound = false;
   /** False after close(); a reconnect only rejoins while the store is open. */
   private open = false;
@@ -109,9 +115,10 @@ export class RoomStore {
    */
   readonly revealCount = this.revealCountState.asReadonly();
 
-  async join(roomId: string): Promise<void> {
+  async join(roomId: string, myGuid: string | null = null): Promise<void> {
     const gen = ++this.generation;
     this.roomId = roomId;
+    this.myGuid = myGuid;
     this.open = true;
     await this.hub.connect();
     if (gen !== this.generation) {
@@ -392,6 +399,13 @@ export class RoomStore {
 
   private personExited(event: PersonExitedEvent): void {
     const guid = event.person.guid;
+    // Only the removed person is told it was an operator; everyone else sees an ordinary exit.
+    if (event.reason === EVENT_REASONS.removedByOperator && guid === this.myGuid) {
+      this.flash.show(REMOVED_BY_OPERATOR_MESSAGE);
+      void this.leave();
+      return;
+    }
+
     this.peopleState.update((people) => people.filter((p) => p.guid !== guid));
     this.votesState.update((votes) => Object.fromEntries(Object.entries(votes).filter(([key]) => key !== guid)));
   }
@@ -400,7 +414,7 @@ export class RoomStore {
     if (event.roomId !== this.roomId) {
       return;
     }
-    this.flash.show(ROOM_DISPOSED_MESSAGE);
+    this.flash.show(event.reason === EVENT_REASONS.closedByOperator ? ROOM_CLOSED_BY_OPERATOR_MESSAGE : ROOM_DISPOSED_MESSAGE);
     await this.leave();
   }
 }
