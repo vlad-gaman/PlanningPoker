@@ -112,6 +112,24 @@ public class IssueLogTests
     }
 
     [Fact]
+    public void CountFailedLogins_CountsTheEntriesCarryingAnAddress()
+    {
+        var log = Create();
+        log.RecordFailedLogin("203.0.113.7", locked: false);
+        log.Record(IssueLevel.Info, "Admin", "Operator signed in");
+
+        Assert.Equal(1, log.CountFailedLogins(_time.GetUtcNow().AddHours(-1)));
+    }
+
+    [Fact]
+    public void CountFailedLogins_TheStoreFails_IsZero()
+    {
+        _store.Failing = true;
+
+        Assert.Equal(0, Create().CountFailedLogins(_time.GetUtcNow()));
+    }
+
+    [Fact]
     public void Prune_PassesTheAgeAndCountLimitsToTheStore()
     {
         Create().Prune();

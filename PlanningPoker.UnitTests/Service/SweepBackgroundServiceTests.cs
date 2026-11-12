@@ -42,9 +42,9 @@ public class SweepBackgroundServiceTests
         }
     }
 
-    private static SweepBackgroundService Create(ISweepService sweep, FakeTimeProvider time, ILogger<SweepBackgroundService>? logger = null, IIssueLog? issues = null)
+    private static SweepBackgroundService Create(ISweepService sweep, FakeTimeProvider time, ILogger<SweepBackgroundService>? logger = null, IIssueLog? issues = null, IServerStatistics? statistics = null)
     {
-        return new SweepBackgroundService(sweep, Options.Create(new SweepOptions { Interval = Interval }), time, issues ?? new FakeIssueLog(), logger ?? NullLogger<SweepBackgroundService>.Instance);
+        return new SweepBackgroundService(sweep, Options.Create(new SweepOptions { Interval = Interval }), time, issues ?? new FakeIssueLog(), statistics ?? new ServerStatistics(time), logger ?? NullLogger<SweepBackgroundService>.Instance);
     }
 
     /// <summary>
@@ -192,5 +192,17 @@ public class SweepBackgroundServiceTests
 
         Assert.Empty(issues.Recorded);
         Assert.Equal(1, issues.Prunes);
+    }
+
+    [Fact]
+    public void RunOnce_FeedsTheServerStatistics()
+    {
+        var time = new FakeTimeProvider();
+        var statistics = new ServerStatistics(time);
+        var service = Create(new CountingSweep(() => new SweepResult { Rooms = 4, People = 1 }), time, statistics: statistics);
+
+        service.RunOnce();
+
+        Assert.Equal(4, statistics.RoomsSweptSince(DateTimeOffset.MinValue));
     }
 }

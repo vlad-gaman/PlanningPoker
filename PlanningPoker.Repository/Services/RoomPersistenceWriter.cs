@@ -20,7 +20,8 @@ public class RoomPersistenceWriter(
     IStoredRoomMapper storedRoomMapper,
     IOptions<PersistenceOptions> options,
     TimeProvider time,
-    ILogger<RoomPersistenceWriter> logger) : BackgroundService
+    ILogger<RoomPersistenceWriter> logger,
+    IPersistenceStatus status) : BackgroundService
 {
     /// <summary>Rooms whose last write failed; the next heartbeat marks them changed again so the store catches up once it works.</summary>
     private readonly HashSet<string> _failed = [];
@@ -100,6 +101,7 @@ public class RoomPersistenceWriter(
             changed.Add(roomId);
         }
 
+        var failedRooms = 0;
         foreach (var roomId in changed)
         {
             try
@@ -121,7 +123,14 @@ public class RoomPersistenceWriter(
                 {
                     _failed.Add(roomId);
                 }
+
+                failedRooms++;
             }
+        }
+
+        if (changed.Count > 0)
+        {
+            status.RecordWrite(time.GetUtcNow(), failedRooms);
         }
     }
 }

@@ -53,6 +53,10 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IIssueEntryMapper, IssueEntryMapper>();
         services.AddSingleton<IIssueRedactor, IssueRedactor>();
         services.AddSingleton<IIssueLog, IssueLog>();
+        services.AddSingleton<IServerStatistics, ServerStatistics>();
+        services.AddSingleton<IAdminRoomMapper, AdminRoomMapper>();
+        services.AddSingleton<IAdminOverviewMapper, AdminOverviewMapper>();
+        services.AddSingleton<IAdminOverviewService, AdminOverviewService>();
         services.AddSingleton<ILoggerProvider, IssueLoggerProvider>();
         return services;
     }
@@ -61,6 +65,7 @@ public static class ServiceServiceCollectionExtensions
     public static IServiceProvider RestoreRooms(this IServiceProvider services)
     {
         var restored = services.GetRequiredService<IRoomRestorer>().Restore();
+        services.GetRequiredService<IServerStatistics>().RecordRestored(restored);
         if (restored > 0)
         {
             services.GetRequiredService<IIssueLog>().Record(IssueLevel.Info, "Startup", $"Restored {restored} rooms from the store");

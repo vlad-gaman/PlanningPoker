@@ -18,13 +18,14 @@ public class RoomPersistenceWriterTests
     private readonly PersonRepository _people = new();
     private readonly FakeRoomStore _store = new();
     private readonly FakeLogger<RoomPersistenceWriter> _logger = new();
+    private readonly PersistenceStatus _status = new();
     private readonly RoomRepository _rooms;
     private readonly RoomPersistenceWriter _writer;
 
     public RoomPersistenceWriterTests()
     {
         _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), _log, _time);
-        _writer = new RoomPersistenceWriter(_log, _rooms, _people, _store, new StoredRoomMapper(), Options.Create(new PersistenceOptions { HeartbeatInterval = Heartbeat }), _time, _logger);
+        _writer = new RoomPersistenceWriter(_log, _rooms, _people, _store, new StoredRoomMapper(), Options.Create(new PersistenceOptions { HeartbeatInterval = Heartbeat }), _time, _logger, _status);
     }
 
     private Guid AddRoom(string id = "r")
@@ -48,6 +49,38 @@ public class RoomPersistenceWriterTests
         Assert.Equal("8", stored.Room.Votes[owner]);
         Assert.Equal("Ann", Assert.Single(stored.People).Name);
         Assert.Equal(_time.GetUtcNow(), stored.SavedAt);
+    }
+
+    [Fact]
+    public void Flush_RecordsASuccessfulWrite()
+    {
+        AddRoom();
+
+        _writer.Flush();
+
+        Assert.True(_status.Snapshot().LastWriteSucceeded);
+        Assert.Equal(_time.GetUtcNow(), _status.Snapshot().LastWriteAt);
+    }
+
+    [Fact]
+    public void Flush_RecordsAFailedWriteAndHowManyRoomsFailed()
+    {
+        _store.Failing = true;
+        AddRoom("a");
+        AddRoom("b");
+
+        _writer.Flush();
+
+        Assert.False(_status.Snapshot().LastWriteSucceeded);
+        Assert.Equal(2, _status.Snapshot().FailedRooms);
+    }
+
+    [Fact]
+    public void Flush_NothingChanged_RecordsNothing()
+    {
+        _writer.Flush();
+
+        Assert.Null(_status.Snapshot().LastWriteAt);
     }
 
     [Fact]

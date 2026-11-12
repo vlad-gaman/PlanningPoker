@@ -70,6 +70,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<MetricsTokenValidation>();
         services.AddSingleton<AdminLoginRequestValidation>();
         services.AddSingleton<IAdminSessionResponseMapper, AdminSessionResponseMapper>();
+        services.AddSingleton<IAdminOverviewResponseMapper, AdminOverviewResponseMapper>();
         services.AddOperatorAuthentication();
         services.AddOpenTelemetry().WithMetrics(metrics =>
         {

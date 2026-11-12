@@ -25,6 +25,10 @@ public sealed class FakeIssueLog : IIssueLog
 
     public IReadOnlyList<IssueEntry> Recent(int limit) => [];
 
+    public int FailedLoginCount { get; set; }
+
+    public int CountFailedLogins(DateTimeOffset since) => FailedLoginCount;
+
     public void Prune()
     {
         Prunes++;

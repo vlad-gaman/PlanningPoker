@@ -19,6 +19,7 @@ public static class RepositoryServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddOptions<PersistenceOptions>().BindConfiguration(PersistenceConstants.ConfigurationSection);
         services.AddSingleton<IRoomChangeLog, RoomChangeLog>();
+        services.AddSingleton<IPersistenceStatus, PersistenceStatus>();
         services.AddSingleton<IRoomStore, SqliteRoomStore>();
         services.AddSingleton<IIssueStore, SqliteIssueStore>();
         services.AddHostedService<RoomPersistenceWriter>();
