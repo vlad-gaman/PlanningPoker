@@ -1,7 +1,7 @@
 @use '@angular/material' as mat;
 @use './compact';
 
-// The old Razor UI's Bootstrap font stack; no webfont, so Material controls and the page render the same face.
+// System font stack; no webfont, so Material controls and the page render the same face.
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
 
 :root {
@@ -372,7 +372,7 @@ a {
   pointer-events: none;
 }
 
-// Plain controls of the old Razor UI (Bootstrap 5 forms and buttons, the colours from the site variables).
+// Plain (non-Material) form controls and buttons, coloured from the site variables.
 .visually-hidden {
   position: absolute;
   width: 1px;

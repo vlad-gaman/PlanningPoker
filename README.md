@@ -40,7 +40,7 @@ This application enables software development teams to conduct efficient, collab
 
 ### Room Creation
 - **Multiple Creation Methods:**
-  - Standard GUID-based rooms (`/Room/{guid}`)
+  - Standard GUID-based rooms (`/room/{guid}`)
   - Fun named rooms using creative name generation (e.g., "42_amazing_red_elephant")
 - **Room Configuration Options:**
   - Card set selection (7 different sets available)
@@ -49,7 +49,7 @@ This application enables software development teams to conduct efficient, collab
   - Maximum participants (2-100, default 50)
 
 ### Room Access
-- **Direct URL Access** - Users can join via `/Room/{room-id}` 
+- **Direct URL Access** - Users can join via `/room/{room-id}` 
 - **Session Management** - Server-side session tracking for user persistence
 - **Name Input Form** - New users enter their name and select role type
 - **Auto-join** - Returning users with valid sessions join automatically
@@ -173,19 +173,18 @@ This application enables software development teams to conduct efficient, collab
 
 ## Technical Architecture
 
-### Backend Requirements
-- **ASP.NET Core 6.0** - Web framework
+### Backend
+- **ASP.NET Core (.NET 10)** - Web framework, layered as Controller, Service and Repository projects
 - **SignalR** - Real-time communication
-- **In-memory Storage** - ConcurrentDictionary for rooms/users
-- **Session Management** - HTTP session-based user tracking
-- **Timer Management** - Custom timer implementation
+- **SQLite** - Rooms and the issue log are kept in a local database file
+- **Session cookie** - Identifies the user across visits
+- **Timer Management** - Custom countdown implementation
 
-### Frontend Requirements
-- **Vanilla JavaScript** - No framework dependencies
-- **Chart.js** - Data visualization library
+### Frontend
+- **Angular + Angular Material** - Single-page app in `PlanningPoker.Client`, built into the API's `wwwroot`
 - **SignalR Client** - Real-time connectivity
-- **LocalStorage** - Client-side data persistence
-- **Fireworks.js** - Animation library for celebrations
+- **fireworks-js** - Animation library for celebrations
+- **Playwright** - End-to-end tests
 
 ### Data Models
 - **Room** - Central entity with voting, timers, configuration
@@ -282,15 +281,17 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 ## Getting Started
 
 ### Prerequisites
-- .NET 6.0 SDK
+- .NET 10 SDK
+- Node.js (see `PlanningPoker.Client/.nvmrc`)
 - Modern web browser with WebSocket support
 
 ### Installation
 1. Clone the repository
-2. Navigate to `PlanningPokerUi` directory
-3. Run `dotnet restore`
-4. Run `dotnet run`
-5. Open browser to `https://localhost:5001`
+2. In `PlanningPoker.Client`, run `npm ci`, then `npm run build:api` (builds the client into `PlanningPoker.Api/wwwroot`)
+3. In `PlanningPoker.Api`, run `dotnet run`
+4. Open the browser to `http://localhost:5000`
+
+For client development, run `npm start` in `PlanningPoker.Client` (proxies the API) next to the API. Tests: `dotnet test`, and in the client `npm run test:ci` and `npm run e2e`.
 
 ### Creating a Room
 1. Visit the main page (`/`)
@@ -299,28 +300,28 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 4. Click "Create room"
 
 ### Joining a Room
-1. Access room via direct URL: `/Room/{room-id}`
+1. Access room via direct URL: `/room/{room-id}`
 2. Enter your name and select role
 3. Click "Join room"
 
 ## API Endpoints
 
 ### REST Endpoints
-- `GET /` - Main page for room creation
-- `GET /Room/{guid}` - Room access (shows join form or room)
-- `POST /Room/{guid}` - Join room with user details
-- `GET /api/cardsets` - Get available card sets
-- `POST /api/updatename` - Update user name in session
+- `POST /api/rooms` - Create a room
+- `GET /api/rooms/{id}` - Get a room
+- `GET /api/card-sets` - Get available card sets
+- `GET /api/me`, `PUT /api/me` - Read or update the current user (name, role)
+- `/api/admin/*` - Management page: sign-in, overview, close a room, remove a person (see [Management page](#management-page))
 
 ### SignalR Hub Methods
-- `JoinRoom(guid)` - Join a specific room
+- `JoinRoom(roomId)` - Join a specific room
+- `LeaveRoom()` - Leave the current room
 - `Vote(mark)` - Cast a vote
 - `ClearVotes()` - Clear all votes (owner only)
 - `ForceShowVotes()` - Reveal votes immediately (owner only)
 - `ChangePersonType(type)` - Change user role
 - `UpdateRoomConfiguration(config)` - Update room settings (owner only)
 - `TransferOwnership(targetPersonGuid)` - Transfer room ownership (owner only)
-- `HealthCheck()` - Respond to health check ping
 
 ### SignalR Events (Client Receives)
 - `RoomJoined` - Successful room join with participant list
@@ -335,37 +336,18 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 - `RoomConfigurationUpdated` - Settings changed
 - `OwnershipTransferred` - Room ownership changed
 - `RoomDisposed` - Room was closed
-- `HealthCheckRequest` - Server requesting health check response
 
 ## File Structure
 
 ```
-PlanningPokerUi/
-├── Controllers/
-│   ├── IndexController.cs      # Main page and API endpoints
-│   └── RoomController.cs       # Room access and joining
-├── Hubs/
-│   └── RoomHub.cs             # SignalR real-time communication
-├── Models/
-│   ├── Room.cs                # Core room entity
-│   ├── Person.cs              # User representation
-│   ├── Vote.cs                # Individual vote
-│   ├── Statistics.cs          # Vote analytics
-│   ├── CardSets.cs            # Available card sets
-│   └── RoomConfiguration.cs   # Room settings
-├── Services/
-│   ├── RoomsManagerService.cs # Room lifecycle management
-│   ├── PeopleManagerService.cs # User session management
-│   └── RoomNameGenerator.cs   # Fun room name generation
-├── Pages/
-│   ├── Index.cshtml           # Main landing page
-│   └── Shared/
-│       ├── Room.cshtml        # Main poker room interface
-│       ├── RoomJoin.cshtml    # Join room form
-│       └── _RoomSettings.cshtml # Room configuration modal
-└── wwwroot/
-    └── js/
-        └── site.js            # Client-side functionality
+PlanningPoker.Api/         # Host: startup, configuration, serves the built client from wwwroot
+PlanningPoker.Controller/  # REST controllers, SignalR RoomHub, middleware, mappers
+PlanningPoker.Service/     # Business logic and validation
+PlanningPoker.Repository/  # Storage entities and SQLite access
+PlanningPoker.Common/      # Shared models and ServiceResponse
+PlanningPoker.UnitTests/   # xUnit tests
+PlanningPoker.Client/      # Angular app (src/app/core, src/app/features, e2e)
+docs/                      # Slice specs and agent docs
 ```
 
 ---

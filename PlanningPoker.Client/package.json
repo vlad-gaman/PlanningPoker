@@ -10,8 +10,7 @@
     "lint": "ng lint",
     "e2e": "playwright test",
     "test:ci": "ng test --watch=false",
-    "build:api": "ng build && node scripts/copy-to-wwwroot.mjs",
-    "parity": "node parity/compare.mjs"
+    "build:api": "ng build && node scripts/copy-to-wwwroot.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.1",

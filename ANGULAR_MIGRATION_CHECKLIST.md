@@ -1,6 +1,6 @@
 # Angular Migration Checklist for Planning Poker
 
-The migration plan is decided in the wayfinder map: [issue #3](https://github.com/vlad-gaman/PlanningPoker/issues/3). The old horizontal phases (backend first, hybrid Razor + API, then Angular) were replaced by vertical slices on the long-lived `angular-migration` branch. The old `PlanningPokerUi` project stays untouched until the cutover.
+The migration plan is decided in the wayfinder map: [issue #3](https://github.com/vlad-gaman/PlanningPoker/issues/3). The old horizontal phases (backend first, hybrid Razor + API, then Angular) were replaced by vertical slices on the long-lived `angular-migration` branch. The old `PlanningPokerUi` project was removed after the cutover; the last Razor build is the `razor-final` tag.
 
 Build details for the first two slices: [docs/phase-1-spec.md](docs/phase-1-spec.md).
 
@@ -16,6 +16,6 @@ Build details for the first two slices: [docs/phase-1-spec.md](docs/phase-1-spec
 - [ ] Slice 6: cutover
   - [ ] Parity checklist signed off by the owner (7 card sets, ownership and transfer, countdown, fireworks, dark mode, Credits, join/leave/reconnect)
   - [ ] CI green; pre-deploy checks pass (.NET 10 on App Service, Web App settings)
-  - [ ] Tag the last old commit `razor-final` and keep the last old build as a release
-  - [ ] Delete the old project (`Pages`, `Controllers`, `ViewModels`, `site.js`, `wwwroot/lib`, root-level debug and test files)
+  - [x] Tag the last old commit `razor-final` and keep the last old build as a release
+  - [x] Delete the old project (`Pages`, `Controllers`, `ViewModels`, `site.js`, `wwwroot/lib`, root-level debug and test files)
   - [ ] Deploy workflow targets `PlanningPoker.Api`; merge `angular-migration` into `main`; slot swap (or direct deploy if the plan has no slots)
