@@ -7,6 +7,7 @@ import { errorMessage } from '../../core/api-request-error';
 import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomsService } from '../../core/rooms.service';
 import { PersonFields } from '../shared/person-fields';
@@ -30,6 +31,7 @@ export class Home implements OnInit, OnDestroy {
   private readonly meService = inject(MeService);
   private readonly roomsService = inject(RoomsService);
   private readonly roomDefaults = inject(RoomDefaultsService);
+  private readonly personDefaults = inject(PersonDefaultsService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly builder = inject(FormBuilder);
@@ -54,6 +56,10 @@ export class Home implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
+    const remembered = this.personDefaults.load();
+    if (remembered) {
+      this.form.patchValue(remembered);
+    }
     try {
       const me = await firstValueFrom(this.meService.get());
       this.form.patchValue({ name: me.name, personType: me.personType });
@@ -73,7 +79,7 @@ export class Home implements OnInit, OnDestroy {
     const useFunRoomName = this.useFunRoomName.value;
     this.roomDefaults.saveUseFunRoomName(useFunRoomName);
     await this.run(async () => {
-      await firstValueFrom(this.meService.update(this.form.getRawValue()));
+      await this.saveMe();
       const { configuration } = this.roomDefaults.load();
       const room = await firstValueFrom(this.roomsService.create({ useFunRoomName, configuration }));
       await this.router.navigate(['/room', room.id]);
@@ -98,9 +104,15 @@ export class Home implements OnInit, OnDestroy {
       return;
     }
     await this.run(async () => {
-      await firstValueFrom(this.meService.update(this.form.getRawValue()));
+      await this.saveMe();
       await this.router.navigate(['/room', roomId]);
     });
+  }
+
+  private async saveMe(): Promise<void> {
+    const request = this.form.getRawValue();
+    await firstValueFrom(this.meService.update(request));
+    this.personDefaults.save(request);
   }
 
   private validName(): boolean {
