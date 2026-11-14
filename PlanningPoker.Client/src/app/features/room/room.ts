@@ -20,6 +20,7 @@ import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ERROR_CODES } from '../../models/api';
@@ -65,6 +66,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly flash = inject(FlashMessageService);
   private readonly dialog = inject(MatDialog);
   private readonly roomDefaults = inject(RoomDefaultsService);
+  private readonly personDefaults = inject(PersonDefaultsService);
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly cardImage = cardImage;
@@ -106,6 +108,10 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
+    const remembered = this.personDefaults.load();
+    if (remembered) {
+      this.form.patchValue(remembered);
+    }
     const popup = inject(ErrorPopupService);
     effect(() => {
       const message = this.error();
@@ -165,7 +171,9 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     const gen = this.generation;
     this.error.set(null);
     try {
-      this.myGuid.set((await firstValueFrom(this.meService.update(this.form.getRawValue()))).guid);
+      const request = this.form.getRawValue();
+      this.myGuid.set((await firstValueFrom(this.meService.update(request))).guid);
+      this.personDefaults.save(request);
     } catch (error) {
       if (gen === this.generation) {
         this.error.set(errorMessage(error));
