@@ -12,12 +12,6 @@
 </main>
 <footer class="footer">
   <div class="shell">
-    <nav class="compact-switch" aria-label="Compact layout prototype">
-      <span>Compact layout:</span>
-      @for (option of compactOptions; track option) {
-        <button type="button" [attr.aria-pressed]="compact() === option" (click)="chooseCompact(option)">{{ option.toUpperCase() }}</button>
-      }
-    </nav>
     <div class="footer-links">
       <span>&copy; {{ year }} - {{ productName }}</span>
       <span class="divider" aria-hidden="true">|</span>
