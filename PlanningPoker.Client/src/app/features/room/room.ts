@@ -324,7 +324,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
    * any other failure of the check is ignored, as joining reports it. Returns false when entering should stop.
    */
   private async checkRoomExists(gen: number): Promise<boolean> {
-    let gone = false;
+    let gone: boolean;
     try {
       gone = !(await firstValueFrom(this.rooms.exists(this.id()))).exists;
     } catch (error) {
