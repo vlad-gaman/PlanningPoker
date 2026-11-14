@@ -28,7 +28,8 @@ This application enables software development teams to conduct efficient, collab
 
 ### User Types
 - **Developers (dev)** - Primary voters, can cast votes and see all statistics
-- **Testers (test)** - Secondary voters, can cast votes and see all statistics  
+- **Testers (test)** - Secondary voters, can cast votes and see all statistics
+- **SREs (sre)** - Voters with their own statistics group, like developers and testers
 - **Observers (obs)** - Non-voting participants, can watch but cannot vote
 
 ### Room Ownership
@@ -43,7 +44,7 @@ This application enables software development teams to conduct efficient, collab
   - Standard GUID-based rooms (`/room/{guid}`)
   - Fun named rooms using creative name generation (e.g., "42_amazing_red_elephant")
 - **Room Configuration Options:**
-  - Card set selection (7 different sets available)
+  - Card set selection (8 different sets available)
   - Countdown duration (1-30 seconds)
   - Fireworks celebrations (enable/disable)
   - Maximum participants (2-100, default 50)
@@ -65,7 +66,7 @@ This application enables software development teams to conduct efficient, collab
 
 ## Voting System
 
-### Available Card Sets (7 Sets)
+### Available Card Sets (8 Sets)
 
 1. **Fibonacci** - 0, 0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, ☕
 2. **Modified Fibonacci** - 0, 0.5, 1, 2, 3, 5, 8, 13, 20, 40, 100, ?, ☕
@@ -74,6 +75,7 @@ This application enables software development teams to conduct efficient, collab
 5. **T-Shirt Sizes** - XS, S, M, L, XL, XXL, ?, ☕
 6. **Traffic Lights** - 🟢, 🟡, 🔴
 7. **Fist of Five** - Hand gesture images (0-5 fingers)
+8. **Esendex Fibonacci** - 1, 2, 3, 5, 8, 13, 30, 100, ?, ☕ as illustrated cards
 
 ### Voting Process
 - **Hidden Votes** - Votes are hidden until revealed
@@ -92,21 +94,24 @@ This application enables software development teams to conduct efficient, collab
 
 ### Vote Analysis
 - **Overall Statistics** - All participants combined
-- **Role-based Statistics** - Separate stats for Developers vs Testers
+- **Role-based Statistics** - Separate stats for Developers, Testers and SREs; observers are not counted
 - **Average Calculations** - Numeric values only (excludes ?, ☕)
 - **Percentage Distribution** - Vote distribution with percentages
-- **Consensus Detection** - Identifies when everyone votes the same
+- **Consensus Detection** - Everyone has voted, there are at least 2 votes, and all of them are the same mark
 
 ### Data Visualization
-- **Bar Charts** - Visual representation using Chart.js
-- **Color Coding** - Green for highest percentage, blue for others
-- **Image Support** - Can display PNG images in charts (Fist of Five)
-- **Responsive Charts** - Auto-update with vote changes
+- **Average Ring** - The average in a ring that fills with the share of votes that agree
+- **Verdict** - A one-line summary: the leading mark and its share, the range, and the vote count
+- **Split Bar** - One bar showing how the votes split, with a segment per mark in the card set's order
+- **Role Averages** - The average for each role that voted
+- **Image Support** - Image cards (Fist of Five, Esendex) show as images in the results
+- **Live Updates** - Results follow the votes as they change
 
 ### Celebration Features
-- **Fireworks Animation** - Triggers on 100% consensus (configurable)
-- **Multiple Bursts** - 10 firework bursts over 10 seconds
-- **Participation Threshold** - Only triggers with 2+ eligible voters
+- **Fireworks Animation** - Plays after a reveal you watch that ends in consensus, if the room has fireworks on (not when you join a room that was already revealed)
+- **Multiple Bursts** - 10 rounds, one per second, of 10 fireworks each; the display fades out about 5 seconds later
+- **Participation Threshold** - Needs consensus, so at least 2 voters
+- **Stops Early** - Clearing the votes stops the display, and rounds are skipped while the tab is hidden
 
 ## Real-time Communication
 
@@ -161,7 +166,7 @@ This application enables software development teams to conduct efficient, collab
 ## Configuration & Customization
 
 ### Room Settings
-- **Card Set Selection** - Choose from 7 predefined sets
+- **Card Set Selection** - Choose from 8 predefined sets
 - **Countdown Timing** - 0-30 seconds (0 = instant reveal)
 - **Fireworks Toggle** - Enable/disable celebration animations
 - **Participant Limits** - Maximum room capacity (2-100, default: 50)
