@@ -103,13 +103,24 @@ $compact-max: 520px;
       border-width: 2px;
       font-size: 1rem;
 
-      img {
+      // Only the fist-of-five picture; an illustrated card's own image fills its card.
+      > img {
         width: 22px;
         height: 22px;
       }
 
-      app-esendex-card-art {
-        width: 28px;
+      // An illustrated vote is the card itself, 5:7 on its paper colour like the deck's, not a small picture on a blue box.
+      &:has(app-esendex-card-art) {
+        --card-w: 48px;
+
+        aspect-ratio: 5 / 7;
+        border: 0;
+        background: var(--esendex-paper);
+
+        app-esendex-card-art {
+          width: 100%;
+          height: 100%;
+        }
       }
     }
   }

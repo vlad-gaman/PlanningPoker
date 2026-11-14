@@ -81,3 +81,30 @@ test('from 521px up the room is the full layout: no progress bar, deck and peopl
 
   await ann.context.close();
 });
+
+test('a small window draws an illustrated vote as a full card, not a small picture', async ({ browser }) => {
+  const ann = await newPerson(browser, 360);
+  await seedRoomDefaults(ann.page, { countdownSeconds: 2, cardSet: 'esendex-fibonacci' });
+  await ann.page.goto('/');
+  await ann.page.getByLabel('Your name').fill('Ann');
+  await ann.page.getByRole('button', { name: 'Create room' }).click();
+  await expect(ann.page).toHaveURL(GUID_ROOM_PATH);
+
+  await ann.page.locator('label.card').first().click();
+  await ann.page.getByRole('button', { name: 'Show votes' }).click();
+  await tab(ann.page, 'Table').click();
+
+  const art = ann.page.locator('.mark app-esendex-card-art');
+  await expect(art).toBeVisible();
+  // Wait out the flip, then the card and its picture are the same size, and larger than the old 28px thumbnail.
+  await expect(async () => {
+    const [card, picture] = await Promise.all([
+      art.boundingBox(),
+      art.locator('img').boundingBox(),
+    ]);
+    expect(card!.width).toBeGreaterThanOrEqual(44);
+    expect(picture!.width).toBeGreaterThanOrEqual(card!.width - 1);
+  }).toPass();
+
+  await ann.context.close();
+});
