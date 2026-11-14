@@ -2,7 +2,14 @@ namespace PlanningPoker.Repository.Models;
 
 public class PersonEntity
 {
+    /// <summary>The public id of the person. Other room members see it.</summary>
     public Guid Guid { get; set; }
+
+    /// <summary>
+    /// The secret the session cookie carries; it is never sent to anyone else. Null for a person stored before tokens
+    /// existed: no session resolves to them, so their owner signs in again as a new person.
+    /// </summary>
+    public string? SessionToken { get; set; }
 
     public string Name { get; set; } = default!;
 

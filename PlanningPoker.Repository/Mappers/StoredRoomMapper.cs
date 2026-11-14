@@ -13,6 +13,7 @@ public class StoredRoomMapper : IStoredRoomMapper
             if (people.Update(guid, person => new PersonEntity
             {
                 Guid = person.Guid,
+                SessionToken = person.SessionToken,
                 Name = person.Name,
                 PersonType = person.PersonType,
                 LastSeenAt = person.LastSeenAt

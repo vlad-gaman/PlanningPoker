@@ -157,4 +157,100 @@ public class PersonRepositoryTests
 
         Assert.Equal(500, repository.Get(person.Guid)!.Connections.Count);
     }
+
+    private static PersonEntity NewPersonWithToken(string token, Guid? guid = null) =>
+        new() { Guid = guid ?? Guid.NewGuid(), SessionToken = token, Name = "Ann", PersonType = "dev" };
+
+    [Fact]
+    public void GetBySessionToken_KnownToken_ReturnsStoredEntity()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.Same(person, repository.GetBySessionToken("token-a"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("token-unknown")]
+    public void GetBySessionToken_MissingEmptyOrUnknown_ReturnsNull(string? token)
+    {
+        var repository = new PersonRepository();
+        repository.TryAdd(NewPersonWithToken("token-a"));
+        repository.TryAdd(NewPerson());
+
+        Assert.Null(repository.GetBySessionToken(token));
+    }
+
+    [Fact]
+    public void GetBySessionToken_PublicGuid_ReturnsNull()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.Null(repository.GetBySessionToken(person.Guid.ToString()));
+    }
+
+    [Fact]
+    public void TryAdd_TakenToken_ReturnsFalseAndKeepsTheFirstPerson()
+    {
+        var repository = new PersonRepository();
+        var first = NewPersonWithToken("token-a");
+        var second = NewPersonWithToken("token-a");
+        repository.TryAdd(first);
+
+        Assert.False(repository.TryAdd(second));
+        Assert.Same(first, repository.GetBySessionToken("token-a"));
+        Assert.Null(repository.Get(second.Guid));
+    }
+
+    [Fact]
+    public void TryAdd_TakenGuid_DoesNotIndexTheRejectedToken()
+    {
+        var repository = new PersonRepository();
+        var first = NewPersonWithToken("token-a");
+        repository.TryAdd(first);
+
+        Assert.False(repository.TryAdd(NewPersonWithToken("token-b", first.Guid)));
+        Assert.Null(repository.GetBySessionToken("token-b"));
+    }
+
+    [Fact]
+    public void Remove_DropsTheToken()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        repository.Remove(person.Guid);
+
+        Assert.Null(repository.GetBySessionToken("token-a"));
+    }
+
+    [Fact]
+    public void RemoveIf_Removed_DropsTheToken()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.True(repository.RemoveIf(person.Guid, _ => true));
+
+        Assert.Null(repository.GetBySessionToken("token-a"));
+    }
+
+    [Fact]
+    public void RemoveIf_Kept_KeepsTheToken()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.False(repository.RemoveIf(person.Guid, _ => false));
+
+        Assert.Same(person, repository.GetBySessionToken("token-a"));
+    }
 }

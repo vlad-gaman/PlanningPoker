@@ -7,6 +7,10 @@ public interface IPersonRepository
     /// <summary>Returns the live stored entity, not a copy. Only <see cref="Update{T}"/> may mutate it.</summary>
     PersonEntity? Get(Guid guid);
 
+    /// <summary>The live stored entity holding <paramref name="sessionToken"/>; null for a null, empty or unknown token.</summary>
+    PersonEntity? GetBySessionToken(string? sessionToken);
+
+    /// <summary>Adds the person and indexes their session token. Fails when the GUID or the token is already taken.</summary>
     bool TryAdd(PersonEntity person);
 
     bool Remove(Guid guid);

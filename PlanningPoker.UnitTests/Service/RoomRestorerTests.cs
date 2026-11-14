@@ -41,7 +41,7 @@ public class RoomRestorerTests
             SavedAt = SavedAt,
             People =
             [
-                new PersonEntity { Guid = _ann, Name = "Ann", PersonType = "dev", Connections = { ["c1"] = "r" } },
+                new PersonEntity { Guid = _ann, SessionToken = "token-ann", Name = "Ann", PersonType = "dev", Connections = { ["c1"] = "r" } },
                 new PersonEntity { Guid = _bob, Name = "Bob", PersonType = "test" }
             ]
         };
@@ -135,5 +135,27 @@ public class RoomRestorerTests
     public void Restore_EmptyStore_RestoresNothing()
     {
         Assert.Equal(0, NewRestorer().Restore());
+    }
+
+    [Fact]
+    public void Restore_PersonWithAToken_IsReachableByIt()
+    {
+        Store();
+
+        NewRestorer().Restore();
+
+        Assert.Same(_people.Get(_ann), _people.GetBySessionToken("token-ann"));
+    }
+
+    [Fact]
+    public void Restore_PersonStoredWithoutAToken_StaysAMemberButHasNoSession()
+    {
+        Store();
+
+        NewRestorer().Restore();
+
+        Assert.Equal("Bob", _people.Get(_bob)!.Name);
+        Assert.Null(_people.Get(_bob)!.SessionToken);
+        Assert.Contains(_bob, _rooms.Get("r")!.MemberGuids);
     }
 }

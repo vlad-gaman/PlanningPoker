@@ -39,16 +39,22 @@ public class MeController(
         var validated = validation.Validate(request);
         if (!validated.IsSuccess)
         {
-            return ToResult(ServiceResponse<Person>.Failure(validated), personResponseMapper.Map);
+            return ToResult(ServiceResponse<PersonSession>.Failure(validated), MapPerson);
         }
 
-        var existingGuid = cookies.Read(Request);
-        var result = persons.Upsert(existingGuid, request.Name, request.PersonType);
-        if (result.IsSuccess && result.Data!.Guid != existingGuid)
+        var existingToken = cookies.Read(Request);
+        var result = persons.Upsert(existingToken, request.Name, request.PersonType);
+        if (result.IsSuccess && result.Data!.SessionToken != existingToken)
         {
-            cookies.Write(Response, result.Data.Guid);
+            cookies.Write(Response, result.Data.SessionToken);
         }
 
-        return ToResult(result, personResponseMapper.Map);
+        return ToResult(result, MapPerson);
+    }
+
+    /// <summary>Only the person goes into the body; the session token travels in the cookie alone.</summary>
+    private PersonResponse MapPerson(PersonSession session)
+    {
+        return personResponseMapper.Map(session.Person);
     }
 }
