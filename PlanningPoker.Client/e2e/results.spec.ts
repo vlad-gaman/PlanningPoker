@@ -235,6 +235,9 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
       { selector: '.segment img', color: 'rgb(255, 255, 255)' },
     ];
     for (const { selector, color } of expectations) {
+      // A phone shows one view at a time: the deck on Vote, the people and results on Table.
+      const view = selector.startsWith('label.card') ? 'Vote' : 'Table';
+      await page.getByRole('button', { name: view, exact: true }).click();
       const images = page.locator(selector);
       await expect(images.first()).toBeVisible();
       for (const image of await images.all()) {

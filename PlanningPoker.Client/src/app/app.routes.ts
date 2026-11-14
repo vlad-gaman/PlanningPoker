@@ -9,7 +9,7 @@ export const routes: Routes = [
   { path: 'credits', title: 'Credits', component: Credits },
   // The Operator's management page: lazy, so none of it is in the public bundle, and nothing in the public UI links to it.
   { path: 'admin', loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES) },
-  // Links from the previous Razor app used capitalised paths.
+  // Capitalised paths from links shared earlier still work.
   { path: 'Room/:id', redirectTo: 'room/:id' },
   { path: 'Credits', redirectTo: 'credits' },
   { path: '**', redirectTo: '' },

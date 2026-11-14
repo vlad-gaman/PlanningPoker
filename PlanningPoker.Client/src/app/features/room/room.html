@@ -33,7 +33,19 @@
       </form>
     }
     @case ('joined') {
-      <div class="layout">
+      <div class="compact-bar">
+        <p class="compact-progress" role="status">
+          <b>{{ voterCount() }}</b> of {{ voterTotal() }} voted
+          @if (store.roundStartedAt(); as startedAt) {
+            · <app-round-timer [startedAt]="startedAt" />
+          }
+        </p>
+        <div class="compact-tabs" role="group" aria-label="View">
+          <button type="button" [attr.aria-pressed]="compactView() === 'vote'" (click)="compactView.set('vote')">Vote</button>
+          <button type="button" [attr.aria-pressed]="compactView() === 'table'" (click)="compactView.set('table')">Table</button>
+        </div>
+      </div>
+      <div class="layout" [attr.data-view]="compactView()">
         <div class="main">
           <div class="head">
             <div class="role-picker" role="radiogroup" aria-label="Your role">

@@ -19,9 +19,17 @@ test('saving a name issues an HttpOnly, SameSite=Lax pp_session cookie (not Secu
   expect(cookie?.expires).toBe(-1);
 });
 
+// A room link to a room that does not exist sends the visitor home with a message.
+for (const path of ['/room/xyz', '/Room/xyz']) {
+  test(`deep link ${path} to a missing room goes home with a message`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: 'Planning Poker' })).toBeVisible();
+    await expect(page.getByRole('status')).toContainText('does not exist');
+  });
+}
+
 for (const [path, heading] of [
-  ['/room/xyz', 'Room xyz'],
-  ['/Room/xyz', 'Room xyz'],
   ['/credits', 'Credits'],
   ['/Credits', 'Credits'],
 ] as const) {
