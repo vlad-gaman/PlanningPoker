@@ -50,14 +50,16 @@ This application enables software development teams to conduct efficient, collab
 
 ### Room Access
 - **Direct URL Access** - Users can join via `/room/{room-id}` 
-- **Session Management** - Server-side session tracking for user persistence
+- **Session Cookie** - A `pp_session` cookie identifies the user across visits
 - **Name Input Form** - New users enter their name and select role type
-- **Auto-join** - Returning users with valid sessions join automatically
+- **Auto-join** - Returning users with a valid session cookie join automatically
 
 ### Room Lifecycle
-- **Health Checks** - 5-second intervals to detect disconnected users
-- **Auto-cleanup** - Removes inactive participants
-- **Room Disposal** - Rooms are disposed when empty
+- **Presence Sweep** - A background sweep runs every second (`Presence__SweepInterval`)
+- **Grace Period** - A person who loses their connection still counts as online for 10 seconds, so a refresh goes unnoticed; after that they are shown offgrid
+- **Removal** - An offgrid person keeps their place and vote for 10 minutes, then is removed
+- **Room Disposal** - A room with nobody online for 10 seconds is deleted
+- **Abandoned Rooms** - A separate sweep every 10 minutes (`Sweep__Interval`) removes rooms and people untouched for 24 hours (`Sweep__AbandonedAfter`)
 - **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; on Azure App Service point it at the persistent mount, e.g. `Data Source=/home/data/planningpoker.db`, and keep staging slots on a different file
 - **Connection Recovery** - Automatic reconnection with exponential backoff
 
@@ -112,7 +114,7 @@ This application enables software development teams to conduct efficient, collab
 - **WebSocket Connection** - Real-time bidirectional communication
 - **Group Management** - Users join room-specific groups
 - **Connection Recovery** - Automatic reconnection with retry logic
-- **Health Monitoring** - Regular connection health checks
+- **Presence** - Dropped connections are detected by the server-side presence sweep (see Room Lifecycle)
 
 ### Real-time Events
 - **Vote Cast** - Immediate notification of new votes
@@ -151,7 +153,7 @@ This application enables software development teams to conduct efficient, collab
 - **Regex Validation** - Room name format validation
 
 ### Session Security
-- **Server-side Sessions** - Secure session management
+- **Session Cookie** - `pp_session` identifies the user; the Operator has a separate sign-in cookie
 - **GUID-based Identity** - Unique user identification
 - **Connection Validation** - Connection ID verification
 - **Room Access Control** - Valid room existence checks
@@ -168,8 +170,8 @@ This application enables software development teams to conduct efficient, collab
 ### System Configuration
 - **Default Settings** - Fallback values for all configurations
 - **Timer Management** - Configurable timer intervals
-- **Health Check Frequency** - Connection monitoring intervals (5 seconds)
-- **Cache Duration** - Client-side cache expiration times (24 hours for card sets)
+- **Presence and Sweep Timings** - Grace period, removal window, empty-room lifetime and sweep intervals, overridable in the `Presence` and `Sweep` configuration sections
+- **Local Preferences** - The theme and the default room settings are kept in the browser's localStorage
 
 ## Technical Architecture
 
@@ -198,14 +200,12 @@ This application enables software development teams to conduct efficient, collab
 ### Optimization Features
 - **Concurrent Collections** - Thread-safe data structures
 - **Connection Pooling** - Efficient SignalR connection management
-- **Cache Strategy** - Client-side caching to reduce server load
 - **Timer Optimization** - Proper cleanup to prevent memory leaks
 
 ### Monitoring & Health
-- **Connection Health Checks** - Regular connectivity validation
-- **Automatic Cleanup** - Remove inactive users and rooms
-- **Error Logging** - Console-based debugging and error tracking
-- **Performance Metrics** - Timer-based performance monitoring
+- **Presence Sweep** - Detects dropped connections and removes inactive users and rooms (see Room Lifecycle)
+- **Issue Log** - Warnings and errors are kept in SQLite (see Management page)
+- **Metrics** - Prometheus metrics at `/metrics` (see Monitoring)
 
 ## Monitoring
 
