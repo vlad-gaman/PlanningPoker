@@ -103,6 +103,12 @@ export class Room implements OnInit, OnChanges, OnDestroy {
         .people()
         .filter((person) => person.personType !== 'obs' && this.store.votes()[person.guid] !== undefined).length,
   );
+  /** People who can vote this round, for the "3 of 5 voted" summary of the compact layouts. */
+  protected readonly voterTotal = computed(
+    () => this.store.people().filter((person) => person.personType !== 'obs').length,
+  );
+  /** PROTOTYPE (compact layout C): which of its two views shows. Follows the round: vote while open, table once revealed. */
+  protected readonly compactView = signal<'vote' | 'table'>('vote');
   protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
@@ -131,6 +137,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       const reveals = this.store.revealCount();
       const showFireworks = this.store.configuration()?.showFireworks ?? false;
       const overlay = this.fireworks();
+      this.compactView.set(statistics ? 'table' : 'vote');
       const isNewReveal = reveals > this.seenReveals;
       this.seenReveals = reveals;
       if (!statistics) {

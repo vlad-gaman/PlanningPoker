@@ -359,3 +359,8 @@
     stroke-linejoin: round;
   }
 }
+
+// PROTOTYPE compact bar: only compact layout C shows it (see src/compact.scss).
+.compact-bar {
+  display: none;
+}
