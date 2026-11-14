@@ -15,6 +15,8 @@ public static class ServiceServiceCollectionExtensions
     public static IServiceCollection AddServiceLayer(this IServiceCollection services)
     {
         services.AddSingleton<IPersonMapper, PersonMapper>();
+        services.AddSingleton<IPersonSessionMapper, PersonSessionMapper>();
+        services.AddSingleton<ISessionTokenGenerator, SessionTokenGenerator>();
         services.AddSingleton<IPersonEntityMapper, PersonEntityMapper>();
         services.AddSingleton<IPersonService, PersonService>();
         services.AddSingleton<IRoomConfigurationMapper, RoomConfigurationMapper>();

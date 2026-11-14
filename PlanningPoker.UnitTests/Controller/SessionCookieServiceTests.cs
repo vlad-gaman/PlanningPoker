@@ -5,19 +5,21 @@ namespace PlanningPoker.UnitTests.Controller;
 
 public class SessionCookieServiceTests
 {
+    private const string Token = "kq3n0aQ9rZ4wYb7xP2cLmT8vF1sJ6dH5gE0uRtWyXzA";
+
     private readonly SessionCookieService _service = new();
 
     [Fact]
-    public void Write_SetsHttpOnlySecureLaxSessionCookie()
+    public void Write_SetsHttpOnlySecureLaxSessionCookieHoldingTheToken()
     {
         var context = new DefaultHttpContext();
         context.Request.Scheme = "https";
-        var guid = Guid.NewGuid();
 
-        _service.Write(context.Response, guid);
+        _service.Write(context.Response, Token);
 
-        var header = context.Response.Headers.SetCookie.ToString().ToLowerInvariant();
-        Assert.StartsWith($"pp_session={guid}", header);
+        var raw = context.Response.Headers.SetCookie.ToString();
+        Assert.StartsWith($"pp_session={Token};", raw);
+        var header = raw.ToLowerInvariant();
         Assert.Contains("httponly", header);
         Assert.Contains("secure", header);
         Assert.Contains("samesite=lax", header);
@@ -32,26 +34,25 @@ public class SessionCookieServiceTests
         var context = new DefaultHttpContext();
         context.Request.Scheme = "http";
 
-        _service.Write(context.Response, Guid.NewGuid());
+        _service.Write(context.Response, Token);
 
         Assert.DoesNotContain("secure", context.Response.Headers.SetCookie.ToString().ToLowerInvariant());
     }
 
     [Fact]
-    public void Read_ValidCookie_ReturnsGuid()
+    public void Read_SessionCookie_ReturnsTheToken()
     {
-        var guid = Guid.NewGuid();
         var context = new DefaultHttpContext();
-        context.Request.Headers.Cookie = $"pp_session={guid}";
+        context.Request.Headers.Cookie = $"pp_session={Token}";
 
-        Assert.Equal(guid, _service.Read(context.Request));
+        Assert.Equal(Token, _service.Read(context.Request));
     }
 
     [Theory]
     [InlineData(null)]
-    [InlineData("pp_session=not-a-guid")]
+    [InlineData("pp_session=")]
     [InlineData("other=1")]
-    public void Read_MissingOrMalformed_ReturnsNull(string? cookie)
+    public void Read_MissingOrEmpty_ReturnsNull(string? cookie)
     {
         var context = new DefaultHttpContext();
         if (cookie is not null)

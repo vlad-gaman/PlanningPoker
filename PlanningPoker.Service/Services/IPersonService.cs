@@ -5,9 +5,9 @@ namespace PlanningPoker.Service.Services;
 
 public interface IPersonService
 {
-    /// <summary>Resolves the session person; a missing or stale guid yields <c>no_session</c>.</summary>
-    ServiceResponse<Person> Get(Guid? guid);
+    /// <summary>Resolves the session person from their session token; a missing or unknown token yields <c>no_session</c>.</summary>
+    ServiceResponse<Person> Get(string? sessionToken);
 
-    /// <summary>Updates the person when the guid is known, otherwise creates a new person with a new guid.</summary>
-    ServiceResponse<Person> Upsert(Guid? existingGuid, string name, string personType);
+    /// <summary>Updates the person when the session token is known, otherwise creates a new person with a new guid and token.</summary>
+    ServiceResponse<PersonSession> Upsert(string? sessionToken, string name, string personType);
 }

@@ -5,16 +5,16 @@ namespace PlanningPoker.Controller.Services;
 
 public class SessionCookieService : ISessionCookieService
 {
-    public Guid? Read(HttpRequest request)
+    public string? Read(HttpRequest request)
     {
-        return request.Cookies.TryGetValue(SessionConstants.CookieName, out var value) && Guid.TryParse(value, out var guid)
-            ? guid
+        return request.Cookies.TryGetValue(SessionConstants.CookieName, out var value) && !string.IsNullOrEmpty(value)
+            ? value
             : null;
     }
 
-    public void Write(HttpResponse response, Guid personGuid)
+    public void Write(HttpResponse response, string sessionToken)
     {
-        response.Cookies.Append(SessionConstants.CookieName, personGuid.ToString(), new CookieOptions
+        response.Cookies.Append(SessionConstants.CookieName, sessionToken, new CookieOptions
         {
             HttpOnly = true,
             // Browsers drop a Secure cookie over plain HTTP, which would break the app on the local network.

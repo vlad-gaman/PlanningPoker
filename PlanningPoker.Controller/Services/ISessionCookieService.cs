@@ -4,7 +4,8 @@ namespace PlanningPoker.Controller.Services;
 
 public interface ISessionCookieService
 {
-    Guid? Read(HttpRequest request);
+    /// <summary>The session token in the request's session cookie, or null when there is none.</summary>
+    string? Read(HttpRequest request);
 
-    void Write(HttpResponse response, Guid personGuid);
+    void Write(HttpResponse response, string sessionToken);
 }
