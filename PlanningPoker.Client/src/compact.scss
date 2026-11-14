@@ -1,0 +1,687 @@
+// PROTOTYPE: three layouts for small windows (a phone, or a narrow window pinned on top of other apps).
+//
+// Everything is inside the media query below, so nothing changes from 521px up. The layout is picked by
+// `<html data-compact="a|b|c">` (the switcher in the footer sets it; `?compact=b` in the URL does too).
+//
+//   A  Dock    one-line rows for people, the card deck pinned to the bottom edge in a single scrolling row
+//   B  Deck up the deck first as a grid of big cards, then the actions, then people as small tiles
+//   C  Tabs    a sticky "3 of 5 voted" bar with Vote / Table views; one thing on screen at a time
+//
+// Shared accessibility work (all three): 44px touch targets, a stronger focus ring, readable muted text in dark
+// mode, long names and room ids that wrap or truncate instead of overflowing, nothing wider than 320px, and a
+// bottom safe-area inset. Our selectors begin with `html[data-compact]`, which outranks the components' scoped styles.
+
+$compact-max: 520px;
+
+@mixin sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Action buttons as one row: the primary one keeps its label, the others are icon-only (their text stays for screen readers).
+@mixin acts-row {
+  .acts {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .act {
+    position: relative;
+    flex: 0 0 var(--tap);
+    padding: 0;
+
+    &.primary {
+      flex: 1 1 auto;
+      padding: 0 0.75rem;
+    }
+
+    &:not(.primary) span {
+      @include sr-only;
+    }
+
+    &.leave {
+      margin-left: 0;
+    }
+  }
+}
+
+// People as one-line rows: avatar, name, role tag, vote card.
+@mixin people-rows {
+  .people {
+    --card-w: 38px;
+
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .person {
+    flex-direction: row;
+    gap: 0.6rem;
+    padding: 0.5rem 0.6rem;
+    overflow: visible;
+    border-radius: 12px;
+    text-align: left;
+
+    // The role tag moves from the corner to the row, before the card.
+    &::before {
+      position: static;
+      order: 3;
+      padding: 1px 7px;
+      border-radius: 6px;
+    }
+
+    .avatar {
+      flex: none;
+      width: 34px;
+      height: 34px;
+      margin: 0;
+      font-size: 1rem;
+      box-shadow: 0 0 0 2px var(--panel-bg), 0 0 0 4px var(--role);
+    }
+
+    .crown {
+      top: -11px;
+      width: 20px;
+      height: 15px;
+    }
+
+    .name {
+      flex: 1 1 0;
+      min-width: 0;
+      font-size: 1rem;
+    }
+
+    .mark {
+      order: 4;
+      width: var(--card-w);
+      margin: 0;
+      border-width: 2px;
+      font-size: 1rem;
+
+      img {
+        width: 22px;
+        height: 22px;
+      }
+
+      app-esendex-card-art {
+        width: 28px;
+      }
+    }
+  }
+}
+
+// The results panel at phone size.
+@mixin compact-results {
+  .results {
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+
+  .hero {
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .ring {
+    width: 84px;
+    height: 84px;
+
+    &::before {
+      inset: 7px;
+    }
+  }
+
+  .average {
+    font-size: 1.6rem;
+  }
+
+  .verdict .label {
+    font-size: 1.3rem;
+  }
+
+  .split {
+    height: 46px;
+  }
+
+  .segment {
+    min-width: 28px;
+  }
+}
+
+@media (max-width: $compact-max) {
+  html[data-compact] {
+    --tap: 44px;
+
+    // The muted grey is 3.7:1 on the dark page; this one passes 4.5:1.
+    &[data-theme='dark'] {
+      --muted-color: #a9b1b9;
+    }
+
+    // ---- Page chrome ----
+    .navbar {
+      padding: 0.3rem 0.5rem;
+      box-shadow: none;
+    }
+
+    .navbar .shell,
+    .footer .shell {
+      padding: 0;
+    }
+
+    .brand {
+      min-height: var(--tap);
+      font-size: 1.15rem;
+    }
+
+    // The theme switch: 40 x 36 per option (it was 34 x 28).
+    .seg button {
+      width: 40px;
+      height: 36px;
+    }
+
+    .footer a:not(.buymeacoffee-link) {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 0.25rem;
+    }
+
+    .buymeacoffee-link {
+      padding: 0.35rem;
+    }
+
+    .footer {
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .page {
+      margin: 0.5rem auto;
+      padding: 0 0.5rem;
+    }
+
+    .panel {
+      padding: 1rem;
+      border-radius: 14px;
+    }
+
+    // ---- Targets and focus ----
+    .primary-button,
+    .secondary-button,
+    .input {
+      min-height: var(--tap);
+    }
+
+    .act {
+      min-height: var(--tap);
+      height: auto;
+    }
+
+    .copy.icon {
+      width: var(--tap);
+      height: var(--tap);
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+
+    // The role picker (room and name fields) fills the width; each option is a full-size target.
+    .role-picker {
+      display: flex;
+      width: 100%;
+      box-sizing: border-box;
+
+      label {
+        display: flex;
+        flex: 1 1 0;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(var(--tap) - 8px);
+        padding: 0 2px;
+        text-align: center;
+        font-size: 0.95rem;
+      }
+    }
+
+    // Dialogs (room settings) use the whole window.
+    .cdk-overlay-pane {
+      max-width: calc(100vw - 16px) !important;
+    }
+
+    // ---- Room header ----
+    .room .title {
+      flex-wrap: nowrap;
+      margin: 0 0 0.5rem;
+
+      h1 {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        word-break: normal;
+        font-size: 0.85rem;
+      }
+    }
+
+    .head {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.4rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .round-timer {
+      margin: 0;
+    }
+
+    .countdown {
+      margin: 0 0 0.6rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .name-entry {
+      margin: 0.5rem auto;
+    }
+
+    // Anything inside a person's name or the room id never pushes the window wider.
+    .name {
+      overflow-wrap: anywhere;
+    }
+
+    // The results come first once votes are shown: they are what the window is open for.
+    .main {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .countdown {
+      order: -2;
+    }
+
+    app-results {
+      order: -1;
+      margin-bottom: 0.75rem;
+    }
+
+    @include compact-results;
+
+    .history {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+
+      ol {
+        max-height: 12rem;
+      }
+    }
+
+    // The prototype switcher, and the bar and tabs of layout C (hidden until C asks for them).
+    .compact-switch {
+      display: flex;
+      flex: 1 1 100%;
+      align-items: center;
+      gap: 0.4rem;
+
+      button {
+        min-width: 40px;
+        min-height: 36px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text-color);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+
+        &[aria-pressed='true'] {
+          border-color: var(--primary-hover);
+          background: var(--primary-color);
+          color: #fff;
+        }
+      }
+    }
+
+    // ================= A: Dock =================
+    &[data-compact='a'] {
+      --dock: 7rem;
+
+      @include acts-row;
+      @include people-rows;
+
+      // The deck is pinned to the bottom edge, one scrolling row; the page leaves room below for it.
+
+      app-card-picker {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: 20;
+        display: block;
+        --card-w: 48px;
+        padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--border-color);
+        background: var(--panel-bg);
+        box-shadow: 0 -4px 14px var(--shadow-color);
+      }
+
+      .cards {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0.25rem 0.25rem 0.4rem;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+        scroll-padding-inline: 0.5rem;
+        scrollbar-width: thin;
+      }
+
+      .card {
+        flex: none;
+        scroll-snap-align: start;
+      }
+
+      .rail {
+        padding: 0;
+        border: 0;
+        background: none;
+      }
+
+      body:has(app-card-picker) .footer {
+        padding-bottom: calc(var(--dock) + env(safe-area-inset-bottom));
+      }
+    }
+
+    // ================= B: Deck up =================
+    &[data-compact='b'] {
+      .layout {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+
+      // The deck sits above everything else; history stays last.
+      .rail {
+        display: contents;
+      }
+
+      app-card-picker {
+        display: block;
+        order: 0;
+        --card-w: 52px;
+        padding: 0.6rem;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--panel-bg);
+      }
+
+      .main {
+        order: 1;
+      }
+
+      app-round-history {
+        order: 2;
+      }
+
+      .cards {
+        grid-template-columns: repeat(auto-fit, minmax(var(--card-w), 1fr));
+        gap: 0.5rem;
+        margin: 0;
+      }
+
+      .card {
+        width: 100%;
+        min-height: var(--tap);
+      }
+
+      // Show votes on its own row, the rest share the next one.
+      .acts {
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+
+        .act {
+          flex: 1 1 0;
+          gap: 0.3rem;
+          padding: 0 0.4rem;
+          font-size: 0.95rem;
+        }
+
+        .primary {
+          flex-basis: 100%;
+        }
+
+        .leave {
+          margin-left: 0;
+        }
+      }
+
+      // People as two small tiles per row: avatar | name + role | card.
+      .people {
+        --card-w: 36px;
+
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .person {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+          'avatar name mark'
+          'avatar tag mark';
+        align-items: center;
+        column-gap: 0.5rem;
+        row-gap: 0.1rem;
+        padding: 0.5rem;
+        overflow: visible;
+        border-radius: 12px;
+        text-align: left;
+
+        &::before {
+          position: static;
+          grid-area: tag;
+          justify-self: start;
+          padding: 0 6px;
+          border-radius: 5px;
+          font-size: 0.65rem;
+        }
+
+        .avatar {
+          grid-area: avatar;
+          width: 34px;
+          height: 34px;
+          margin: 0;
+          font-size: 1rem;
+          box-shadow: 0 0 0 2px var(--panel-bg), 0 0 0 4px var(--role);
+        }
+
+        .crown {
+          top: -11px;
+          width: 20px;
+          height: 15px;
+        }
+
+        .name {
+          grid-area: name;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          white-space: normal;
+          font-size: 0.9rem;
+          line-height: 1.15;
+        }
+
+        .mark {
+          grid-area: mark;
+          width: var(--card-w);
+          margin: 0;
+          border-width: 2px;
+          font-size: 0.95rem;
+
+          img {
+            width: 20px;
+            height: 20px;
+          }
+
+          app-esendex-card-art {
+            width: 24px;
+          }
+        }
+      }
+    }
+
+    // ================= C: Tabs =================
+    &[data-compact='c'] {
+      @include acts-row;
+      @include people-rows;
+
+      .compact-bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        padding: 0.4rem 0;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-color);
+      }
+
+      .compact-progress {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0 0.4rem;
+        margin: 0;
+        font-weight: 600;
+
+        .round-timer {
+          font-weight: 400;
+        }
+      }
+
+      // The sticky bar already shows the time; drop the duplicate in the table view.
+      .head app-round-timer {
+        display: none;
+      }
+
+      .compact-tabs {
+        display: inline-flex;
+        flex: none;
+        padding: 3px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--panel-bg);
+
+        button {
+          min-width: 64px;
+          min-height: calc(var(--tap) - 8px);
+          padding: 0 0.9rem;
+          border: 0;
+          border-radius: 8px;
+          background: transparent;
+          color: var(--muted-color);
+          font: inherit;
+          font-weight: 600;
+          cursor: pointer;
+
+          &[aria-pressed='true'] {
+            background: var(--primary-color);
+            color: #fff;
+          }
+        }
+      }
+
+      // The layout's parts become one list that the view picks from; the role picker, actions and countdown
+      // stay in both views.
+      .layout {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .acts {
+        margin-bottom: 0;
+      }
+
+      .main,
+      .rail {
+        display: contents;
+      }
+
+      .countdown {
+        order: -2;
+      }
+
+      .head {
+        order: 1;
+      }
+
+      .acts {
+        order: 2;
+      }
+
+      .people {
+        order: 3;
+      }
+
+      app-card-picker {
+        display: block;
+        order: 3;
+        --card-w: 60px;
+      }
+
+      app-results {
+        order: -1;
+      }
+
+      app-round-history {
+        order: 5;
+      }
+
+      .cards {
+        grid-template-columns: repeat(auto-fit, minmax(var(--card-w), 1fr));
+        gap: 0.6rem;
+        margin: 0;
+      }
+
+      .card {
+        width: 100%;
+      }
+
+      // Vote: the deck, big. Table: everyone, the results and the history.
+      .layout[data-view='vote'] {
+        .head,
+        .people,
+        app-results,
+        app-round-history {
+          display: none;
+        }
+      }
+
+      .layout[data-view='table'] app-card-picker {
+        display: none;
+      }
+    }
+  }
+}
+
+@media (max-width: $compact-max) and (prefers-reduced-motion: reduce) {
+  html[data-compact] .mark.back,
+  html[data-compact] .card {
+    animation: none;
+    transition: none;
+  }
+}

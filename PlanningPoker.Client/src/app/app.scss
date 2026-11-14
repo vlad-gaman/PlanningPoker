@@ -82,3 +82,8 @@ main {
 .divider {
   color: var(--border-color);
 }
+
+// PROTOTYPE switcher: only visible in the compact layouts (see src/compact.scss).
+.compact-switch {
+  display: none;
+}

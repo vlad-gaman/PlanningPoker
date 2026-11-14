@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use './compact';
 
 // The old Razor UI's Bootstrap font stack; no webfont, so Material controls and the page render the same face.
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
