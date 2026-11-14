@@ -80,6 +80,25 @@ describe('Home', () => {
     expect((element.querySelector('input') as HTMLInputElement).value).toBe('Zoe');
   });
 
+  it('prefills the form from the name remembered in this browser when there is no session', async () => {
+    localStorage.setItem('pp-person', JSON.stringify({ name: 'Zoe', personType: 'obs' }));
+
+    const { element } = await render();
+
+    expect((element.querySelector('input') as HTMLInputElement).value).toBe('Zoe');
+  });
+
+  it('remembers the name in this browser once it is saved', async () => {
+    rooms.create.mockReturnValue(of({ id: 'new-room' }));
+    const { fixture, element } = await render();
+
+    type(element, 'Your name', 'Ann');
+    submit(element, 0);
+    await fixture.whenStable();
+
+    expect(JSON.parse(localStorage.getItem('pp-person')!)).toEqual({ name: 'Ann', personType: 'dev' });
+  });
+
   it('saves the person, creates the room with the default settings and opens it', async () => {
     rooms.create.mockReturnValue(of({ id: 'new-room' }));
     const { fixture, element } = await render();

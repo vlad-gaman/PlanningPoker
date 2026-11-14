@@ -20,8 +20,10 @@ import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
+import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
+import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES, Person, PersonType } from '../../models/person';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
@@ -65,6 +67,8 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly flash = inject(FlashMessageService);
   private readonly dialog = inject(MatDialog);
   private readonly roomDefaults = inject(RoomDefaultsService);
+  private readonly personDefaults = inject(PersonDefaultsService);
+  private readonly rooms = inject(RoomsService);
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly cardImage = cardImage;
@@ -112,6 +116,10 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
+    const remembered = this.personDefaults.load();
+    if (remembered) {
+      this.form.patchValue(remembered);
+    }
     const popup = inject(ErrorPopupService);
     effect(() => {
       const message = this.error();
@@ -172,7 +180,9 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     const gen = this.generation;
     this.error.set(null);
     try {
-      this.myGuid.set((await firstValueFrom(this.meService.update(this.form.getRawValue()))).guid);
+      const request = this.form.getRawValue();
+      this.myGuid.set((await firstValueFrom(this.meService.update(request))).guid);
+      this.personDefaults.save(request);
     } catch (error) {
       if (gen === this.generation) {
         this.error.set(errorMessage(error));
@@ -293,6 +303,9 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   /** Joins straight away when the visitor has a name, otherwise asks for one. */
   private async enter(): Promise<void> {
     const gen = ++this.generation;
+    if (!(await this.checkRoomExists(gen))) {
+      return;
+    }
     try {
       const me = await firstValueFrom(this.meService.get());
       if (gen !== this.generation) {
@@ -312,6 +325,28 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       }
     }
     this.phase.set('name');
+  }
+
+  /**
+   * Checks the room exists before asking for a name or joining. A missing room sends the visitor home with a message;
+   * any other failure of the check is ignored, as joining reports it. Returns false when entering should stop.
+   */
+  private async checkRoomExists(gen: number): Promise<boolean> {
+    let gone: boolean;
+    try {
+      gone = !(await firstValueFrom(this.rooms.exists(this.id()))).exists;
+    } catch (error) {
+      gone = isRoomGone(error);
+    }
+    if (gen !== this.generation) {
+      return false;
+    }
+    if (gone) {
+      this.flash.show(ROOM_NOT_FOUND_MESSAGE);
+      await this.router.navigateByUrl('/');
+      return false;
+    }
+    return true;
   }
 
   private async join(gen: number): Promise<void> {

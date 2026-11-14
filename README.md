@@ -28,7 +28,8 @@ This application enables software development teams to conduct efficient, collab
 
 ### User Types
 - **Developers (dev)** - Primary voters, can cast votes and see all statistics
-- **Testers (test)** - Secondary voters, can cast votes and see all statistics  
+- **Testers (test)** - Secondary voters, can cast votes and see all statistics
+- **SREs (sre)** - Voters with their own statistics group, like developers and testers
 - **Observers (obs)** - Non-voting participants, can watch but cannot vote
 
 ### Room Ownership
@@ -40,30 +41,32 @@ This application enables software development teams to conduct efficient, collab
 
 ### Room Creation
 - **Multiple Creation Methods:**
-  - Standard GUID-based rooms (`/Room/{guid}`)
+  - Standard GUID-based rooms (`/room/{guid}`)
   - Fun named rooms using creative name generation (e.g., "42_amazing_red_elephant")
 - **Room Configuration Options:**
-  - Card set selection (7 different sets available)
+  - Card set selection (8 different sets available)
   - Countdown duration (1-30 seconds)
   - Fireworks celebrations (enable/disable)
   - Maximum participants (2-100, default 50)
 
 ### Room Access
-- **Direct URL Access** - Users can join via `/Room/{room-id}` 
-- **Session Management** - Server-side session tracking for user persistence
+- **Direct URL Access** - Users can join via `/room/{room-id}` 
+- **Session Cookie** - A `pp_session` cookie identifies the user across visits
 - **Name Input Form** - New users enter their name and select role type
-- **Auto-join** - Returning users with valid sessions join automatically
+- **Auto-join** - Returning users with a valid session cookie join automatically
 
 ### Room Lifecycle
-- **Health Checks** - 5-second intervals to detect disconnected users
-- **Auto-cleanup** - Removes inactive participants
-- **Room Disposal** - Rooms are disposed when empty
+- **Presence Sweep** - A background sweep runs every second (`Presence__SweepInterval`)
+- **Grace Period** - A person who loses their connection still counts as online for 10 seconds, so a refresh goes unnoticed; after that they are shown offgrid
+- **Removal** - An offgrid person keeps their place and vote for 10 minutes, then is removed
+- **Room Disposal** - A room with nobody online for 10 seconds is deleted
+- **Abandoned Rooms** - A separate sweep every 10 minutes (`Sweep__Interval`) removes rooms and people untouched for 24 hours (`Sweep__AbandonedAfter`)
 - **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; on Azure App Service point it at the persistent mount, e.g. `Data Source=/home/data/planningpoker.db`, and keep staging slots on a different file
 - **Connection Recovery** - Automatic reconnection with exponential backoff
 
 ## Voting System
 
-### Available Card Sets (7 Sets)
+### Available Card Sets (8 Sets)
 
 1. **Fibonacci** - 0, 0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, ☕
 2. **Modified Fibonacci** - 0, 0.5, 1, 2, 3, 5, 8, 13, 20, 40, 100, ?, ☕
@@ -72,6 +75,7 @@ This application enables software development teams to conduct efficient, collab
 5. **T-Shirt Sizes** - XS, S, M, L, XL, XXL, ?, ☕
 6. **Traffic Lights** - 🟢, 🟡, 🔴
 7. **Fist of Five** - Hand gesture images (0-5 fingers)
+8. **Esendex Fibonacci** - 1, 2, 3, 5, 8, 13, 30, 100, ?, ☕ as illustrated cards
 
 ### Voting Process
 - **Hidden Votes** - Votes are hidden until revealed
@@ -90,21 +94,24 @@ This application enables software development teams to conduct efficient, collab
 
 ### Vote Analysis
 - **Overall Statistics** - All participants combined
-- **Role-based Statistics** - Separate stats for Developers vs Testers
+- **Role-based Statistics** - Separate stats for Developers, Testers and SREs; observers are not counted
 - **Average Calculations** - Numeric values only (excludes ?, ☕)
 - **Percentage Distribution** - Vote distribution with percentages
-- **Consensus Detection** - Identifies when everyone votes the same
+- **Consensus Detection** - Everyone has voted, there are at least 2 votes, and all of them are the same mark
 
 ### Data Visualization
-- **Bar Charts** - Visual representation using Chart.js
-- **Color Coding** - Green for highest percentage, blue for others
-- **Image Support** - Can display PNG images in charts (Fist of Five)
-- **Responsive Charts** - Auto-update with vote changes
+- **Average Ring** - The average in a ring that fills with the share of votes that agree
+- **Verdict** - A one-line summary: the leading mark and its share, the range, and the vote count
+- **Split Bar** - One bar showing how the votes split, with a segment per mark in the card set's order
+- **Role Averages** - The average for each role that voted
+- **Image Support** - Image cards (Fist of Five, Esendex) show as images in the results
+- **Live Updates** - Results follow the votes as they change
 
 ### Celebration Features
-- **Fireworks Animation** - Triggers on 100% consensus (configurable)
-- **Multiple Bursts** - 10 firework bursts over 10 seconds
-- **Participation Threshold** - Only triggers with 2+ eligible voters
+- **Fireworks Animation** - Plays after a reveal you watch that ends in consensus, if the room has fireworks on (not when you join a room that was already revealed)
+- **Multiple Bursts** - 10 rounds, one per second, of 10 fireworks each; the display fades out about 5 seconds later
+- **Participation Threshold** - Needs consensus, so at least 2 voters
+- **Stops Early** - Clearing the votes stops the display, and rounds are skipped while the tab is hidden
 
 ## Real-time Communication
 
@@ -112,7 +119,7 @@ This application enables software development teams to conduct efficient, collab
 - **WebSocket Connection** - Real-time bidirectional communication
 - **Group Management** - Users join room-specific groups
 - **Connection Recovery** - Automatic reconnection with retry logic
-- **Health Monitoring** - Regular connection health checks
+- **Presence** - Dropped connections are detected by the server-side presence sweep (see Room Lifecycle)
 
 ### Real-time Events
 - **Vote Cast** - Immediate notification of new votes
@@ -151,7 +158,7 @@ This application enables software development teams to conduct efficient, collab
 - **Regex Validation** - Room name format validation
 
 ### Session Security
-- **Server-side Sessions** - Secure session management
+- **Session Cookie** - `pp_session` identifies the user; the Operator has a separate sign-in cookie
 - **GUID-based Identity** - Unique user identification
 - **Connection Validation** - Connection ID verification
 - **Room Access Control** - Valid room existence checks
@@ -159,7 +166,7 @@ This application enables software development teams to conduct efficient, collab
 ## Configuration & Customization
 
 ### Room Settings
-- **Card Set Selection** - Choose from 7 predefined sets
+- **Card Set Selection** - Choose from 8 predefined sets
 - **Countdown Timing** - 0-30 seconds (0 = instant reveal)
 - **Fireworks Toggle** - Enable/disable celebration animations
 - **Participant Limits** - Maximum room capacity (2-100, default: 50)
@@ -168,24 +175,23 @@ This application enables software development teams to conduct efficient, collab
 ### System Configuration
 - **Default Settings** - Fallback values for all configurations
 - **Timer Management** - Configurable timer intervals
-- **Health Check Frequency** - Connection monitoring intervals (5 seconds)
-- **Cache Duration** - Client-side cache expiration times (24 hours for card sets)
+- **Presence and Sweep Timings** - Grace period, removal window, empty-room lifetime and sweep intervals, overridable in the `Presence` and `Sweep` configuration sections
+- **Local Preferences** - The theme and the default room settings are kept in the browser's localStorage
 
 ## Technical Architecture
 
-### Backend Requirements
-- **ASP.NET Core 6.0** - Web framework
+### Backend
+- **ASP.NET Core (.NET 10)** - Web framework, layered as Controller, Service and Repository projects
 - **SignalR** - Real-time communication
-- **In-memory Storage** - ConcurrentDictionary for rooms/users
-- **Session Management** - HTTP session-based user tracking
-- **Timer Management** - Custom timer implementation
+- **SQLite** - Rooms and the issue log are kept in a local database file
+- **Session cookie** - Identifies the user across visits
+- **Timer Management** - Custom countdown implementation
 
-### Frontend Requirements
-- **Vanilla JavaScript** - No framework dependencies
-- **Chart.js** - Data visualization library
+### Frontend
+- **Angular + Angular Material** - Single-page app in `PlanningPoker.Client`, built into the API's `wwwroot`
 - **SignalR Client** - Real-time connectivity
-- **LocalStorage** - Client-side data persistence
-- **Fireworks.js** - Animation library for celebrations
+- **fireworks-js** - Animation library for celebrations
+- **Playwright** - End-to-end tests
 
 ### Data Models
 - **Room** - Central entity with voting, timers, configuration
@@ -199,14 +205,12 @@ This application enables software development teams to conduct efficient, collab
 ### Optimization Features
 - **Concurrent Collections** - Thread-safe data structures
 - **Connection Pooling** - Efficient SignalR connection management
-- **Cache Strategy** - Client-side caching to reduce server load
 - **Timer Optimization** - Proper cleanup to prevent memory leaks
 
 ### Monitoring & Health
-- **Connection Health Checks** - Regular connectivity validation
-- **Automatic Cleanup** - Remove inactive users and rooms
-- **Error Logging** - Console-based debugging and error tracking
-- **Performance Metrics** - Timer-based performance monitoring
+- **Presence Sweep** - Detects dropped connections and removes inactive users and rooms (see Room Lifecycle)
+- **Issue Log** - Warnings and errors are kept in SQLite (see Management page)
+- **Metrics** - Prometheus metrics at `/metrics` (see Monitoring)
 
 ## Monitoring
 
@@ -282,15 +286,17 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 ## Getting Started
 
 ### Prerequisites
-- .NET 6.0 SDK
+- .NET 10 SDK
+- Node.js (see `PlanningPoker.Client/.nvmrc`)
 - Modern web browser with WebSocket support
 
 ### Installation
 1. Clone the repository
-2. Navigate to `PlanningPokerUi` directory
-3. Run `dotnet restore`
-4. Run `dotnet run`
-5. Open browser to `https://localhost:5001`
+2. In `PlanningPoker.Client`, run `npm ci`, then `npm run build:api` (builds the client into `PlanningPoker.Api/wwwroot`)
+3. In `PlanningPoker.Api`, run `dotnet run`
+4. Open the browser to `http://localhost:5000`
+
+For client development, run `npm start` in `PlanningPoker.Client` (proxies the API) next to the API. Tests: `dotnet test`, and in the client `npm run test:ci` and `npm run e2e`.
 
 ### Creating a Room
 1. Visit the main page (`/`)
@@ -299,28 +305,28 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 4. Click "Create room"
 
 ### Joining a Room
-1. Access room via direct URL: `/Room/{room-id}`
+1. Access room via direct URL: `/room/{room-id}`
 2. Enter your name and select role
 3. Click "Join room"
 
 ## API Endpoints
 
 ### REST Endpoints
-- `GET /` - Main page for room creation
-- `GET /Room/{guid}` - Room access (shows join form or room)
-- `POST /Room/{guid}` - Join room with user details
-- `GET /api/cardsets` - Get available card sets
-- `POST /api/updatename` - Update user name in session
+- `POST /api/rooms` - Create a room
+- `GET /api/rooms/{id}` - Get a room
+- `GET /api/card-sets` - Get available card sets
+- `GET /api/me`, `PUT /api/me` - Read or update the current user (name, role)
+- `/api/admin/*` - Management page: sign-in, overview, close a room, remove a person (see [Management page](#management-page))
 
 ### SignalR Hub Methods
-- `JoinRoom(guid)` - Join a specific room
+- `JoinRoom(roomId)` - Join a specific room
+- `LeaveRoom()` - Leave the current room
 - `Vote(mark)` - Cast a vote
 - `ClearVotes()` - Clear all votes (owner only)
 - `ForceShowVotes()` - Reveal votes immediately (owner only)
 - `ChangePersonType(type)` - Change user role
 - `UpdateRoomConfiguration(config)` - Update room settings (owner only)
 - `TransferOwnership(targetPersonGuid)` - Transfer room ownership (owner only)
-- `HealthCheck()` - Respond to health check ping
 
 ### SignalR Events (Client Receives)
 - `RoomJoined` - Successful room join with participant list
@@ -335,37 +341,18 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 - `RoomConfigurationUpdated` - Settings changed
 - `OwnershipTransferred` - Room ownership changed
 - `RoomDisposed` - Room was closed
-- `HealthCheckRequest` - Server requesting health check response
 
 ## File Structure
 
 ```
-PlanningPokerUi/
-├── Controllers/
-│   ├── IndexController.cs      # Main page and API endpoints
-│   └── RoomController.cs       # Room access and joining
-├── Hubs/
-│   └── RoomHub.cs             # SignalR real-time communication
-├── Models/
-│   ├── Room.cs                # Core room entity
-│   ├── Person.cs              # User representation
-│   ├── Vote.cs                # Individual vote
-│   ├── Statistics.cs          # Vote analytics
-│   ├── CardSets.cs            # Available card sets
-│   └── RoomConfiguration.cs   # Room settings
-├── Services/
-│   ├── RoomsManagerService.cs # Room lifecycle management
-│   ├── PeopleManagerService.cs # User session management
-│   └── RoomNameGenerator.cs   # Fun room name generation
-├── Pages/
-│   ├── Index.cshtml           # Main landing page
-│   └── Shared/
-│       ├── Room.cshtml        # Main poker room interface
-│       ├── RoomJoin.cshtml    # Join room form
-│       └── _RoomSettings.cshtml # Room configuration modal
-└── wwwroot/
-    └── js/
-        └── site.js            # Client-side functionality
+PlanningPoker.Api/         # Host: startup, configuration, serves the built client from wwwroot
+PlanningPoker.Controller/  # REST controllers, SignalR RoomHub, middleware, mappers
+PlanningPoker.Service/     # Business logic and validation
+PlanningPoker.Repository/  # Storage entities and SQLite access
+PlanningPoker.Common/      # Shared models and ServiceResponse
+PlanningPoker.UnitTests/   # xUnit tests
+PlanningPoker.Client/      # Angular app (src/app/core, src/app/features, e2e)
+docs/                      # Slice specs and agent docs
 ```
 
 ---

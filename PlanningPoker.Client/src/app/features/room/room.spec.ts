@@ -8,6 +8,7 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
+import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES } from '../../models/api';
 import {
   ANN,
@@ -35,6 +36,7 @@ describe('Room', () => {
   const launcher = { create: vi.fn() };
   const dialog = { open: vi.fn() };
   const popup = { show: vi.fn(), dismiss: vi.fn() };
+  const rooms = { exists: vi.fn() };
   let hub: ReturnType<typeof fakeHub>;
   let navigate: ReturnType<typeof vi.spyOn>;
 
@@ -48,6 +50,8 @@ describe('Room', () => {
     dialog.open.mockReset();
     popup.show.mockReset();
     popup.dismiss.mockReset();
+    rooms.exists.mockReset();
+    rooms.exists.mockReturnValue(of({ id: 'room-1', exists: true }));
     launcher.create.mockReturnValue(fireworks);
     TestBed.configureTestingModule({
       providers: [
@@ -56,6 +60,7 @@ describe('Room', () => {
         { provide: FireworksLauncher, useValue: launcher },
         { provide: MatDialog, useValue: dialog },
         { provide: ErrorPopupService, useValue: popup },
+        { provide: RoomsService, useValue: rooms },
       ],
     });
     // The room provides its own hub client at component level, so the fake replaces it there.
@@ -223,6 +228,29 @@ describe('Room', () => {
 
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
+  });
+
+  it('checks the room exists before asking for a name, and goes home when it does not', async () => {
+    me.get.mockReturnValue(throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'x' }])));
+    rooms.exists.mockReturnValue(of({ id: 'room-1', exists: false }));
+
+    const { element } = await render();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
+    expect(element.textContent).not.toContain('Join this room');
+    expect(hub.invoke).not.toHaveBeenCalled();
+  });
+
+  it('goes home when the existence check reports the room as not found', async () => {
+    rooms.exists.mockReturnValue(
+      throwError(() => new ApiRequestError(404, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }])),
+    );
+
+    await render();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(me.get).not.toHaveBeenCalled();
   });
 
   it('goes home with a message when the room id is malformed', async () => {

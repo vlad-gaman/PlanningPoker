@@ -4,6 +4,10 @@ A web app where a team estimates work by voting with cards in a shared room and 
 
 ## Language
 
+**Room**:
+The shared space where a team votes: it has an owner, members, settings and a series of rounds. It is disposed when its last member leaves, and a server restart restores it from the store.
+_Avoid_: Session, game, lobby
+
 **Round**:
 One cycle in a room: people vote, the votes are revealed, then cleared to start the next round.
 _Avoid_: Game, session
@@ -63,3 +67,7 @@ _Avoid_: Participant, user
 **Operator**:
 The single person who looks after the running app: they see the live rooms and people, and can close a room or remove a person, through the management page. An operator is not a member of any room and never votes; they cannot see votes. Closing a room tells everyone in it that an operator closed it.
 _Avoid_: Admin, user, moderator, owner (the owner belongs to one room)
+
+**Takeover**:
+Opening a room in a second tab of the same browser makes the older tab give the room up, with a message. It happens in the browser only: another browser or device keeps its connection.
+_Avoid_: Duplicate session

@@ -46,4 +46,3 @@ Thumbs.db
 # Playwright
 /test-results/
 /playwright-report/
-/parity/out
