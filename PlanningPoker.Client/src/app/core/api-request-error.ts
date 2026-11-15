@@ -2,12 +2,22 @@ import { ApiError } from '../models/api';
 
 export const UNEXPECTED_ERROR_MESSAGE = 'Something went wrong.';
 
+/** Shown for a 429 whose body carries no server message (a proxy in front of the app can answer one itself). */
+export const RATE_LIMITED_MESSAGE = 'Too many requests. Wait a minute and try again.';
+
+const TOO_MANY_REQUESTS = 429;
+
 export class ApiRequestError extends Error {
   constructor(
     readonly status: number,
     readonly errors: ApiError[],
   ) {
-    super(errors[0]?.message ?? `Request failed with status ${status}`);
+    super(
+      errors[0]?.message ??
+        (status === TOO_MANY_REQUESTS
+          ? RATE_LIMITED_MESSAGE
+          : `Request failed with status ${status}`),
+    );
     this.name = 'ApiRequestError';
   }
 

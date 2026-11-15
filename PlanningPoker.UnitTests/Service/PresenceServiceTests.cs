@@ -625,17 +625,59 @@ public class PresenceServiceTests
         Assert.Single(sweep.Removed);
     }
 
+    private string CreateRoomNobodyJoins()
+    {
+        var owner = AddPerson();
+        var settings = new RoomSettings { Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = 5, ShowFireworks = false, MaxParticipants = 9 } };
+        return _service.Create(owner, settings).Data!.Id;
+    }
+
     [Fact]
-    public void SweepPresence_RoomNobodyHasJoinedYet_IsLeftToTheAbandonedSweep()
+    public void SweepPresence_RoomNobodyHasJoinedYet_SurvivesUntilTheNeverJoinedLifetime()
+    {
+        var roomId = CreateRoomNobodyJoins();
+
+        var sweep = SweepAfter(PresenceConstants.NeverJoinedRoomLifetime - TimeSpan.FromMilliseconds(1));
+
+        Assert.Empty(sweep.DisposedRoomIds);
+        Assert.NotNull(_rooms.Get(roomId));
+    }
+
+    [Fact]
+    public void SweepPresence_RoomNobodyJoinedForTheNeverJoinedLifetime_DeletesTheRoomLongBeforeTheAbandonedSweep()
+    {
+        var roomId = CreateRoomNobodyJoins();
+
+        var sweep = SweepAfter(PresenceConstants.NeverJoinedRoomLifetime);
+
+        Assert.Equal(roomId, Assert.Single(sweep.DisposedRoomIds));
+        Assert.Null(_rooms.Get(roomId));
+        Assert.True(PresenceConstants.NeverJoinedRoomLifetime < SweepConstants.AbandonedAfter);
+    }
+
+    [Fact]
+    public void SweepPresence_RoomTheCreatorJoinedInTime_IsNotDeletedAsNeverJoined()
     {
         var owner = AddPerson();
         var settings = new RoomSettings { Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = 5, ShowFireworks = false, MaxParticipants = 9 } };
         var roomId = _service.Create(owner, settings).Data!.Id;
+        _time.Advance(TimeSpan.FromSeconds(30));
+        Assert.True(_service.Join(owner, "c1", roomId).IsSuccess);
 
-        var sweep = SweepAfter(TimeSpan.FromHours(1));
+        var sweep = SweepAfter(PresenceConstants.NeverJoinedRoomLifetime);
 
         Assert.Empty(sweep.DisposedRoomIds);
         Assert.NotNull(_rooms.Get(roomId));
+    }
+
+    [Fact]
+    public void SweepPresence_UsesTheConfiguredNeverJoinedLifetime()
+    {
+        var presence = PresenceServiceFactory.Create(_rooms, _people, _service, _time, new PresenceOptions { NeverJoinedRoomLifetime = TimeSpan.FromSeconds(5) });
+        var roomId = CreateRoomNobodyJoins();
+        _time.Advance(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(roomId, Assert.Single(presence.SweepPresence().DisposedRoomIds));
     }
 
     // --- takeover ---
@@ -678,6 +720,7 @@ public class PresenceServiceTests
         Assert.Equal(TimeSpan.FromSeconds(10), options.GracePeriod);
         Assert.Equal(TimeSpan.FromMinutes(10), options.RemovalWindow);
         Assert.Equal(TimeSpan.FromSeconds(10), options.EmptyRoomLifetime);
+        Assert.Equal(TimeSpan.FromMinutes(1), options.NeverJoinedRoomLifetime);
     }
 
     [Fact]

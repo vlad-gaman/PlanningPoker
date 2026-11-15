@@ -1,4 +1,6 @@
+using System.Net;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
@@ -7,6 +9,7 @@ using PlanningPoker.Controller.Extensions;
 using PlanningPoker.Controller.Hubs;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
+using PlanningPoker.Controller.Services;
 using PlanningPoker.Controller.Validations;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Validations;
@@ -25,10 +28,12 @@ public class RoomHubWorkflowTests
     private readonly FakeRoomEventPublisher _publisher = new();
     private readonly FakeRoomTimerService _timer = new();
     private readonly FakeGroupManager _groups = new();
+    private readonly FailedJoinLimiter _failedJoins = new(Options.Create(new RateLimitingOptions()));
 
     private RoomHub NewHub(Person? person, CancellationToken connectionAborted = default)
     {
         var http = new DefaultHttpContext();
+        http.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
         if (person is not null)
         {
             http.SetSessionPerson(person);
@@ -46,6 +51,7 @@ public class RoomHubWorkflowTests
             new RoomConfigurationRequestMapper(),
             new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
+            _failedJoins,
             NullLogger<RoomHub>.Instance)
         {
             Context = new FakeHubCallerContext(ConnectionId, http, connectionAborted),
@@ -98,6 +104,46 @@ public class RoomHubWorkflowTests
         Assert.Equal((ConnectionId, "room"), Assert.Single(_groups.Added));
         Assert.Equal((ConnectionId, "room"), Assert.Single(_groups.Removed));
         Assert.Empty(_publisher.Joined);
+    }
+
+    [Fact]
+    public async Task JoinRoom_AfterTheFailedJoinLimit_IsRefusedAsRateLimitedWithoutTouchingTheRoom()
+    {
+        _rooms.JoinResult = ServiceResponse<JoinRoomResult>.Failure(ServiceError.RoomNotFound("room"));
+        for (var attempt = 0; attempt < RateLimitingConstants.FailedJoinLimit; attempt++)
+        {
+            Assert.Equal(ErrorCodes.RoomNotFound, ErrorCode(await NewHub(Ann).JoinRoom("room")));
+        }
+
+        _rooms.JoinCalls.Clear();
+        _groups.Added.Clear();
+        _rooms.JoinResult = ServiceResponse<JoinRoomResult>.Success(RoomResults.Join(Ann));
+        var response = await NewHub(Ann).JoinRoom("room");
+
+        Assert.Equal(ErrorCodes.RateLimited, ErrorCode(response));
+        Assert.Empty(_rooms.JoinCalls);
+        Assert.Empty(_groups.Added);
+    }
+
+    [Fact]
+    public async Task JoinRoom_SuccessfulJoins_NeverCountTowardsTheLimit()
+    {
+        _rooms.JoinResult = ServiceResponse<JoinRoomResult>.Success(RoomResults.Join(Ann));
+        for (var attempt = 0; attempt < RateLimitingConstants.FailedJoinLimit * 3; attempt++)
+        {
+            Assert.Null((await NewHub(Ann).JoinRoom("room")).Errors);
+        }
+    }
+
+    [Fact]
+    public async Task JoinRoom_InvalidIdentifiersCountAsFailedJoins()
+    {
+        for (var attempt = 0; attempt < RateLimitingConstants.FailedJoinLimit; attempt++)
+        {
+            Assert.Equal(ErrorCodes.ValidationFailed, ErrorCode(await NewHub(Ann).JoinRoom("has space")));
+        }
+
+        Assert.Equal(ErrorCodes.RateLimited, ErrorCode(await NewHub(Ann).JoinRoom("has space")));
     }
 
     [Theory]

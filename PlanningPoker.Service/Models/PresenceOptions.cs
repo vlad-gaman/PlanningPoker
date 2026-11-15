@@ -13,6 +13,9 @@ public class PresenceOptions
     /// <summary>How long a room may have nobody online before it is deleted.</summary>
     public TimeSpan EmptyRoomLifetime { get; set; } = PresenceConstants.EmptyRoomLifetime;
 
+    /// <summary>How long after its creation a room that nobody has joined yet is deleted.</summary>
+    public TimeSpan NeverJoinedRoomLifetime { get; set; } = PresenceConstants.NeverJoinedRoomLifetime;
+
     /// <summary>How often the background sweep runs.</summary>
     public TimeSpan SweepInterval { get; set; } = PresenceConstants.SweepInterval;
 }

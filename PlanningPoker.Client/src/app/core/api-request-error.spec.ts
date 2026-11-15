@@ -1,4 +1,4 @@
-import { ApiRequestError, errorMessage } from './api-request-error';
+import { ApiRequestError, RATE_LIMITED_MESSAGE, errorMessage } from './api-request-error';
 
 describe('ApiRequestError', () => {
   const error = new ApiRequestError(400, [
@@ -27,9 +27,23 @@ describe('ApiRequestError', () => {
 
 describe('errorMessage', () => {
   it('returns the message of an API error', () => {
-    expect(errorMessage(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]))).toBe(
-      'Server down.',
-    );
+    expect(
+      errorMessage(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }])),
+    ).toBe('Server down.');
+  });
+
+  it('returns the server message of a rate_limited response', () => {
+    const limited = new ApiRequestError(429, [
+      { code: 'rate_limited', message: 'Too many requests. Wait a minute and try again.' },
+    ]);
+
+    expect(errorMessage(limited)).toBe('Too many requests. Wait a minute and try again.');
+  });
+
+  it('shows a rate-limit message for a 429 with no body, instead of a bare status', () => {
+    const limited = new ApiRequestError(429, []);
+
+    expect(errorMessage(limited)).toBe(RATE_LIMITED_MESSAGE);
   });
 
   it('returns a generic message for anything else', () => {

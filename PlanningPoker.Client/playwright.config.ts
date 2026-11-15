@@ -16,9 +16,17 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: process.env['E2E_SERVER_COMMAND'] ?? 'dotnet run --project ../PlanningPoker.Api --no-launch-profile',
+    command:
+      process.env['E2E_SERVER_COMMAND'] ??
+      'dotnet run --project ../PlanningPoker.Api --no-launch-profile',
     // The tests talk plain HTTP to a Production host, so the redirect to HTTPS (on by default outside Development) is switched off.
-    env: { ASPNETCORE_URLS: `http://localhost:${port}`, ASPNETCORE_ENVIRONMENT: 'Production', Https__Redirect: 'false' },
+    // They also create far more people and rooms from one address than the per-address rate limits allow, so those are switched off too.
+    env: {
+      ASPNETCORE_URLS: `http://localhost:${port}`,
+      ASPNETCORE_ENVIRONMENT: 'Production',
+      Https__Redirect: 'false',
+      RateLimiting__Enabled: 'false',
+    },
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,

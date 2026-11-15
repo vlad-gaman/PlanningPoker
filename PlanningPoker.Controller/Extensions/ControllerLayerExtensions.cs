@@ -74,6 +74,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IAdminSessionResponseMapper, AdminSessionResponseMapper>();
         services.AddSingleton<IAdminOverviewResponseMapper, AdminOverviewResponseMapper>();
         services.AddOperatorAuthentication();
+        services.AddRateLimiting();
         services.AddOpenTelemetry().WithMetrics(metrics =>
         {
             metrics.ConfigureResource(resource => resource.AddService(MetricsConstants.ServiceName));
@@ -87,6 +88,8 @@ public static class ControllerLayerExtensions
 
     public static IApplicationBuilder UseControllerLayer(this IApplicationBuilder app)
     {
+        // After the forwarded headers (UseHttpsEnforcement runs first), so the limiter partitions on the real client address.
+        app.UseRateLimiting();
         app.UseMiddleware<ExceptionHandlingMiddleware>();
         app.UseMiddleware<JsonOnlyMiddleware>();
         app.UseMiddleware<SessionPersonMiddleware>();

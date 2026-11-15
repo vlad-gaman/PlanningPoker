@@ -42,9 +42,23 @@ public class SwaggerEndpointTests
         var put = me.GetProperty("put").GetProperty("responses");
         Assert.True(put.TryGetProperty("200", out _));
         Assert.True(put.TryGetProperty("400", out _));
+        Assert.True(put.TryGetProperty("429", out _));
         var get = me.GetProperty("get").GetProperty("responses");
         Assert.True(get.TryGetProperty("200", out _));
         Assert.True(get.TryGetProperty("401", out _));
+    }
+
+    [Fact]
+    public async Task SwaggerDocument_InDevelopment_DescribesTheRateLimitedResponseOfEveryLimitedEndpoint()
+    {
+        using var factory = new DevelopmentApiFactory();
+
+        var doc = await (await factory.CreateClient().GetAsync(SwaggerDocumentPath)).Content.ReadFromJsonAsync<JsonElement>();
+
+        var paths = doc.GetProperty("paths");
+        Assert.True(paths.GetProperty("/api/me").GetProperty("put").GetProperty("responses").TryGetProperty("429", out _));
+        Assert.True(paths.GetProperty("/api/rooms").GetProperty("post").GetProperty("responses").TryGetProperty("429", out _));
+        Assert.True(paths.GetProperty("/api/rooms/{id}").GetProperty("get").GetProperty("responses").TryGetProperty("429", out _));
     }
 
     [Fact]

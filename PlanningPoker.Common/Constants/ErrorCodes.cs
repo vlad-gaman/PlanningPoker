@@ -19,6 +19,7 @@ public static class ErrorCodes
     public const string AdminTotpRequired = "admin_totp_required";
     public const string AdminTotpInvalid = "admin_totp_invalid";
     public const string AdminLoginExpired = "admin_login_expired";
+    public const string RateLimited = "rate_limited";
 
     // Hub-only: returned from RoomHub methods, never from REST, so they have no entry in the REST status table.
     public const string NotInRoom = "not_in_room";
