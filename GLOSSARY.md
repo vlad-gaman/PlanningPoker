@@ -65,7 +65,7 @@ A person who has joined a room and has at least one open connection to it. Creat
 _Avoid_: Participant, user
 
 **Operator**:
-The single person who looks after the running app: they see the live rooms and people, and can close a room or remove a person, through the management page. An operator is not a member of any room and never votes; they cannot see votes. Closing a room tells everyone in it that an operator closed it.
+The single person who looks after the running app: they see the live rooms and people, and can close a room or remove a person, through the management page. An operator is not a member of any room and never votes; they cannot see votes. Closing a room tells everyone in it that an operator closed it. Failed sign-ins lock the Operator account for everyone, not just the sender (see [ADR 0002](docs/adr/0002-operator-sign-in-lockout-is-account-wide.md)).
 _Avoid_: Admin, user, moderator, owner (the owner belongs to one room)
 
 **Takeover**:
