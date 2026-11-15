@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -19,15 +20,32 @@ public static class HttpsEnforcementExtensions
     public static IServiceCollection AddHttpsEnforcement(this IServiceCollection services)
     {
         services.AddOptions<HttpsOptions>().BindConfiguration(HttpsConstants.ConfigurationSection);
-        services.Configure<ForwardedHeadersOptions>(options =>
+        services.AddOptions<ForwardedHeadersTrustOptions>().BindConfiguration(ForwardedHeadersConstants.ConfigurationSection);
+        services.AddOptions<ForwardedHeadersOptions>().Configure<IOptions<ForwardedHeadersTrustOptions>>((options, trust) =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-            // The front end's address is not known ahead of time, so any sender is trusted; only the last hop is read (ForwardLimit 1),
-            // which is the one the front end appended. The app is reached through the front end only.
-            options.KnownIPNetworks.Clear();
-            options.KnownProxies.Clear();
+            // Only the last hop is read (ForwardLimit 1), which is the one the front end appended.
             options.ForwardLimit = 1;
+
+            // Loopback stays trusted (the ASP.NET default). Trusting any sender is an explicit setting for a host that is reached
+            // through its front end alone (App Service, whose address is not known ahead of time).
+            if (trust.Value.TrustAnySender)
+            {
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+                return;
+            }
+
+            foreach (var proxy in trust.Value.KnownProxies)
+            {
+                options.KnownProxies.Add(IPAddress.Parse(proxy));
+            }
+
+            foreach (var network in trust.Value.KnownNetworks)
+            {
+                options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+            }
         });
         services.AddOptions<HstsOptions>().Configure<IOptions<HttpsOptions>>((hsts, https) =>
         {
