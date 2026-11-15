@@ -47,11 +47,8 @@ test('unknown /api routes return a JSON ApiResponse error, not index.html', asyn
   expect((await response.json()).errors[0].code).toBe('not_found');
 });
 
-test('swagger UI is served', async ({ request }) => {
+test('swagger is not served outside Development', async ({ request }) => {
   const response = await request.get('/swagger/v1/swagger.json');
 
-  expect(response.status()).toBe(200);
-  expect(Object.keys((await response.json()).paths)).toEqual(
-    expect.arrayContaining(['/api/me', '/api/card-sets', '/api/rooms', '/api/rooms/{id}']),
-  );
+  expect(response.status()).toBe(404);
 });
