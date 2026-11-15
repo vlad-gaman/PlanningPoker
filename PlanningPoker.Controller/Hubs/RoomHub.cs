@@ -91,7 +91,10 @@ public class RoomHub(
         }
 
         await roomEvents.PublishPersonExitedAsync(exited.Data!);
-        await ApplyFollowUpAsync(exited.Data!.RoomId, exited.Data.FollowUp);
+        // Only this connection unsubscribes, whether or not the person left: another tab of theirs stays in the room
+        // and in the group. The person's own PersonExited above still reaches this connection before it goes.
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, exited.Data!.RoomId);
+        await ApplyFollowUpAsync(exited.Data.RoomId, exited.Data.FollowUp);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 

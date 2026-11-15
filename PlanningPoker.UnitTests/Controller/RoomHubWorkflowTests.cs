@@ -168,6 +168,28 @@ public class RoomHubWorkflowTests
         Assert.False(exited.RoomDisposed);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task LeaveRoom_ExitSucceeds_RemovesOnlyThisConnectionFromTheRoomGroup(bool personLeft)
+    {
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(RoomResults.Exit(Ann, personLeft: personLeft));
+
+        await NewHub(Ann).LeaveRoom();
+
+        Assert.Equal((ConnectionId, "room"), Assert.Single(_groups.Removed));
+    }
+
+    [Fact]
+    public async Task LeaveRoom_ExitFails_KeepsTheGroupMembership()
+    {
+        _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Failure(ServiceError.NotInRoom());
+
+        await NewHub(Ann).LeaveRoom();
+
+        Assert.Empty(_groups.Removed);
+    }
+
     [Fact]
     public async Task LeaveRoom_LastMember_PassesRoomDisposedToThePublisher()
     {
