@@ -9,7 +9,7 @@ The shared space where a team votes: it has an owner, members, settings and a se
 _Avoid_: Session, game, lobby
 
 **Round**:
-One cycle in a room: people vote, the votes are revealed, then cleared to start the next round.
+One cycle in a room: people vote, the votes are revealed, then cleared to start the next round. Any member may reveal or clear, not only the owner, as with physical cards.
 _Avoid_: Game, session
 
 **Round history**:
@@ -17,7 +17,7 @@ The list, newest first, of the rounds a room has revealed, each with its round n
 _Avoid_: Past votes, vote log, archive
 
 **Reveal**:
-The moment the votes in a room are shown to everyone, either after the countdown or when forced.
+The moment the votes in a room are shown to everyone, either after the countdown or when forced. Any member can force it, and any member can clear the votes afterwards; the owner has no special say here.
 _Avoid_: Flip, show-down
 
 **Round timer**:
@@ -57,7 +57,7 @@ What a person is in the room: Developer, Tester, SRE or Observer. Only Observer 
 _Avoid_: Person type, position
 
 **Owner**:
-The member who can change the room settings and manage the room. The creator is the owner from creation, but a creator who has not joined is not a member: the first person admitted to a room with no owner among its members becomes owner. A creator who arrives later joins as a regular member and does not get ownership back. When the owner leaves, ownership passes to another member.
+The member who can change the room settings and transfer ownership. Revealing and clearing votes are not owner powers: any member can do them. The creator is the owner from creation, but a creator who has not joined is not a member: the first person admitted to a room with no owner among its members becomes owner. A creator who arrives later joins as a regular member and does not get ownership back. When the owner leaves, ownership passes to another member.
 _Avoid_: Host, admin, creator (the creator is only the owner until someone else is admitted first)
 
 **Member**:
