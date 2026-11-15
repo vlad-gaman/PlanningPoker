@@ -41,7 +41,7 @@ A person whose membership ended because they stayed offgrid for the removal wind
 _Avoid_: Exited, kicked
 
 **Restored room**:
-A room that came back from the store after a server restart (SQLite file, `Persistence` appsettings section; on App Service point it at `/home`). Its people, votes and round state are kept and every person starts offgrid until they reconnect. A revealed round stays revealed; a countdown that was running is not resumed. A restored room is deleted once all its people are removed or it has had no activity for the `Sweep:AbandonedAfter` period (24 hours).
+A room that came back from the store after a server restart (SQLite file, `Persistence` appsettings section; on App Service for Linux point it at `/home`; the container image sets `/home/data/planningpoker.db`). Its people, votes and round state are kept and every person starts offgrid until they reconnect. A revealed round stays revealed; a countdown that was running is not resumed. A restored room is deleted once all its people are removed or it has had no activity for the `Sweep:AbandonedAfter` period (24 hours).
 _Avoid_: Recovered, reloaded
 
 **Voter**:
@@ -71,3 +71,7 @@ _Avoid_: Admin, user, moderator, owner (the owner belongs to one room)
 **Takeover**:
 Opening a room in a second tab of the same browser makes the older tab give the room up, with a message. It happens in the browser only: another browser or device keeps its connection.
 _Avoid_: Duplicate session
+
+**Staging image**:
+The container image a "Deploy to staging" run builds and pushes to private GHCR as `staging-<run_number>`. It is deployed to the staging slot by digest, not by tag, and "Roll back staging" redeploys an earlier one the same way (see [ADR 0004](docs/adr/0004-staging-deploys-a-container-image-by-digest.md)). The SQLite file lives outside the image, on the App Service `/home` mount, so a deploy or rollback keeps the rooms.
+_Avoid_: Build, release, site.zip

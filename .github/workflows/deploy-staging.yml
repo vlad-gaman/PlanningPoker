@@ -1,6 +1,8 @@
 name: Deploy to staging
 
-# Manual only. Needs the "staging" environment with secret AZURE_WEBAPP_PUBLISH_PROFILE
+# Manual only. Builds the container image, pushes it to private GHCR as staging-<run_number>
+# and deploys it, by digest, to the staging slot of a Linux container Web App.
+# Needs the "staging" environment with secret AZURE_WEBAPP_PUBLISH_PROFILE
 # (the staging slot's publish profile) and variable AZURE_WEBAPP_NAME.
 on:
   workflow_dispatch:
@@ -12,29 +14,56 @@ jobs:
   test:
     uses: ./.github/workflows/ci.yml
 
-  deploy:
+  build:
     needs: test
     runs-on: ubuntu-latest
-    environment: staging
     permissions:
-      contents: write
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.push.outputs.image }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: site
-      - name: Unzip the site
-        run: unzip -q site.zip -d site
+      - name: Log in to GHCR
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: echo "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+      - name: Build the image
+        env:
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+          SHA: ${{ github.sha }}
+        run: |
+          image="ghcr.io/${REPO,,}"
+          docker build \
+            --label "org.opencontainers.image.revision=$SHA" \
+            --tag "$image:staging-$RUN_NUMBER" .
+      - name: Push the image and record its digest
+        id: push
+        env:
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          image="ghcr.io/${REPO,,}"
+          docker push "$image:staging-$RUN_NUMBER"
+          ref=$(docker inspect --format '{{ index .RepoDigests 0 }}' "$image:staging-$RUN_NUMBER")
+          if [[ ! "$ref" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Could not read the pushed image digest"
+            exit 1
+          fi
+          echo "image=$ref" >> "$GITHUB_OUTPUT"
+          echo "Pushed $image:staging-$RUN_NUMBER as $ref" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions: {}
+    steps:
       - uses: azure/webapps-deploy@5cfb776471c748b351e1ebf5770e208a54ace016 # v2.2.19
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           slot-name: staging
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: site
-      - name: Tag and keep the deployed zip
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="staging-${{ github.run_number }}"
-          gh release create "$tag" site.zip --target "${{ github.sha }}" --prerelease \
-            --title "Staging build $tag" --notes "Deployed to the staging slot from ${{ github.sha }}."
+          images: ${{ needs.build.outputs.image }}

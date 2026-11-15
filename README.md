@@ -18,6 +18,7 @@ A **real-time collaborative Planning Poker application** used by software develo
 - [Monitoring](#monitoring)
 - [Management page](#management-page)
 - [Getting Started](#getting-started)
+- [Container](#container)
 - [API Endpoints](#api-endpoints)
 
 ## Core Business Purpose
@@ -62,7 +63,7 @@ This application enables software development teams to conduct efficient, collab
 - **Room Disposal** - A room with nobody online for 10 seconds is deleted
 - **Never-Joined Rooms** - A room nobody has joined is deleted 1 minute after it was created (`Presence__NeverJoinedRoomLifetime`)
 - **Abandoned Rooms** - A separate sweep every 10 minutes (`Sweep__Interval`) removes rooms and people untouched for 24 hours (`Sweep__AbandonedAfter`)
-- **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; on Azure App Service point it at the persistent mount, e.g. `Data Source=/home/data/planningpoker.db`, and keep staging slots on a different file
+- **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; the container image already points it at `/home/data/planningpoker.db`, which on Azure App Service for Linux is the persistent mount (see [Container](#container)); keep staging and production on different files
 - **Connection Recovery** - Automatic reconnection with exponential backoff
 
 ## Voting System
@@ -304,6 +305,24 @@ Closing a room shows everyone in it "This room was closed by an operator." and s
 
 For client development, run `npm start` in `PlanningPoker.Client` (proxies the API) next to the API. Tests: `dotnet test`, and in the client `npm run test:ci` and `npm run e2e`.
 
+## Container
+
+The app ships as one Linux container image (`Dockerfile` at the repo root): a Node 24 stage builds the Angular client, a .NET 10 SDK stage publishes the API with the client in `wwwroot`, and the `aspnet` runtime image runs it. It listens on port 8080. See `docs/adr/0004-staging-deploys-a-container-image-by-digest.md`.
+
+### Run it locally
+```
+docker build -t planningpoker .
+docker run --rm -p 8080:8080 -e Https__Redirect=false -v planningpoker-data:/home/data planningpoker
+```
+Then open `http://localhost:8080`. `Https__Redirect=false` is needed because the image runs in the Production environment, which redirects plain HTTP to HTTPS (see [HTTPS](#https)). The named volume keeps the SQLite file `/home/data/planningpoker.db` across runs (the image sets `Persistence__ConnectionString` to that path); leave the `-v` out for a throwaway database. Other settings are passed as environment variables with `-e`, for example `-e Operator__Username=...` (see [Management page](#management-page)).
+
+### Deploy to staging
+`deploy-staging.yml` (manual) runs CI, builds the image, pushes it to the private GitHub container registry as `ghcr.io/<owner>/<repo>:staging-<run_number>`, and deploys it **by digest** (`...@sha256:...`) to the `staging` slot of the Linux container Web App. A tag can be moved; the digest cannot, so what runs is exactly what was built.
+
+`rollback-staging.yml` (manual) takes an image tag such as `staging-12`, checks it against `^staging-[0-9]+$`, resolves it to its digest in GHCR and deploys that digest to the staging slot. Nothing is kept as a release asset any more.
+
+On the Web App (slot), set `WEBSITES_PORT=8080`, keep `WEBSITES_ENABLE_APP_SERVICE_STORAGE=true` so `/home` persists, and give the slot the GHCR pull credentials (`DOCKER_REGISTRY_SERVER_URL`, `DOCKER_REGISTRY_SERVER_USERNAME`, `DOCKER_REGISTRY_SERVER_PASSWORD`). Keep WebSockets, Always On and HTTPS Only on, and one instance.
+
 ### Creating a Room
 1. Visit the main page (`/`)
 2. Enter your name and select role (Dev/Tester/Observer)
@@ -358,6 +377,7 @@ PlanningPoker.Repository/  # Storage entities and SQLite access
 PlanningPoker.Common/      # Shared models and ServiceResponse
 PlanningPoker.UnitTests/   # xUnit tests
 PlanningPoker.Client/      # Angular app (src/app/core, src/app/features, e2e)
+Dockerfile                 # Container image: builds the client, publishes the API, runs it
 docs/                      # Slice specs and agent docs
 ```
 
