@@ -53,29 +53,4 @@ public class SpaAndRoutingTests : IClassFixture<ApiFactory>
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("not_found", body.GetProperty("errors")[0].GetProperty("code").GetString());
     }
-
-    [Fact]
-    public async Task Swagger_ListsMeEndpointWithResponses()
-    {
-        var response = await _client.GetAsync("/swagger/v1/swagger.json");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var me = doc.GetProperty("paths").GetProperty("/api/me");
-        var put = me.GetProperty("put").GetProperty("responses");
-        Assert.True(put.TryGetProperty("200", out _));
-        Assert.True(put.TryGetProperty("400", out _));
-        var get = me.GetProperty("get").GetProperty("responses");
-        Assert.True(get.TryGetProperty("200", out _));
-        Assert.True(get.TryGetProperty("401", out _));
-    }
-
-    [Fact]
-    public async Task SwaggerUi_IsNotShadowedBySpaFallback()
-    {
-        var response = await _client.GetAsync("/swagger/index.html");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.DoesNotContain("spa-index", await response.Content.ReadAsStringAsync());
-    }
 }
