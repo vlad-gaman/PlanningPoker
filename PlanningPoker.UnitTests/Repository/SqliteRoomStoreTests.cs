@@ -109,4 +109,22 @@ public sealed class SqliteRoomStoreTests : IDisposable
         Assert.Empty(NewStore().LoadAll());
         Assert.Single(SetAsideFiles());
     }
+
+    [Fact]
+    public void Save_ThenLoadAll_KeepsTheSessionToken()
+    {
+        var room = NewRoom("room-a");
+        room.People[0].SessionToken = "token-ann";
+        NewStore().Save(room);
+
+        Assert.Equal("token-ann", Assert.Single(Assert.Single(NewStore().LoadAll()).People).SessionToken);
+    }
+
+    [Fact]
+    public void LoadAll_PersonStoredWithoutAToken_LoadsWithNone()
+    {
+        NewStore().Save(NewRoom("room-a"));
+
+        Assert.Null(Assert.Single(Assert.Single(NewStore().LoadAll()).People).SessionToken);
+    }
 }

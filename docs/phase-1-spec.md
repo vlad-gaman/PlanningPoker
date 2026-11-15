@@ -44,7 +44,7 @@ Target framework .NET 10 (see section 0). Each layer registers its own classes i
   2. JSON-only guard: state-changing routes (`POST`/`PUT`/`PATCH`/`DELETE`) reject non-`application/json` bodies with `unsupported_media_type` (CSRF defence with `SameSite=Lax`; no antiforgery tokens).
   3. Session cookie (see below).
 - **Logging**: built-in `ILogger` to console only (App Service captures it). No Application Insights or Serilog. Hub command failures are logged with room id and person id.
-- **Session cookie** (replaces ASP.NET `Session`; `AddSession` is not used): a cookie holding the **person GUID**, HttpOnly, Secure, `SameSite=Lax`, session cookie (no expiry), name `pp_session`. A stale GUID (no matching person, for example after a restart) is treated as "no person". The cookie is minted by `PUT /api/me` when no valid person exists, and replaced when stale. REST and the hub handshake both read it (same origin, no bearer token, no CORS).
+- **Session cookie** (replaces ASP.NET `Session`; `AddSession` is not used): a cookie holding the person's **session token** (32 random bytes, base64url), HttpOnly, Secure, `SameSite=Lax`, session cookie (no expiry), name `pp_session`. The token is a secret separate from the person GUID: the GUID is the public id other room members see, the token is never sent anywhere but this cookie. An unknown token (no matching person, or anything that is not a token) is treated as "no person". The cookie is minted by `PUT /api/me` when no valid person exists, and replaced when stale. REST and the hub handshake both read it (same origin, no bearer token, no CORS).
 - **`GET /api/me`** is specified in slice 1; slice 0 only needs the cookie middleware and a person-resolving helper.
 - **`RoomHub`** at `/hubs/room`, in the Controller project. Empty in slice 0 apart from `OnConnectedAsync` / `OnDisconnectedAsync`. A connection with no valid person is rejected with 401 at connect. Hub methods return the `ApiResponse` shape via `invoke`. JSON is camelCase on both REST and hub.
 - **Swagger** (Swashbuckle) on the Api host; every endpoint documents its request and its responses (`ProducesResponseType` with `ApiResponse<T>`).
@@ -83,7 +83,7 @@ Move the colour variables from `PlanningPokerUi/wwwroot/css/site.css` (`:root` a
 
 ### 1.7 Tests for slice 0
 
-- xUnit: `ApiResponseMapper` status table and shape; the exception middleware returns `internal_error`; the JSON-only guard; session-cookie flags and stale-GUID handling; the SPA fallback does not shadow `/api`.
+- xUnit: `ApiResponseMapper` status table and shape; the exception middleware returns `internal_error`; the JSON-only guard; session-cookie flags and unknown-token handling; the SPA fallback does not shadow `/api`.
 - Vitest: `ApiClient` unwrapping of success and error `ApiResponse`; `ThemeService` effective-theme resolution and persistence.
 - Playwright (first e2e): the app loads at `/`, and a session cookie with the HttpOnly/Secure/`SameSite=Lax` flags is issued.
 

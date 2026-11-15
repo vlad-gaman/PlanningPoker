@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace PlanningPoker.UnitTests.Api;
 
@@ -11,7 +12,8 @@ public class MeEndpointTests : IClassFixture<ApiFactory>
 
     public MeEndpointTests(ApiFactory factory)
     {
-        _client = factory.CreateClient();
+        // Every test sets the cookie it means to send, so the client must not replay cookies from earlier responses.
+        _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
     }
 
     private static HttpRequestMessage Put(object body, string? cookie = null)
@@ -64,7 +66,55 @@ public class MeEndpointTests : IClassFixture<ApiFactory>
         var data = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
         Assert.Equal("Ann", data.GetProperty("name").GetString());
         Assert.Equal("dev", data.GetProperty("personType").GetString());
-        Assert.Contains(data.GetProperty("guid").GetString()!, cookie);
+        Assert.DoesNotContain(data.GetProperty("guid").GetString()!, cookie);
+    }
+
+    [Fact]
+    public async Task Get_CookieHoldingPublicId_Returns401NoSession()
+    {
+        var put = await _client.SendAsync(Put(new { name = "Ann", personType = "dev" }));
+        var guid = (await put.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("guid").GetString();
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("Cookie", $"pp_session={guid}");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("no_session", body.GetProperty("errors")[0].GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Put_CookieHoldingPublicId_CreatesNewPersonAndLeavesTheOriginalUnchanged()
+    {
+        var first = await _client.SendAsync(Put(new { name = "Ann", personType = "dev" }));
+        var cookie = CookieValue(first);
+        var guid = (await first.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("guid").GetString();
+
+        var second = await _client.SendAsync(Put(new { name = "Bob", personType = "obs" }, $"pp_session={guid}"));
+
+        Assert.True(second.Headers.Contains("Set-Cookie"));
+        var created = (await second.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        Assert.NotEqual(guid, created.GetProperty("guid").GetString());
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("Cookie", cookie);
+        var original = (await (await _client.SendAsync(request)).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        Assert.Equal("Ann", original.GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task Get_SessionToken_IsNotInTheResponseBody()
+    {
+        var put = await _client.SendAsync(Put(new { name = "Ann", personType = "dev" }));
+        var token = CookieValue(put)["pp_session=".Length..];
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("Cookie", CookieValue(put));
+
+        var get = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+        Assert.DoesNotContain(token, await put.Content.ReadAsStringAsync());
+        Assert.DoesNotContain(token, await get.Content.ReadAsStringAsync());
     }
 
     [Fact]

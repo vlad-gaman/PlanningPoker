@@ -13,6 +13,8 @@ public sealed class InterleavingPersonRepository(IPersonRepository inner) : IPer
 
     public PersonEntity? Get(Guid guid) => inner.Get(guid);
 
+    public PersonEntity? GetBySessionToken(string? sessionToken) => inner.GetBySessionToken(sessionToken);
+
     public bool TryAdd(PersonEntity person) => inner.TryAdd(person);
 
     public bool Remove(Guid guid) => inner.Remove(guid);

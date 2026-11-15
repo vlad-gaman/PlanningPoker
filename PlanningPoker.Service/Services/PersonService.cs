@@ -6,11 +6,16 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Services;
 
-public class PersonService(IPersonRepository repository, IPersonMapper personMapper, IPersonEntityMapper entityMapper, TimeProvider time) : IPersonService
+public class PersonService(
+    IPersonRepository repository,
+    IPersonMapper personMapper,
+    IPersonSessionMapper sessionMapper,
+    IPersonEntityMapper entityMapper,
+    TimeProvider time) : IPersonService
 {
-    public ServiceResponse<Person> Get(Guid? guid)
+    public ServiceResponse<Person> Get(string? sessionToken)
     {
-        var entity = guid is null ? null : repository.Get(guid.Value);
+        var entity = repository.GetBySessionToken(sessionToken);
         if (entity is null)
         {
             return ServiceResponse<Person>.Failure(ServiceError.NoSession());
@@ -19,22 +24,23 @@ public class PersonService(IPersonRepository repository, IPersonMapper personMap
         return ServiceResponse<Person>.Success(personMapper.Map(entity));
     }
 
-    public ServiceResponse<Person> Upsert(Guid? existingGuid, string name, string personType)
+    public ServiceResponse<PersonSession> Upsert(string? sessionToken, string name, string personType)
     {
         var trimmedName = name.Trim();
-        if (existingGuid is not null && repository.Update(existingGuid.Value, existing =>
+        var existing = repository.GetBySessionToken(sessionToken);
+        if (existing is not null && repository.Update(existing.Guid, person =>
             {
-                existing.Name = trimmedName;
-                existing.PersonType = personType;
-                existing.LastSeenAt = time.GetUtcNow();
-                return personMapper.Map(existing);
+                person.Name = trimmedName;
+                person.PersonType = personType;
+                person.LastSeenAt = time.GetUtcNow();
+                return sessionMapper.Map(person);
             }, out var updated))
         {
-            return ServiceResponse<Person>.Success(updated!);
+            return ServiceResponse<PersonSession>.Success(updated!);
         }
 
         var created = entityMapper.Map(Guid.NewGuid(), trimmedName, personType);
         repository.TryAdd(created);
-        return ServiceResponse<Person>.Success(personMapper.Map(created));
+        return ServiceResponse<PersonSession>.Success(sessionMapper.Map(created));
     }
 }

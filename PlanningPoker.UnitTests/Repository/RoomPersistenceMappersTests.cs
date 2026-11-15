@@ -52,4 +52,16 @@ public class RoomPersistenceMappersTests
 
         Assert.Empty(stored.People);
     }
+
+    [Fact]
+    public void StoredRoomMapper_KeepsTheSessionToken()
+    {
+        var people = new PersonRepository();
+        var owner = Guid.NewGuid();
+        people.TryAdd(new PersonEntity { Guid = owner, SessionToken = "token-ann", Name = "Ann", PersonType = "dev" });
+
+        var stored = new StoredRoomMapper().Map(new RoomEntity { Id = "r", OwnerGuid = owner }, people, DateTimeOffset.UnixEpoch);
+
+        Assert.Equal("token-ann", Assert.Single(stored.People).SessionToken);
+    }
 }

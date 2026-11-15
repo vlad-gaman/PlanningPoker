@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -58,6 +59,66 @@ public class RoomHubConnectTests : IClassFixture<ApiFactory>
         await using var connection = BuildConnection($"pp_session={Guid.NewGuid()}");
 
         await Assert.ThrowsAnyAsync<Exception>(() => connection.StartAsync());
+    }
+
+    [Fact]
+    public async Task Connect_WithCookieHoldingPublicId_IsRejected()
+    {
+        var guid = await PublicIdOf(await MintCookie());
+
+        var response = await NegotiateWith($"pp_session={guid}");
+        await using var connection = BuildConnection($"pp_session={guid}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("no_session", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors")[0].GetProperty("code").GetString());
+        await Assert.ThrowsAnyAsync<Exception>(() => connection.StartAsync());
+    }
+
+    [Fact]
+    public async Task Negotiate_WithSessionToken_Succeeds()
+    {
+        var response = await NegotiateWith(await MintCookie());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task JoinRoomAndPersonJoined_DoNotCarryTheSessionToken()
+    {
+        var ownerCookie = await _factory.MintCookie("Ann");
+        var guestCookie = await _factory.MintCookie("Bob", "test");
+        var roomId = await _factory.CreateRoom(ownerCookie);
+        await using var owner = BuildConnection(ownerCookie);
+        await using var guest = BuildConnection(guestCookie);
+        await owner.StartAsync();
+        await guest.StartAsync();
+        var ownerJoin = await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        var guestJoinedEvent = owner.NextEvent("PersonJoined");
+
+        var guestJoin = await guest.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        var guestJoined = await guestJoinedEvent;
+
+        var payloads = string.Join(" ", ownerJoin.GetRawText(), guestJoin.GetRawText(), guestJoined.GetRawText());
+        Assert.Contains(await PublicIdOf(guestCookie), payloads);
+        Assert.DoesNotContain(TokenOf(ownerCookie), payloads);
+        Assert.DoesNotContain(TokenOf(guestCookie), payloads);
+    }
+
+    private static string TokenOf(string cookie) => cookie["pp_session=".Length..];
+
+    private async Task<string> PublicIdOf(string cookie)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("Cookie", cookie);
+        var body = await (await _factory.CreateClient().SendAsync(request)).Content.ReadFromJsonAsync<JsonElement>();
+        return body.GetProperty("data").GetProperty("guid").GetString()!;
+    }
+
+    private async Task<HttpResponseMessage> NegotiateWith(string cookie)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/hubs/room/negotiate?negotiateVersion=1");
+        request.Headers.Add("Cookie", cookie);
+        return await _factory.CreateClient().SendAsync(request);
     }
 
     [Fact]
