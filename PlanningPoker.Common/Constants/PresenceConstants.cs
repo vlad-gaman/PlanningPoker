@@ -14,6 +14,12 @@ public static class PresenceConstants
     /// <summary>How long a room may have nobody online (people in their grace period count as online) before it is deleted.</summary>
     public static readonly TimeSpan EmptyRoomLifetime = TimeSpan.FromSeconds(10);
 
+    /// <summary>
+    /// How long after its creation a room that nobody has joined yet is deleted. Short, because creating rooms needs no sign-in and
+    /// a room nobody joined would otherwise live for the abandoned-room sweep (24 hours); long enough for the creator's browser to open the room.
+    /// </summary>
+    public static readonly TimeSpan NeverJoinedRoomLifetime = TimeSpan.FromMinutes(1);
+
     /// <summary>How often the background sweep looks for people to turn offgrid or remove and for empty rooms.</summary>
     public static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(1);
 }

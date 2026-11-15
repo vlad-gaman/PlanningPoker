@@ -20,6 +20,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.Forbidden] = StatusCodes.Status403Forbidden,
         [ErrorCodes.AdminInvalidCredentials] = StatusCodes.Status401Unauthorized,
         [ErrorCodes.AdminLoginLocked] = StatusCodes.Status429TooManyRequests,
+        [ErrorCodes.RateLimited] = StatusCodes.Status429TooManyRequests,
         [ErrorCodes.AdminAntiforgeryInvalid] = StatusCodes.Status403Forbidden,
         [ErrorCodes.AdminTotpRequired] = StatusCodes.Status401Unauthorized,
         [ErrorCodes.AdminTotpInvalid] = StatusCodes.Status401Unauthorized,

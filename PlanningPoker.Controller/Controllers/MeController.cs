@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
@@ -31,9 +33,11 @@ public class MeController(
 
     /// <summary>Sets the name and person type; mints the session cookie when no valid person exists.</summary>
     [HttpPut]
+    [EnableRateLimiting(RateLimitingConstants.MeUpdatePolicy)]
     [ProducesResponseType<ApiResponse<PersonResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status415UnsupportedMediaType)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status429TooManyRequests)]
     public IActionResult Put([FromBody] UpdateMeRequest request)
     {
         var validated = validation.Validate(request);

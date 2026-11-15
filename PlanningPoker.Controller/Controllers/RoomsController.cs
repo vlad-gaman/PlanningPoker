@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
@@ -22,11 +24,13 @@ public class RoomsController(
 {
     /// <summary>Creates a room owned by the session person.</summary>
     [HttpPost]
+    [EnableRateLimiting(RateLimitingConstants.RoomCreatePolicy)]
     [ProducesResponseType<ApiResponse<RoomCreatedResponse>>(StatusCodes.Status201Created)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status415UnsupportedMediaType)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status429TooManyRequests)]
     public IActionResult Create([FromBody] CreateRoomRequest request)
     {
         var session = RequireSessionPerson();
@@ -46,8 +50,10 @@ public class RoomsController(
 
     /// <summary>Tells whether a room exists.</summary>
     [HttpGet("{id}")]
+    [EnableRateLimiting(RateLimitingConstants.RoomLookupPolicy)]
     [ProducesResponseType<ApiResponse<RoomExistsResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status429TooManyRequests)]
     public IActionResult Get(string id)
     {
         return ToResult(rooms.Exists(id), roomExistsResponseMapper.Map);

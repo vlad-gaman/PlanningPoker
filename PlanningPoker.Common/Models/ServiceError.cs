@@ -110,6 +110,12 @@ public class ServiceError
         return Create(ErrorCodes.Forbidden, "You may not do this.");
     }
 
+    /// <summary>The single definition of the error returned when a client address has used up its requests for the current window.</summary>
+    public static ServiceError RateLimited()
+    {
+        return Create(ErrorCodes.RateLimited, "Too many requests. Wait a minute and try again.");
+    }
+
     /// <summary>The single definition of the error returned when an endpoint needs the Operator and there is no valid sign-in.</summary>
     public static ServiceError Unauthorized()
     {
