@@ -96,6 +96,54 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
     }
 
     [Fact]
+    public async Task LeaveRoom_DepartedConnection_ReceivesNoFurtherRoomEvents()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var receivedBeforeLeaving = room.Owner.NextEvent("VoteCast");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "1");
+        await receivedBeforeLeaving;
+        var afterLeaving = CountEvents(room.Owner, "VoteCast");
+
+        await room.Owner.InvokeAsync<JsonElement>("LeaveRoom");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "2");
+        await room.Guest.InvokeAsync<JsonElement>("ClearVotes");
+
+        // A broadcast the guest sends after the owner's group removal would reach the owner within this window.
+        await Task.Delay(500);
+        Assert.Equal(0, afterLeaving());
+    }
+
+    [Fact]
+    public async Task LeaveRoom_PersonStillHasAnotherConnection_OnlyTheLeavingConnectionStopsReceiving()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await using var otherTab = factory.Connect(room.OwnerCookie);
+        await otherTab.StartAsync();
+        await otherTab.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+        var otherTabReceivedBefore = otherTab.NextEvent("VoteCast");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "1");
+        await otherTabReceivedBefore;
+        var leavingConnectionVotes = CountEvents(room.Owner, "VoteCast");
+        var otherTabVotes = CountEvents(otherTab, "VoteCast");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("LeaveRoom");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "2");
+
+        Assert.Equal(JsonValueKind.Null, response.GetProperty("errors").ValueKind);
+        await TestSession.WaitUntilAsync(() => Task.FromResult(otherTabVotes() == 1), TimeSpan.FromSeconds(5));
+        await Task.Delay(500);
+        Assert.Equal(0, leavingConnectionVotes());
+        Assert.Equal(1, otherTabVotes());
+    }
+
+    private static Func<int> CountEvents(HubConnection connection, string eventName)
+    {
+        var count = 0;
+        connection.On<JsonElement>(eventName, _ => Interlocked.Increment(ref count));
+        return () => Volatile.Read(ref count);
+    }
+
+    [Fact]
     public async Task LeaveRoom_LastMember_RemovesTheRoom()
     {
         var cookie = await factory.MintCookie();

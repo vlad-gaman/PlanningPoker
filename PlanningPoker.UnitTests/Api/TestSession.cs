@@ -58,7 +58,7 @@ public static class TestSession
         var guestJoined = owner.NextEvent("PersonJoined", payload => PersonName(payload) == "Bob");
         await JoinSuccessfully(guest, roomId);
         await guestJoined;
-        return new TestRoom(roomId, owner, guest);
+        return new TestRoom(roomId, owner, guest, ownerCookie);
     }
 
     /// <summary>Resolves with the first payload of <paramref name="eventName"/> that satisfies <paramref name="predicate"/> (any payload when omitted).</summary>
