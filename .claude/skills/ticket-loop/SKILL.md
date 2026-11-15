@@ -19,7 +19,7 @@ Take at most **one** ticket per tick. A ticket finishing never starts the next o
 
 1. **Pick.** List the queue with `gh issue list`. Order by dependency, then number: read each ticket's "blocked by" lines and the `docs/phase-*-spec.md` slice order, and never start a ticket before the ones it depends on are merged. Skip the skip list.
 2. **Triage (only if the user asked for it).** For a `needs-triage` or `needs-info` ticket (see `docs/agents/triage-labels.md`), delegate a `grilling` session to an **Opus** sub-agent, record the decisions on the ticket and relabel it `ready-for-agent`. Without a triage request, skip this step and take the ticket as written; if it can't be implemented as written, treat it as a blocker (step 8).
-3. **Implement.** Delegate to a **Sonnet** sub-agent in its own worktree, told to use `/implement <ticket>`. The brief names the ticket, the base branch (`main`) and "follow CLAUDE.md, add tests, add an e2e test for any user-visible flow". Ask it to open the PR and report.
+3. **Implement.** Delegate to a **Sonnet** sub-agent in its own worktree, told to implement the ticket directly (`/implement` can't be invoked by a sub-agent): read the ticket, write the tests first where the spec lists them, run the single test files while working and the full suite once at the end, review its own diff, and commit. The brief names the ticket, the base branch (`main`) and "follow CLAUDE.md, add tests, add an e2e test for any user-visible flow". Ask it to open the PR and report.
 4. **Review the PR.**
    - A PR with open-ended questions in its body: have an Opus sub-agent `grilling` them, then send the decision back to the implementer. You do not guess.
    - Assumptions anywhere in the work get the same grilling treatment.
