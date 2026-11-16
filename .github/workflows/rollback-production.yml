@@ -20,7 +20,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
-        run: gh release download "$TAG" --repo "${{ github.repository }}" --pattern site.zip
+          REPO: ${{ github.repository }}
+        run: |
+          if [[ ! "$TAG" =~ ^prod-[0-9]+$ ]]; then
+            echo "::error::Tag must look like prod-12"
+            exit 1
+          fi
+          gh release download "$TAG" --repo "$REPO" --pattern site.zip
       - name: Unzip the site
         run: unzip -q site.zip -d site
       - uses: azure/webapps-deploy@5cfb776471c748b351e1ebf5770e208a54ace016 # v2.2.19
