@@ -1,0 +1,30 @@
+name: Roll back production
+
+# Manual only. Redeploys the zip kept by an earlier "Deploy to production" run.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to redeploy (for example prod-12)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download the kept zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release download "$TAG" --repo "${{ github.repository }}" --pattern site.zip
+      - name: Unzip the site
+        run: unzip -q site.zip -d site
+      - uses: azure/webapps-deploy@5cfb776471c748b351e1ebf5770e208a54ace016 # v2.2.19
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: site
