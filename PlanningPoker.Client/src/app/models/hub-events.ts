@@ -1,0 +1,19 @@
+/** Event names the server pushes on the room hub. Must match PlanningPoker.Controller/Constants/HubEvents.cs. */
+export const HUB_EVENTS = {
+  PersonJoined: 'PersonJoined',
+  PersonExited: 'PersonExited',
+  PersonOffgrid: 'PersonOffgrid',
+  PersonBack: 'PersonBack',
+  OwnershipTransferred: 'OwnershipTransferred',
+  PersonTypeChanged: 'PersonTypeChanged',
+  RoomConfigurationUpdated: 'RoomConfigurationUpdated',
+  RoomDisposed: 'RoomDisposed',
+  CountdownReset: 'CountdownReset',
+  VoteCast: 'VoteCast',
+  VoteStatusUpdate: 'VoteStatusUpdate',
+  CountdownUpdate: 'CountdownUpdate',
+  VotesShown: 'VotesShown',
+  VotesCleared: 'VotesCleared',
+} as const;
+
+export type HubEvent = (typeof HUB_EVENTS)[keyof typeof HUB_EVENTS];

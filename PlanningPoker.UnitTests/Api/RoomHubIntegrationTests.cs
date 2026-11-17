@@ -1,0 +1,435 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.SignalR.Client;
+
+namespace PlanningPoker.UnitTests.Api;
+
+public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFactory>
+{
+    private static JsonElement Data(JsonElement response)
+    {
+        return response.GetProperty("data");
+    }
+
+    private static string ErrorCode(JsonElement response)
+    {
+        return response.GetProperty("errors")[0].GetProperty("code").GetString()!;
+    }
+
+    private static string? PersonName(JsonElement payload)
+    {
+        return payload.GetProperty("person").GetProperty("name").GetString();
+    }
+
+    [Fact]
+    public async Task JoinRoom_Owner_GetsPeopleAndMaskedVoteStatus()
+    {
+        var cookie = await factory.MintCookie("Ann");
+        var roomId = await factory.CreateRoom(cookie);
+        await using var connection = factory.Connect(cookie);
+        await connection.StartAsync();
+
+        var response = await connection.InvokeAsync<JsonElement>("JoinRoom", roomId);
+
+        var data = Data(response);
+        var person = Assert.Single(data.GetProperty("people").EnumerateArray());
+        Assert.Equal("Ann", person.GetProperty("name").GetString());
+        Assert.Equal("dev", person.GetProperty("personType").GetString());
+        Assert.False(data.GetProperty("voteStatus").GetProperty("hasEveryoneVoted").GetBoolean());
+        Assert.Equal(person.GetProperty("guid").GetGuid(), data.GetProperty("ownerGuid").GetGuid());
+        Assert.Equal("linear", data.GetProperty("configuration").GetProperty("cardSet").GetString());
+    }
+
+    [Fact]
+    public async Task JoinRoom_LaterPerson_GetsEveryoneAndOthersGetPersonJoined()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var laterCookie = await factory.MintCookie("Cara", "obs");
+        await using var later = factory.Connect(laterCookie);
+        var joined = room.Owner.NextEvent("PersonJoined", payload => PersonName(payload) == "Cara");
+        await later.StartAsync();
+
+        var response = await later.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+
+        Assert.Equal(["Ann", "Bob", "Cara"], Data(response).GetProperty("people").EnumerateArray().Select(p => p.GetProperty("name").GetString()));
+        var payload = await joined;
+        Assert.Equal("Cara", PersonName(payload));
+        Assert.Equal("obs", payload.GetProperty("personType").GetString());
+    }
+
+    [Fact]
+    public async Task JoinRoom_UnknownRoom_ReturnsRoomNotFound()
+    {
+        await using var connection = factory.Connect(await factory.MintCookie());
+        await connection.StartAsync();
+
+        var response = await connection.InvokeAsync<JsonElement>("JoinRoom", "missing");
+
+        Assert.Equal("room_not_found", ErrorCode(response));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("bad id")]
+    [InlineData("a<b>")]
+    public async Task JoinRoom_InvalidIdentifier_ReturnsValidationFailed(string roomId)
+    {
+        await using var connection = factory.Connect(await factory.MintCookie());
+        await connection.StartAsync();
+
+        var response = await connection.InvokeAsync<JsonElement>("JoinRoom", roomId);
+
+        Assert.Equal("validation_failed", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task LeaveRoom_RemovesThePersonAtOnceAndHandsOverOwnership()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var exited = room.Guest.NextEvent("PersonExited", payload => PersonName(payload) == "Ann");
+        var transferred = room.Guest.NextEvent("OwnershipTransferred");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("LeaveRoom");
+
+        Assert.Equal(JsonValueKind.Null, response.GetProperty("errors").ValueKind);
+        Assert.Equal("Ann", PersonName(await exited));
+        Assert.Equal("Bob", (await transferred).GetProperty("newOwner").GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task LeaveRoom_DepartedConnection_ReceivesNoFurtherRoomEvents()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var receivedBeforeLeaving = room.Owner.NextEvent("VoteCast");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "1");
+        await receivedBeforeLeaving;
+        var afterLeaving = CountEvents(room.Owner, "VoteCast");
+
+        await room.Owner.InvokeAsync<JsonElement>("LeaveRoom");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "2");
+        await room.Guest.InvokeAsync<JsonElement>("ClearVotes");
+
+        // A broadcast the guest sends after the owner's group removal would reach the owner within this window.
+        await Task.Delay(500);
+        Assert.Equal(0, afterLeaving());
+    }
+
+    [Fact]
+    public async Task LeaveRoom_PersonStillHasAnotherConnection_OnlyTheLeavingConnectionStopsReceiving()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await using var otherTab = factory.Connect(room.OwnerCookie);
+        await otherTab.StartAsync();
+        await otherTab.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+        var otherTabReceivedBefore = otherTab.NextEvent("VoteCast");
+        var leavingConnectionReceivedBefore = room.Owner.NextEvent("VoteCast");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "1");
+        // Both copies of the first vote must have landed, or a late one is counted as received after leaving.
+        await otherTabReceivedBefore;
+        await leavingConnectionReceivedBefore;
+        var leavingConnectionVotes = CountEvents(room.Owner, "VoteCast");
+        var otherTabVotes = CountEvents(otherTab, "VoteCast");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("LeaveRoom");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "2");
+
+        Assert.Equal(JsonValueKind.Null, response.GetProperty("errors").ValueKind);
+        await TestSession.WaitUntilAsync(() => Task.FromResult(otherTabVotes() == 1), TimeSpan.FromSeconds(5));
+        await Task.Delay(500);
+        Assert.Equal(0, leavingConnectionVotes());
+        Assert.Equal(1, otherTabVotes());
+    }
+
+    private static Func<int> CountEvents(HubConnection connection, string eventName)
+    {
+        var count = 0;
+        connection.On<JsonElement>(eventName, _ => Interlocked.Increment(ref count));
+        return () => Volatile.Read(ref count);
+    }
+
+    [Fact]
+    public async Task LeaveRoom_LastMember_RemovesTheRoom()
+    {
+        var cookie = await factory.MintCookie();
+        var roomId = await factory.CreateRoom(cookie);
+        await using var connection = factory.Connect(cookie);
+        await connection.StartAsync();
+        await connection.InvokeAsync<JsonElement>("JoinRoom", roomId);
+
+        await connection.InvokeAsync<JsonElement>("LeaveRoom");
+
+        var client = factory.CreateClient();
+        await TestSession.WaitUntilAsync(async () =>
+            (await client.GetAsync($"/api/rooms/{roomId}")).StatusCode == System.Net.HttpStatusCode.NotFound,
+            TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task JoinRoom_CreatorNeverJoined_FirstPersonInIsOwner()
+    {
+        var creatorCookie = await factory.MintCookie("Ann");
+        var roomId = await factory.CreateRoom(creatorCookie);
+        var bobCookie = await factory.MintCookie("Bob");
+        await using var bob = factory.Connect(bobCookie);
+        await bob.StartAsync();
+
+        var response = await bob.InvokeAsync<JsonElement>("JoinRoom", roomId);
+
+        var data = Data(response);
+        var person = Assert.Single(data.GetProperty("people").EnumerateArray());
+        Assert.Equal("Bob", person.GetProperty("name").GetString());
+        Assert.Equal(person.GetProperty("guid").GetGuid(), data.GetProperty("ownerGuid").GetGuid());
+    }
+
+    private static bool HasErrors(JsonElement response)
+    {
+        return response.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array;
+    }
+
+    [Fact]
+    public async Task Vote_BroadcastsVoteCastAndMaskedStatusToTheWholeRoom()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var cast = room.Guest.NextEvent("VoteCast");
+        var status = room.Owner.NextEvent("VoteStatusUpdate");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("Vote", "5");
+
+        Assert.False(HasErrors(response));
+        Assert.NotEqual(Guid.Empty, (await cast).GetProperty("personGuid").GetGuid());
+        Assert.All((await status).GetProperty("votes").EnumerateObject(), vote => Assert.Equal("hide", vote.Value.GetString()));
+    }
+
+    [Fact]
+    public async Task Vote_InvalidMark_ReturnsValidationFailed()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("Vote", "not-a-card");
+
+        Assert.Equal("validation_failed", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task Vote_Observer_ReturnsObserverCannotVote()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var observerCookie = await factory.MintCookie("Cara", "obs");
+        await using var observer = factory.Connect(observerCookie);
+        await observer.StartAsync();
+        await observer.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+
+        var response = await observer.InvokeAsync<JsonElement>("Vote", "5");
+
+        Assert.Equal("observer_cannot_vote", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task ForceShowVotes_RevealsRealMarksToEveryone()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "8");
+        var shown = room.Guest.NextEvent("VotesShown");
+
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+
+        var payload = await shown;
+        Assert.True(payload.GetProperty("votingFinished").GetBoolean());
+        Assert.Contains(payload.GetProperty("votes").EnumerateObject(), vote => vote.Value.GetString() == "8");
+    }
+
+    [Fact]
+    public async Task Vote_AfterReveal_ReturnsVotingClosed()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+
+        var response = await room.Guest.InvokeAsync<JsonElement>("Vote", "3");
+
+        Assert.Equal("voting_closed", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task ClearVotes_BroadcastsVotesClearedAndReopensVoting()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+        var cleared = new TaskCompletionSource();
+        room.Guest.On<JsonElement>("VotesCleared", _ => cleared.TrySetResult());
+
+        await room.Owner.InvokeAsync<JsonElement>("ClearVotes");
+        await cleared.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var response = await room.Guest.InvokeAsync<JsonElement>("Vote", "3");
+
+        Assert.False(HasErrors(response));
+    }
+
+    [Fact]
+    public async Task VotesShown_CarriesTheStatisticsOfTheVotes()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "3");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "5");
+        var shown = room.Guest.NextEvent("VotesShown");
+
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+
+        var statistics = (await shown).GetProperty("statistics");
+        var all = statistics.GetProperty("all");
+        Assert.Equal(["3", "5"], all.GetProperty("marks").EnumerateArray().Select(share => share.GetProperty("mark").GetString()));
+        Assert.Equal(50m, all.GetProperty("marks")[0].GetProperty("percentage").GetDecimal());
+        Assert.Equal(JsonValueKind.Null, all.GetProperty("highestMark").ValueKind);
+        Assert.Equal(4m, all.GetProperty("averageMark").GetDecimal());
+        Assert.False(statistics.GetProperty("consensus").GetBoolean());
+    }
+
+    [Fact]
+    public async Task JoinRoom_AfterTheReveal_GetsTheSameStatistics_AndAfterClearingNone()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "3");
+        await room.Guest.InvokeAsync<JsonElement>("Vote", "3");
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+        await using var late = factory.Connect(await factory.MintCookie("Cara", "dev"));
+        await late.StartAsync();
+
+        var joined = await late.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+
+        var statistics = Data(joined).GetProperty("voteStatus").GetProperty("statistics");
+        Assert.True(statistics.GetProperty("consensus").GetBoolean());
+        Assert.Equal("3", statistics.GetProperty("all").GetProperty("highestMark").GetString());
+        Assert.Equal(JsonValueKind.Null, Data(await room.Owner.InvokeAsync<JsonElement>("ClearVotes")).ValueKind);
+        await using var after = factory.Connect(await factory.MintCookie("Dan", "dev"));
+        await after.StartAsync();
+        var fresh = await after.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
+        Assert.Equal(JsonValueKind.Null, Data(fresh).GetProperty("voteStatus").GetProperty("statistics").ValueKind);
+    }
+
+    private static object Settings(string cardSet = "linear", int countdown = 5, bool fireworks = true, int max = 50)
+    {
+        return new { cardSet, countdownSeconds = countdown, showFireworks = fireworks, maxParticipants = max };
+    }
+
+    [Fact]
+    public async Task ChangePersonType_BroadcastsThePersonWithTheNewTypeToEveryone()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var changed = room.Owner.NextEvent("PersonTypeChanged", payload => PersonName(payload) == "Bob");
+
+        var response = await room.Guest.InvokeAsync<JsonElement>("ChangePersonType", "obs");
+
+        Assert.False(HasErrors(response));
+        var payload = await changed;
+        Assert.Equal("obs", payload.GetProperty("person").GetProperty("personType").GetString());
+        Assert.False(payload.GetProperty("voteStatus").GetProperty("votingFinished").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ChangePersonType_ThatCompletesTheRound_StartsTheCountdown()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("Vote", "5");
+        var countdown = room.Owner.NextEvent("CountdownUpdate");
+
+        await room.Guest.InvokeAsync<JsonElement>("ChangePersonType", "obs");
+
+        Assert.Equal(5, (await countdown).GetProperty("countdown").GetInt32());
+    }
+
+    [Fact]
+    public async Task ChangePersonType_InvalidType_ReturnsValidationFailed()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Guest.InvokeAsync<JsonElement>("ChangePersonType", "admin");
+
+        Assert.Equal("validation_failed", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_Owner_BroadcastsTheNewConfigurationAndCards()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var updated = room.Guest.NextEvent("RoomConfigurationUpdated");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings("t-shirt-sizes", 9, false, 4));
+
+        Assert.False(HasErrors(response));
+        var payload = await updated;
+        Assert.Equal("t-shirt-sizes", payload.GetProperty("configuration").GetProperty("cardSet").GetString());
+        Assert.Equal(9, payload.GetProperty("configuration").GetProperty("countdownSeconds").GetInt32());
+        Assert.Equal("XS", payload.GetProperty("cards")[0].GetProperty("value").GetString());
+        Assert.Equal("Ann", payload.GetProperty("updatedBy").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_AfterTheReveal_AlsoBroadcastsVotesCleared()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        await room.Owner.InvokeAsync<JsonElement>("ForceShowVotes");
+        var cleared = new TaskCompletionSource();
+        room.Guest.On<JsonElement>("VotesCleared", _ => cleared.TrySetResult());
+
+        await room.Owner.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings("t-shirt-sizes"));
+        await cleared.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.False(HasErrors(await room.Guest.InvokeAsync<JsonElement>("Vote", "XL")));
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_NotTheOwner_ReturnsNotRoomOwner()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Guest.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings("t-shirt-sizes"));
+
+        Assert.Equal("not_room_owner", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_Invalid_ReturnsValidationFailedWithTheField()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings(countdown: 31));
+
+        Assert.Equal("validation_failed", ErrorCode(response));
+        Assert.Equal("countdownSeconds", response.GetProperty("errors")[0].GetProperty("metadata").GetProperty("field").GetString());
+    }
+
+    [Fact]
+    public async Task TransferOwnership_MovesTheRoomAndTheNewOwnerCanSaveSettings()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+        var bobGuid = Data(await room.Guest.InvokeAsync<JsonElement>("JoinRoom", room.RoomId)).GetProperty("people").EnumerateArray()
+            .Single(person => person.GetProperty("name").GetString() == "Bob").GetProperty("guid").GetString();
+        var transferred = room.Guest.NextEvent("OwnershipTransferred");
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("TransferOwnership", bobGuid);
+
+        Assert.False(HasErrors(response));
+        Assert.Equal("Bob", (await transferred).GetProperty("newOwner").GetProperty("name").GetString());
+        Assert.False(HasErrors(await room.Guest.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings())));
+        Assert.Equal("not_room_owner", ErrorCode(await room.Owner.InvokeAsync<JsonElement>("UpdateRoomConfiguration", Settings())));
+    }
+
+    [Fact]
+    public async Task TransferOwnership_NotTheOwner_ReturnsNotRoomOwner()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Guest.InvokeAsync<JsonElement>("TransferOwnership", Guid.NewGuid().ToString());
+
+        Assert.Equal("not_room_owner", ErrorCode(response));
+    }
+
+    [Fact]
+    public async Task TransferOwnership_ToSomeoneNotInTheRoom_ReturnsNotAMember()
+    {
+        await using var room = await factory.CreateTestRoomAsync();
+
+        var response = await room.Owner.InvokeAsync<JsonElement>("TransferOwnership", Guid.NewGuid().ToString());
+
+        Assert.Equal("validation_failed", ErrorCode(response));
+        Assert.Equal("not_a_member", response.GetProperty("errors")[0].GetProperty("metadata").GetProperty("reason").GetString());
+    }
+}

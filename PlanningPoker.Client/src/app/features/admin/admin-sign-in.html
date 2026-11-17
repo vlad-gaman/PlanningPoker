@@ -1,0 +1,54 @@
+<section class="page sign-in">
+  @if (flash.message(); as notice) {
+    <p class="notice" role="status">{{ notice }}</p>
+  }
+
+  @if (step() === 'password') {
+    <form class="panel" [formGroup]="passwordForm" (ngSubmit)="submitPassword()">
+      <h1>Operator sign-in</h1>
+      <div class="field">
+        <label for="operator-username">Username</label>
+        <input class="input" id="operator-username" formControlName="username" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="operator-password">Password</label>
+        <input class="input" id="operator-password" type="password" formControlName="password" autocomplete="current-password" />
+      </div>
+      @if (passwordForm.touched && passwordForm.invalid) {
+        <div class="field-error" role="alert">Enter your username and password.</div>
+      }
+      @if (error(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+      <div class="actions">
+        <button class="primary-button" type="submit" [disabled]="busy()">Continue</button>
+      </div>
+    </form>
+  } @else {
+    <form class="panel" [formGroup]="codeForm" (ngSubmit)="submitCode()">
+      <h1>Enter your code</h1>
+      <p class="lead">Enter the 6-digit code from your authenticator app.</p>
+      <div class="field">
+        <label for="operator-code">Code</label>
+        <input
+          class="input"
+          id="operator-code"
+          formControlName="code"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="7"
+        />
+      </div>
+      @if (codeForm.touched && codeForm.invalid) {
+        <div class="field-error" role="alert">Enter the 6-digit code.</div>
+      }
+      @if (error(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+      <div class="actions">
+        <button class="primary-button" type="submit" [disabled]="busy()">Sign in</button>
+        <button class="link-button" type="button" (click)="back()">Back</button>
+      </div>
+    </form>
+  }
+</section>

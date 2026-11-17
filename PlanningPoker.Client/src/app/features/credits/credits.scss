@@ -1,0 +1,70 @@
+.credits {
+  max-width: 44rem;
+}
+
+.hero {
+  margin-bottom: 1.5rem;
+  text-align: center;
+
+  h1 {
+    margin: 0.5rem 0 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+}
+
+.logo {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 6px 12px var(--shadow-color));
+}
+
+.panel {
+  margin-bottom: 1.25rem;
+}
+
+.lead {
+  margin: -0.5rem 0 1rem;
+  color: var(--muted-color);
+}
+
+ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Each credit is a row of its own, like a person tile.
+li {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
+a {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.license {
+  margin-left: 0.25rem;
+  color: var(--muted-color);
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+}

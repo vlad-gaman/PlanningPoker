@@ -1,0 +1,84 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+}
+
+.navbar,
+.footer {
+  padding: 0.5rem 1rem;
+}
+
+.shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 0.75rem;
+}
+
+.navbar {
+  background: var(--navbar-bg);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 0.25rem 0.75rem var(--shadow-color);
+}
+
+.footer {
+  background: var(--footer-bg);
+  border-top: 1px solid var(--border-color);
+  color: var(--muted-color);
+
+  a {
+    color: var(--muted-color);
+  }
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 20px;
+  font-weight: 400;
+  text-decoration: none;
+  color: var(--text-color);
+
+  &:hover {
+    color: var(--text-color);
+  }
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.buymeacoffee-link {
+  display: inline-block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+
+  img {
+    display: block;
+    padding: 2px;
+    border-radius: 50%;
+    background: var(--coffee-bg);
+    filter: var(--coffee-filter);
+    box-shadow: 0 1px 3px var(--shadow-color);
+  }
+}
+
+.divider {
+  color: var(--border-color);
+}

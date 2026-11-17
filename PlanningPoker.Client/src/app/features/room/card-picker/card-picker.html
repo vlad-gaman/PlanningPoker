@@ -1,0 +1,26 @@
+<div class="cards" role="radiogroup" aria-label="Cards">
+  @for (card of cards(); track card.value) {
+    <label
+      class="card"
+      [class.art-card]="art(card) !== null"
+      [class.selected]="card.value === selected()"
+      [class.disabled]="disabled()"
+    >
+      <input
+        type="radio"
+        name="card"
+        [value]="card.value"
+        [checked]="card.value === selected()"
+        [disabled]="disabled()"
+        (change)="markSelected.emit(card.value)"
+      />
+      @if (image(card); as src) {
+        <img [src]="src" [alt]="card.value" [style.--mark-mask]="'url(' + src + ')'" />
+      } @else if (art(card); as name) {
+        <app-esendex-card-art [art]="name" [label]="card.value" />
+      } @else {
+        <span>{{ text(card) ?? card.value }}</span>
+      }
+    </label>
+  }
+</div>

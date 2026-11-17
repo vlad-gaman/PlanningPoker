@@ -1,0 +1,143 @@
+:host {
+  display: block;
+  width: 440px;
+  max-width: 100%;
+  color: var(--text-color);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+
+  h2 {
+    margin: 0;
+    padding: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--text-color);
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.settings-content {
+  padding: 15px;
+}
+
+.group h3 {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+}
+
+.setting {
+  margin-bottom: 14px;
+
+  .meta {
+    margin-bottom: 5px;
+  }
+  .meta label {
+    display: block;
+  }
+}
+
+.hint {
+  display: block;
+  opacity: 0.7;
+}
+
+.transfer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+// Toggle switch
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex: none;
+
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+  .track {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--border-color);
+    transition: background-color 0.2s ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.2s ease;
+    }
+  }
+  input:checked + .track {
+    background: var(--primary-color);
+  }
+  input:checked + .track::after {
+    transform: translateX(18px);
+  }
+  input:focus-visible + .track {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// Grouped cards
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.group {
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--panel-bg);
+}
+.setting:last-child {
+  margin-bottom: 0;
+}
+.setting:has(.switch) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  .meta {
+    margin: 0;
+  }
+}

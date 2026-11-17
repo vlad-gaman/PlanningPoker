@@ -1,0 +1,122 @@
+// The deck: cards sized by the shared --card-w (see styles.scss), the same as the vote cards on people's tiles.
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--card-w));
+  justify-content: space-between;
+  gap: 0.75rem 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--card-w);
+  aspect-ratio: 3 / 4;
+  border: 3px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: calc(var(--card-w) * 0.29);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  // Only the properties that change, on the compositor-friendly curve: `all` re-ran every property on each hover.
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.28s ease;
+  will-change: transform;
+
+  // The lift moves the card out from under the pointer, which made it drop and lift again at its bottom edge (the
+  // stutter). This invisible pad keeps the hover steady for the distance it travels.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px -2px;
+  }
+
+  &:hover:not(.disabled, .selected) {
+    border-color: var(--primary-color);
+    transform: translate3d(0, -4px, 0);
+  }
+
+  &.selected {
+    border-color: var(--primary-hover);
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 6px 18px var(--shadow-color);
+
+    img {
+      background-color: #fff;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    &.selected {
+      opacity: 1;
+    }
+  }
+
+  // An illustrated card is a physical card: 5:7, its paper colour, no border. Its art fills the face.
+  &.art-card {
+    padding: 0;
+    aspect-ratio: 5 / 7;
+    border: none;
+    border-radius: 10px;
+    background: var(--esendex-paper);
+    // Not clipped: the number bubble pokes out past the card's edge.
+
+    app-esendex-card-art {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover:not(.disabled, .selected) {
+      background: var(--esendex-paper);
+      filter: brightness(0.96);
+    }
+
+    &.selected {
+      background: var(--esendex-paper);
+      box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    &.disabled {
+      background: var(--esendex-paper);
+      opacity: 0.6;
+    }
+  }
+
+  // The radio stays in the layout for keyboard and screen reader use; the label is the visible control.
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  img {
+    height: calc(var(--card-w) * 0.33);
+    width: calc(var(--card-w) * 0.33);
+    // The fist-of-five images are black line art: the PNG is the mask and the fill is the theme's text colour. The
+    // image itself is pushed out of its box so only the recoloured mask shows.
+    background-color: var(--text-color);
+    -webkit-mask: var(--mark-mask) center / contain no-repeat;
+    mask: var(--mark-mask) center / contain no-repeat;
+    object-fit: none;
+    object-position: 9999px 0;
+  }
+}

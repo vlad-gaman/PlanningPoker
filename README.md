@@ -1,0 +1,366 @@
+# Planning Poker Application
+
+A **real-time collaborative Planning Poker application** used by software development teams for **story point estimation** during agile sprint planning sessions.
+
+## Table of Contents
+
+- [Core Business Purpose](#core-business-purpose)
+- [User Roles & Personas](#user-roles--personas)
+- [Room Management](#room-management)
+- [Voting System](#voting-system)
+- [Statistics & Analytics](#statistics--analytics)
+- [Real-time Communication](#real-time-communication)
+- [User Experience](#user-experience)
+- [Security & Validation](#security--validation)
+- [Configuration & Customization](#configuration--customization)
+- [Technical Architecture](#technical-architecture)
+- [Performance & Scalability](#performance--scalability)
+- [Monitoring](#monitoring)
+- [Management page](#management-page)
+- [Getting Started](#getting-started)
+- [API Endpoints](#api-endpoints)
+
+## Core Business Purpose
+
+This application enables software development teams to conduct efficient, collaborative story point estimation sessions using the Planning Poker technique. Teams can vote anonymously on story complexity, view comprehensive statistics, and reach consensus through real-time collaboration.
+
+## User Roles & Personas
+
+### User Types
+- **Developers (dev)** - Primary voters, can cast votes and see all statistics
+- **Testers (test)** - Secondary voters, can cast votes and see all statistics
+- **SREs (sre)** - Voters with their own statistics group, like developers and testers
+- **Observers (obs)** - Non-voting participants, can watch but cannot vote
+
+### Room Ownership
+- **Room Owner** - First person to create the room, has administrative privileges
+- **Ownership Transfer** - Can transfer ownership to other participants
+- **Auto-transfer** - If owner leaves, ownership automatically transfers to another participant
+
+## Room Management
+
+### Room Creation
+- **Multiple Creation Methods:**
+  - Standard GUID-based rooms (`/room/{guid}`)
+  - Fun named rooms using creative name generation (e.g., "42_amazing_red_elephant")
+- **Room Configuration Options:**
+  - Card set selection (8 different sets available)
+  - Countdown duration (1-30 seconds)
+  - Fireworks celebrations (enable/disable)
+  - Maximum participants (2-100, default 50)
+
+### Room Access
+- **Direct URL Access** - Users can join via `/room/{room-id}` 
+- **Session Cookie** - A `pp_session` cookie identifies the user across visits
+- **Name Input Form** - New users enter their name and select role type
+- **Auto-join** - Returning users with a valid session cookie join automatically
+
+### Room Lifecycle
+- **Presence Sweep** - A background sweep runs every second (`Presence__SweepInterval`)
+- **Grace Period** - A person who loses their connection still counts as online for 10 seconds, so a refresh goes unnoticed; after that they are shown offgrid
+- **Removal** - An offgrid person keeps their place and vote for 10 minutes, then is removed
+- **Room Disposal** - A room with nobody online for 10 seconds is deleted
+- **Never-Joined Rooms** - A room nobody has joined is deleted 1 minute after it was created (`Presence__NeverJoinedRoomLifetime`)
+- **Abandoned Rooms** - A separate sweep every 10 minutes (`Sweep__Interval`) removes rooms and people untouched for 24 hours (`Sweep__AbandonedAfter`)
+- **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; on Azure App Service point it at the persistent mount, e.g. `Data Source=/home/data/planningpoker.db`, and keep staging slots on a different file
+- **Connection Recovery** - Automatic reconnection with exponential backoff
+
+## Voting System
+
+### Available Card Sets (8 Sets)
+
+1. **Fibonacci** - 0, 0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, ☕
+2. **Modified Fibonacci** - 0, 0.5, 1, 2, 3, 5, 8, 13, 20, 40, 100, ?, ☕
+3. **Linear** - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ?, ☕
+4. **Powers of 2** - 0, 1, 2, 4, 8, 16, 32, 64, 128, ?, ☕
+5. **T-Shirt Sizes** - XS, S, M, L, XL, XXL, ?, ☕
+6. **Traffic Lights** - 🟢, 🟡, 🔴
+7. **Fist of Five** - Hand gesture images (0-5 fingers)
+8. **Esendex Fibonacci** - 1, 2, 3, 5, 8, 13, 30, 100, ?, ☕ as illustrated cards
+
+### Voting Process
+- **Hidden Votes** - Votes are hidden until revealed
+- **Vote Indicators** - Shows ▮ when someone has voted
+- **Real-time Updates** - Instant notification when votes are cast
+- **Vote Changes** - Users can change votes before reveal
+- **Force Reveal** - Manual vote revelation by room owner/admin
+
+### Countdown System
+- **Auto-reveal** - Automatic vote revelation after countdown expires
+- **Configurable Duration** - 0-30 seconds (0 = instant reveal, default: 5 seconds)
+- **Countdown Display** - Real-time countdown timer
+- **Vote Editing** - Users can still change votes during countdown
+
+## Statistics & Analytics
+
+### Vote Analysis
+- **Overall Statistics** - All participants combined
+- **Role-based Statistics** - Separate stats for Developers, Testers and SREs; observers are not counted
+- **Average Calculations** - Numeric values only (excludes ?, ☕)
+- **Percentage Distribution** - Vote distribution with percentages
+- **Consensus Detection** - Everyone has voted, there are at least 2 votes, and all of them are the same mark
+
+### Data Visualization
+- **Average Ring** - The average in a ring that fills with the share of votes that agree
+- **Verdict** - A one-line summary: the leading mark and its share, the range, and the vote count
+- **Split Bar** - One bar showing how the votes split, with a segment per mark in the card set's order
+- **Role Averages** - The average for each role that voted
+- **Image Support** - Image cards (Fist of Five, Esendex) show as images in the results
+- **Live Updates** - Results follow the votes as they change
+
+### Celebration Features
+- **Fireworks Animation** - Plays after a reveal you watch that ends in consensus, if the room has fireworks on (not when you join a room that was already revealed)
+- **Multiple Bursts** - 10 rounds, one per second, of 10 fireworks each; the display fades out about 5 seconds later
+- **Participation Threshold** - Needs consensus, so at least 2 voters
+- **Stops Early** - Clearing the votes stops the display, and rounds are skipped while the tab is hidden
+
+## Real-time Communication
+
+### SignalR Integration
+- **WebSocket Connection** - Real-time bidirectional communication
+- **Group Management** - Users join room-specific groups
+- **Connection Recovery** - Automatic reconnection with retry logic
+- **Presence** - Dropped connections are detected by the server-side presence sweep (see Room Lifecycle)
+
+### Real-time Events
+- **Vote Cast** - Immediate notification of new votes
+- **Vote Revealed** - Broadcast when votes are shown
+- **User Join/Leave** - Real-time participant updates
+- **Configuration Changes** - Live updates of room settings
+- **Ownership Transfer** - Instant ownership change notifications
+
+## User Experience
+
+### Client-side Caching
+- **Name Persistence** - User names cached locally and in server session
+- **Room Preferences** - Creation settings cached (card set, countdown, etc.)
+- **Card Set Caching** - 24-hour cache for available card sets
+- **Cross-session Sync** - Client and server-side name synchronization
+
+### User Interface
+- **Responsive Design** - Works on desktop and mobile
+- **Participant Tables** - Separate tables for Devs, Testers, Observers
+- **Vote Cards** - Interactive card selection interface
+- **Settings Modal** - Room configuration interface
+- **Connection Status** - Visual connection state indicators
+
+### Accessibility & Usability
+- **Unicode Support** - Non-ASCII character encoding
+- **Input Validation** - XSS prevention and input sanitization
+- **Error Handling** - Graceful failure handling
+- **Loading States** - User feedback during async operations
+
+## Security & Validation
+
+### Input Security
+- **XSS Prevention** - Sanitization of dangerous characters (`<`, `>`, `"`, `'`, `&`, etc.)
+- **Input Length Limits** - Max 20 chars for names, 100 for room IDs
+- **Character Encoding** - Non-ASCII character handling
+- **Regex Validation** - Room name format validation
+
+### Session Security
+- **Session Cookie** - `pp_session` identifies the user; the Operator has a separate sign-in cookie
+- **GUID-based Identity** - Unique user identification
+- **Connection Validation** - Connection ID verification
+- **Room Access Control** - Valid room existence checks
+
+## Configuration & Customization
+
+### Room Settings
+- **Card Set Selection** - Choose from 8 predefined sets
+- **Countdown Timing** - 0-30 seconds (0 = instant reveal)
+- **Fireworks Toggle** - Enable/disable celebration animations
+- **Participant Limits** - Maximum room capacity (2-100, default: 50)
+- **Ownership Management** - Transfer room ownership
+
+### System Configuration
+- **Default Settings** - Fallback values for all configurations
+- **Timer Management** - Configurable timer intervals
+- **Presence and Sweep Timings** - Grace period, removal window, empty-room lifetime and sweep intervals, overridable in the `Presence` and `Sweep` configuration sections
+- **Local Preferences** - The theme and the default room settings are kept in the browser's localStorage
+
+## Technical Architecture
+
+### Backend
+- **ASP.NET Core (.NET 10)** - Web framework, layered as Controller, Service and Repository projects
+- **SignalR** - Real-time communication
+- **SQLite** - Rooms and the issue log are kept in a local database file
+- **Session cookie** - Identifies the user across visits
+- **Timer Management** - Custom countdown implementation
+
+### Frontend
+- **Angular + Angular Material** - Single-page app in `PlanningPoker.Client`, built into the API's `wwwroot`
+- **SignalR Client** - Real-time connectivity
+- **fireworks-js** - Animation library for celebrations
+- **Playwright** - End-to-end tests
+
+### Data Models
+- **Room** - Central entity with voting, timers, configuration
+- **Person** - User with role, connection state, identity
+- **Vote** - Individual vote with user association
+- **Statistics** - Aggregated voting results and analytics
+- **Configuration** - Room-specific settings and preferences
+
+## Performance & Scalability
+
+### Optimization Features
+- **Concurrent Collections** - Thread-safe data structures
+- **Connection Pooling** - Efficient SignalR connection management
+- **Timer Optimization** - Proper cleanup to prevent memory leaks
+
+### Monitoring & Health
+- **Presence Sweep** - Detects dropped connections and removes inactive users and rooms (see Room Lifecycle)
+- **Issue Log** - Warnings and errors are kept in SQLite (see Management page)
+- **Metrics** - Prometheus metrics at `/metrics` (see Monitoring)
+
+## Monitoring
+
+The app exposes Prometheus text at `GET /metrics`, for Grafana Cloud to scrape. It is not in Swagger: it is not JSON and not under `/api`.
+
+### Scrape token
+- Set `Metrics__ScrapeToken` (the `Metrics:ScrapeToken` setting) in the App Service configuration and mark it as a **deployment slot setting**, so staging and production each keep their own. Never put it in an `appsettings*.json` file.
+- Generate a 32-byte random token, for example `openssl rand -base64 32`, or in PowerShell `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`.
+- Requests must send `Authorization: Bearer <token>`. Anything else gets `401` with `WWW-Authenticate: Bearer`.
+
+### Grafana Cloud
+Add a **Metrics Endpoint** scrape job with the URL `https://<host>/metrics`, **Bearer** authentication with the token, and a **1 minute** scrape interval. Use one job per environment, each with its own token: `planningpoker-staging` for staging and `planningpoker-prod` for production (added at the production cutover).
+
+### App metrics
+Prometheus names are the meter names with dots turned into underscores:
+- `planningpoker_rooms_in_memory` - gauge: rooms currently held in memory.
+- `planningpoker_people_in_memory` - gauge: people currently held in memory.
+- `planningpoker_rooms_created_total` - counter: rooms created.
+- `planningpoker_votes_cast_total{card_set}` - counter: votes cast (a changed vote counts again; rejected votes do not), by card set.
+
+The scrape also carries the ASP.NET Core, SignalR and .NET runtime metrics, for example `http_server_request_duration_seconds` and `signalr_server_active_connections`.
+
+### Development
+With no token configured, `/metrics` is open in the Development environment. With a token configured it is enforced. In any other environment with no token, every request gets `401` and a warning is logged at startup.
+
+## Management page
+
+The **Operator** (see `GLOSSARY.md`) looks after the running app from the management page at `/admin`. Nothing in the public pages links to it. It shows the live rooms with their people, stats, and the recent errors and events, and lets the Operator close a room or remove a person (both ask first). It never shows votes.
+
+### Settings
+Set these in the App Service configuration and mark each as a **deployment slot setting**, so staging and production keep their own. Never put them in an `appsettings*.json` file.
+
+| Setting | Meaning | If unset |
+| --- | --- | --- |
+| `Operator__Username` | The Operator's username. | Nobody can sign in; a warning is logged at startup. |
+| `Operator__PasswordHash` | The hash of the Operator's password (see below). | Nobody can sign in; a warning is logged at startup. |
+| `Operator__TotpSecret` | The Base32 secret of the Operator's authenticator app. | No second step: the password alone signs in. |
+
+Optional tuning (the defaults are shown): `Operator__MaxFailures` (`5`), `Operator__LockoutDuration` (`00:15:00`), `Operator__FailureDelay` (`00:00:00.5`), `Operator__SessionLifetime` (`00:30:00`), `Operator__ChallengeLifetime` (`00:05:00`, how long the password step stays valid while the code is entered).
+
+A `Operator__TotpSecret` that is set but not valid Base32 turns the second step on and no code is accepted, so sign-in is refused until it is fixed.
+
+### Generate the password hash
+The password is read from standard input, never from an argument, so it stays out of the shell history. Put the printed line in `Operator__PasswordHash`.
+
+```
+echo "the password" | dotnet run --project PlanningPoker.Api -- --hash-password
+```
+
+In PowerShell: `"the password" | dotnet run --project PlanningPoker.Api -- --hash-password`.
+
+### Generate the authenticator secret (optional)
+```
+dotnet run --project PlanningPoker.Api -- --generate-totp-secret
+```
+It prints the secret for `Operator__TotpSecret` and an `otpauth://` address. Add the account to an authenticator app by scanning a QR code of that address, or by typing the secret in (SHA-1, 6 digits, 30 seconds).
+
+### Signing in
+- **Two steps with an authenticator:** username and password first, then a separate screen for the 6-digit code. If the first step is more than 5 minutes old, sign-in starts again.
+- **A code works once.** Using it again, or an earlier one, is refused.
+- **Lockout:** 5 failed attempts (a wrong password or a wrong code) from one address, or 5 in total for the Operator account, lock sign-in for 15 minutes. Each failure also waits half a second. The counters are in memory, so a restart clears them. Failed sign-ins, and who signed in, are written to the issues log.
+- **Session:** a cookie that is Secure (outside Development), HttpOnly and SameSite=Strict, valid for 30 minutes since the last use. Every action sends an anti-forgery token. When the session ends the page returns to the sign-in page and says so.
+
+### HTTPS
+Turn on **HTTPS Only** for the web app and for the staging slot in App Service. The app also applies the forwarded headers from trusted senders (so it sees the real scheme and client address; see below), sends HSTS for 7 days and redirects plain HTTP to HTTPS, all outside Development. Set `Https__Redirect=false` only for a host that is not reached through TLS at all. The Operator cookie is Secure outside Development, so signing in works over HTTPS only. In Development everything keeps working over plain HTTP.
+
+Forwarded headers are trusted from loopback only unless the `ForwardedHeaders` settings say otherwise: `ForwardedHeaders__KnownProxies__0` (an address), `ForwardedHeaders__KnownNetworks__0` (a CIDR network) and `ForwardedHeaders__TrustAnySender` (`true` trusts every sender). `appsettings.Production.json` sets `TrustAnySender` to true for App Service, whose front end has no fixed address; set it to false, and list the proxies, for a host that can be reached directly. See `docs/adr/0001-forwarded-headers-trust-is-explicit.md`.
+
+### Rate limits
+Creating a person or a room needs no sign-in, so each client address (read after the forwarded headers) gets fixed one-minute windows: `PUT /api/me` 10, `POST /api/rooms` 10, `GET /api/rooms/{id}` 30, and 10 failed `JoinRoom` calls (successful joins never count). Past a limit the API answers 429 with the error code `rate_limited` and a `Retry-After` header. The `RateLimiting` settings change them: `RateLimiting__Enabled` (`false` switches every limit off, as the end-to-end run and the integration tests do) and, per rule, `RateLimiting__MeUpdate__PermitLimit`, `RateLimiting__RoomCreate__...`, `RateLimiting__RoomLookup__...`, `RateLimiting__FailedJoin__...` (each also has `Window`). See `docs/adr/0003-anonymous-creation-is-rate-limited-per-address.md`.
+
+### Issues log
+Warnings, errors, startup restores, sweeps and the Operator's own actions are kept in the same SQLite file as the rooms: at most 500 entries and nothing older than 7 days (`IssueLog__MaxEntries`, `IssueLog__MaxAge`, `IssueLog__MaxMessageLength`). Messages are cut to one line without query strings or vote values, and the client address is kept only for failed sign-ins.
+
+### What people in a room see
+Closing a room shows everyone in it "This room was closed by an operator." and sends them home. Removing a person shows that person "You were removed by an operator." and sends them home; everyone else just sees them leave.
+
+## Getting Started
+
+### Prerequisites
+- .NET 10 SDK
+- Node.js (see `PlanningPoker.Client/.nvmrc`)
+- Modern web browser with WebSocket support
+
+### Installation
+1. Clone the repository
+2. In `PlanningPoker.Client`, run `npm ci`, then `npm run build:api` (builds the client into `PlanningPoker.Api/wwwroot`)
+3. In `PlanningPoker.Api`, run `dotnet run`
+4. Open the browser to `http://localhost:5000`
+
+For client development, run `npm start` in `PlanningPoker.Client` (proxies the API) next to the API. Tests: `dotnet test`, and in the client `npm run test:ci` and `npm run e2e`.
+
+### Creating a Room
+1. Visit the main page (`/`)
+2. Enter your name and select role (Dev/Tester/Observer)
+3. Click "⚙️ More Settings" to configure room options
+4. Click "Create room"
+
+### Joining a Room
+1. Access room via direct URL: `/room/{room-id}`
+2. Enter your name and select role
+3. Click "Join room"
+
+## API Endpoints
+
+### REST Endpoints
+- `POST /api/rooms` - Create a room
+- `GET /api/rooms/{id}` - Get a room
+- `GET /api/card-sets` - Get available card sets
+- `GET /api/me`, `PUT /api/me` - Read or update the current user (name, role)
+- `/api/admin/*` - Management page: sign-in, overview, close a room, remove a person (see [Management page](#management-page))
+
+### SignalR Hub Methods
+- `JoinRoom(roomId)` - Join a specific room
+- `LeaveRoom()` - Leave the current room
+- `Vote(mark)` - Cast a vote
+- `ClearVotes()` - Clear all votes (owner only)
+- `ForceShowVotes()` - Reveal votes immediately (owner only)
+- `ChangePersonType(type)` - Change user role
+- `UpdateRoomConfiguration(config)` - Update room settings (owner only)
+- `TransferOwnership(targetPersonGuid)` - Transfer room ownership (owner only)
+
+### SignalR Events (Client Receives)
+- `RoomJoined` - Successful room join with participant list
+- `PersonJoined` - New participant joined
+- `PersonExited` - Participant left
+- `VoteCast` - Someone cast a vote
+- `VoteStatusUpdate` - Voting progress update
+- `VotesShown` - Votes revealed with statistics
+- `VotesCleared` - All votes cleared
+- `CountdownUpdate` - Timer countdown progress
+- `PersonTypeChanged` - Someone changed their role
+- `RoomConfigurationUpdated` - Settings changed
+- `OwnershipTransferred` - Room ownership changed
+- `RoomDisposed` - Room was closed
+
+## File Structure
+
+```
+PlanningPoker.Api/         # Host: startup, configuration, serves the built client from wwwroot
+PlanningPoker.Controller/  # REST controllers, SignalR RoomHub, middleware, mappers
+PlanningPoker.Service/     # Business logic and validation
+PlanningPoker.Repository/  # Storage entities and SQLite access
+PlanningPoker.Common/      # Shared models and ServiceResponse
+PlanningPoker.UnitTests/   # xUnit tests
+PlanningPoker.Client/      # Angular app (src/app/core, src/app/features, e2e)
+docs/                      # Slice specs and agent docs
+```
+
+---
+
+This Planning Poker application serves as a comprehensive tool for agile teams to conduct efficient, real-time story point estimation sessions with rich statistics, multiple voting systems, and robust real-time collaboration features.

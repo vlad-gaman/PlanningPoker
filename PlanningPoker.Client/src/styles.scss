@@ -1,0 +1,501 @@
+@use '@angular/material' as mat;
+@use './compact';
+
+// System font stack; no webfont, so Material controls and the page render the same face.
+$font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+
+:root {
+  // Size of a vote card: the deck cards and the vote cards on people's tiles share it, growing on wide screens.
+  --card-w: clamp(72px, 6.5vw, 120px);
+  --bg-color: #ffffff;
+  --text-color: #212529;
+  --border-color: #e5e5e5;
+  --muted-color: #6c757d;
+  --card-bg: #ffffff;
+  --card-hover-bg: rgba(0, 0, 0, 0.075);
+  --card-selected-bg: rgba(0, 0, 0, 0.3);
+  --card-disabled-bg: rgba(0, 0, 0, 0.1);
+  --card-border: #a8a8a8;
+  --primary-color: #1b6ec2;
+  --primary-hover: #1861ac;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --navbar-bg: #fff;
+  --footer-bg: #fff;
+  --coffee-bg: #ffdd00;
+  --coffee-filter: none;
+  // The Esendex Fibonacci illustrations: the physical cards' purple, white, grey and ink.
+  --esendex-purple: #4b2468;
+  --esendex-light: #fbfaff;
+  --esendex-grey: #aeb4bb;
+  --esendex-ink: #3b3b44;
+  --esendex-black: #1d1d22;
+  --esendex-red: #e35b53;
+  --esendex-gold: #c9a33b;
+  --esendex-green: #4caf50;
+  --esendex-nose: #e88ea0;
+  --esendex-shadow: #3b3b44;
+  --esendex-paper: #f3efe3;
+  --esendex-lens: #9fb0a6;
+  --esendex-lens-deep: #6b7b71;
+  --esendex-glow: #ffffff;
+  --esendex-saucer: #5d4a6e;
+  --esendex-tube-top: #c3c9bd;
+  --esendex-purple-deep: #35194a;
+  --esendex-metal: #aeb1a3;
+  --esendex-metal-light: #c9ccc1;
+  --esendex-frame: #2f3536;
+  --esendex-tube: #3f2250;
+  --esendex-tube-lit: #5e3a7a;
+  --esendex-tag: #4b2468;
+  --esendex-crack: #55584f;
+  --esendex-band: #3d2a4d;
+  --esendex-handle: #c3c8cd;
+  --esendex-die-deep: #c4c8c8;
+  --esendex-top-face: #f5f8fb;
+  --esendex-metal-deep: #8f9284;
+  --panel-bg: #f8f9fb;
+  --verdict-good: #1e8e3e;
+  --verdict-mid: #b57e00;
+  --verdict-bad: #d93025;
+  --avatar-from: #1b6ec2;
+  --avatar-to: #7a4fd6;
+  --seg-1: #1b6ec2;
+  --seg-2: #7a4fd6;
+  --seg-3: #c2417f;
+  --seg-4: #c77a1b;
+  --seg-5: #1e8e3e;
+  --seg-6: #1c8ca8;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg-color: #1a1a1a;
+  --text-color: #e9ecef;
+  --border-color: #404040;
+  --muted-color: #6c757d;
+  --card-bg: #2d2d2d;
+  --card-hover-bg: rgba(255, 255, 255, 0.1);
+  --card-selected-bg: rgba(255, 255, 255, 0.3);
+  --card-disabled-bg: rgba(255, 255, 255, 0.1);
+  --card-border: #565656;
+  --primary-color: #4dabf7;
+  --primary-hover: #339af0;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --navbar-bg: #1a1a1a;
+  --footer-bg: #1a1a1a;
+  --coffee-bg: #ffdd00;
+  --coffee-filter: brightness(0.95) contrast(1.05);
+  --esendex-purple: #9566c6;
+  --esendex-light: #ece9f2;
+  --esendex-grey: #7d838b;
+  --esendex-ink: #d6d6de;
+  --esendex-black: #0c0c0f;
+  --esendex-red: #ff7b72;
+  --esendex-gold: #d8b452;
+  --esendex-green: #7ee07e;
+  --esendex-nose: #f09aaa;
+  --esendex-shadow: #000000;
+  --esendex-paper: #2d2d2d;
+  --esendex-lens: #6f8078;
+  --esendex-lens-deep: #4d5c55;
+  --esendex-glow: #4a4f57;
+  --esendex-saucer: #8b7aa0;
+  --esendex-tube-top: #8f9a92;
+  --esendex-purple-deep: #6a4399;
+  --esendex-metal: #6e7469;
+  --esendex-metal-light: #9aa096;
+  --esendex-frame: #9aa3ab;
+  --esendex-tube: #4a3560;
+  --esendex-tube-lit: #6a5088;
+  --esendex-tag: #2e1545;
+  --esendex-crack: #111114;
+  --esendex-band: #3d2a4d;
+  --esendex-handle: #d5dadf;
+  --esendex-die-deep: #9aa1a8;
+  --esendex-top-face: #e6ebf0;
+  --esendex-metal-deep: #3f443e;
+  --panel-bg: #232323;
+  --verdict-good: #51cf66;
+  --verdict-mid: #ffd43b;
+  --verdict-bad: #ff8787;
+  --avatar-from: #4dabf7;
+  --avatar-to: #9775fa;
+  --seg-1: #4dabf7;
+  --seg-2: #9775fa;
+  --seg-3: #f783ac;
+  --seg-4: #ffa94d;
+  --seg-5: #51cf66;
+  --seg-6: #3bc9db;
+  color-scheme: dark;
+}
+
+html {
+  @include mat.theme(
+    (
+      color: mat.$azure-palette,
+      typography: (
+        plain-family: $font-stack,
+        brand-family: $font-stack,
+        bold-weight: 700,
+        medium-weight: 500,
+        regular-weight: 400,
+      ),
+      density: 0,
+    )
+  );
+
+  // Buttons look like the old Bootstrap ones: 16px/400 text, 4px radius, 1px border, white (dark #2d2d2d) fill.
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 4px,
+      filled-container-height: 38px,
+      filled-horizontal-padding: 12px,
+      filled-container-color: var(--card-bg),
+      filled-label-text-color: var(--text-color),
+      filled-hover-state-layer-opacity: 0.075,
+      outlined-container-shape: 4px,
+      outlined-container-height: 38px,
+      outlined-horizontal-padding: 12px,
+      outlined-label-text-color: var(--text-color),
+      outlined-outline-color: var(--border-color),
+      text-container-shape: 4px,
+      text-container-height: 38px,
+      text-horizontal-padding: 12px,
+      text-label-text-color: var(--text-color),
+    )
+  );
+
+  @include mat.dialog-overrides((container-color: var(--card-bg), container-shape: 8px));
+
+  // Text is 16px like the old page (Material defaults to 14px for labels and table cells).
+  --mat-sys-label-large-size: 1rem;
+  --mat-sys-label-large-weight: 400;
+  --mat-sys-body-large-size: 1rem;
+  --mat-sys-body-medium-size: 1rem;
+
+  // Table rows sit on the page colour, like the old table.
+  --mat-table-background-color: var(--bg-color);
+
+  // Material reads these system tokens; point them at the site's variables so both stay in sync.
+  --mat-sys-primary: var(--primary-color);
+  --mat-sys-background: var(--bg-color);
+  --mat-sys-surface: var(--bg-color);
+  --mat-sys-on-background: var(--text-color);
+  --mat-sys-on-surface: var(--text-color);
+  --mat-sys-outline: var(--card-border);
+  --mat-sys-outline-variant: var(--border-color);
+}
+
+// The old page's root font size: 14px on a phone, 16px from the 768px breakpoint up (all rem sizes follow).
+html {
+  font-size: 14px;
+
+  @media (min-width: 768px) {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: $font-stack;
+}
+
+a {
+  color: var(--primary-color);
+
+  &:hover {
+    color: var(--primary-hover);
+  }
+}
+
+// Cards, labelled fields and buttons of the home page and the room's name step.
+.panel {
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--panel-bg);
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .hint {
+    margin: -0.5rem 0 1rem;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+
+  label {
+    color: var(--muted-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}
+
+.input {
+  box-sizing: border-box;
+  height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.primary-button,
+.secondary-button {
+  height: 42px;
+  padding: 0 1.25rem;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.primary-button {
+  border: 1px solid var(--primary-hover);
+  background: var(--primary-color);
+  color: #fff;
+
+  &:hover {
+    background: var(--primary-hover);
+  }
+}
+
+.secondary-button {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+
+  &:hover {
+    background: var(--card-hover-bg);
+  }
+}
+
+// Each role has a colour, used by the role picker, the corner tag and the avatar ring.
+[data-role] {
+  --role: var(--muted-color);
+
+  &[data-role='dev'] { --role: #3b82f6; }
+  &[data-role='test'] { --role: #16a34a; }
+  &[data-role='sre'] { --role: #d97706; }
+  &[data-role='obs'] { --role: #7c7c8a; }
+}
+
+// Role picker: one segmented control, shared by the room and the name fields. The radios stay in the layout for keyboard use.
+.role-picker {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+
+  label {
+    position: relative;
+    padding: 4px 12px;
+    border-radius: 8px;
+    color: var(--muted-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: var(--text-color);
+    }
+
+    &:has(input:checked) {
+      background: var(--role);
+      color: #fff;
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+}
+
+// Shared page container; each page sets its own max-width.
+.page {
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-error {
+  color: var(--mat-sys-error);
+}
+
+// The old footer text and link are muted grey in both themes; `.mat-mdc-unelevated-button` and the text button carry the old 1px border.
+.mat-mdc-unelevated-button:not(:disabled),
+.mat-mdc-button:not(:disabled) {
+  border: 1px solid var(--border-color);
+}
+
+// A wide font lets a form-field label overlap the middle of its control; clicks must reach the control underneath.
+.mat-mdc-form-field .mdc-notched-outline .mat-mdc-floating-label.mdc-floating-label {
+  pointer-events: none;
+}
+
+// Plain (non-Material) form controls and buttons, coloured from the site variables.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.plain-input {
+  box-sizing: border-box;
+  height: 28px;
+  width: 114px;
+  margin: 0.25rem;
+  padding: 1px 2px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+}
+
+.plain-button {
+  margin: 0.25rem;
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--card-hover-bg);
+  }
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  line-height: 1.5;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--card-hover-bg);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: default;
+  }
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  border-radius: 3.2px;
+  font-size: 0.875rem;
+}
+
+.form-control {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  line-height: 1.5;
+
+  &:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+  }
+}
+
+.form-check {
+  margin-bottom: 10px;
+  padding-left: 24px;
+}
+
+.form-check-input {
+  appearance: none;
+  float: left;
+  width: 16px;
+  height: 16px;
+  margin: 4px 0 0 -24px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg) center / contain no-repeat;
+
+  &:checked {
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+  }
+}
+
+.hint {
+  color: var(--muted-color);
+  font-size: 0.875rem;
+}
+
+.field-error {
+  color: var(--mat-sys-error);
+  font-size: 0.875rem;
+}
+
+// The old settings panel dimmed the page by half.
+.cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+// The popup for failures (ErrorPopupService): red, on top of everything, readable in both themes.
+.error-popup {
+  --mat-snack-bar-container-color: #b3261e;
+  --mat-snack-bar-supporting-text-color: #fff;
+  --mat-snack-bar-button-color: #fff;
+}

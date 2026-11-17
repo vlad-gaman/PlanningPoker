@@ -1,0 +1,256 @@
+using PlanningPoker.Repository.Models;
+using PlanningPoker.Repository.Repositories;
+
+namespace PlanningPoker.UnitTests.Repository;
+
+public class PersonRepositoryTests
+{
+    private static PersonEntity NewPerson(Guid? guid = null) => new() { Guid = guid ?? Guid.NewGuid(), Name = "Ann", PersonType = "dev" };
+
+    [Fact]
+    public void Get_Unknown_ReturnsNull()
+    {
+        Assert.Null(new PersonRepository().Get(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void TryAdd_ThenGet_ReturnsStoredEntity()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+
+        Assert.True(repository.TryAdd(person));
+        Assert.Same(person, repository.Get(person.Guid));
+    }
+
+    [Fact]
+    public void TryAdd_Duplicate_ReturnsFalse()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Assert.False(repository.TryAdd(NewPerson(person.Guid)));
+    }
+
+    [Fact]
+    public void Remove_RemovesOnlyExisting()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Assert.True(repository.Remove(person.Guid));
+        Assert.False(repository.Remove(person.Guid));
+        Assert.Null(repository.Get(person.Guid));
+    }
+
+    [Fact]
+    public void Guids_ReturnsSnapshotOfStoredGuids()
+    {
+        var repository = new PersonRepository();
+        var first = NewPerson();
+        var second = NewPerson();
+        repository.TryAdd(first);
+        repository.TryAdd(second);
+
+        var guids = repository.Guids();
+        repository.Remove(first.Guid);
+
+        Assert.Equal(2, guids.Count);
+        Assert.Contains(first.Guid, guids);
+        Assert.Equal([second.Guid], repository.Guids());
+    }
+
+    [Fact]
+    public void Guids_EmptyRepository_ReturnsEmpty()
+    {
+        Assert.Empty(new PersonRepository().Guids());
+    }
+
+    [Fact]
+    public void RemoveIf_Unknown_ReturnsFalse()
+    {
+        Assert.False(new PersonRepository().RemoveIf(Guid.NewGuid(), _ => true));
+    }
+
+    [Fact]
+    public void RemoveIf_PredicateFalse_KeepsThePerson()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Assert.False(repository.RemoveIf(person.Guid, _ => false));
+        Assert.False(person.IsRemoved);
+        Assert.NotNull(repository.Get(person.Guid));
+    }
+
+    [Fact]
+    public void RemoveIf_PredicateTrue_RemovesFlagsAndBlocksLaterUpdate()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Assert.True(repository.RemoveIf(person.Guid, _ => true));
+
+        Assert.True(person.IsRemoved);
+        Assert.Null(repository.Get(person.Guid));
+        Assert.False(repository.Update(person.Guid, entity => entity.Name = "Late", out _));
+        Assert.Equal("Ann", person.Name);
+    }
+
+    [Fact]
+    public void RemoveIf_RunsPredicateUnderThePersonLock_SoItSeesAnUpdateThatWonTheLock()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+        repository.Update(person.Guid, entity => entity.Connections["c1"] = "room", out _);
+
+        var removed = repository.RemoveIf(person.Guid, entity => entity.Connections.Count == 0);
+
+        Assert.False(removed);
+        Assert.NotNull(repository.Get(person.Guid));
+    }
+
+    [Fact]
+    public void Update_Unknown_ReturnsFalse()
+    {
+        var found = new PersonRepository().Update(Guid.NewGuid(), _ => 1, out var result);
+
+        Assert.False(found);
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public void Update_MutatesStoredPersonAndReturnsResult()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        var found = repository.Update(person.Guid, entity =>
+        {
+            entity.Name = "Bob";
+            return entity.Name;
+        }, out var name);
+
+        Assert.True(found);
+        Assert.Equal("Bob", name);
+        Assert.Equal("Bob", repository.Get(person.Guid)!.Name);
+    }
+
+    [Fact]
+    public void Update_ConcurrentCallers_AreAtomic()
+    {
+        var repository = new PersonRepository();
+        var person = NewPerson();
+        repository.TryAdd(person);
+
+        Parallel.For(0, 500, _ => repository.Update(person.Guid, entity =>
+        {
+            entity.Connections[Guid.NewGuid().ToString()] = "room";
+            return 0;
+        }, out _));
+
+        Assert.Equal(500, repository.Get(person.Guid)!.Connections.Count);
+    }
+
+    private static PersonEntity NewPersonWithToken(string token, Guid? guid = null) =>
+        new() { Guid = guid ?? Guid.NewGuid(), SessionToken = token, Name = "Ann", PersonType = "dev" };
+
+    [Fact]
+    public void GetBySessionToken_KnownToken_ReturnsStoredEntity()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.Same(person, repository.GetBySessionToken("token-a"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("token-unknown")]
+    public void GetBySessionToken_MissingEmptyOrUnknown_ReturnsNull(string? token)
+    {
+        var repository = new PersonRepository();
+        repository.TryAdd(NewPersonWithToken("token-a"));
+        repository.TryAdd(NewPerson());
+
+        Assert.Null(repository.GetBySessionToken(token));
+    }
+
+    [Fact]
+    public void GetBySessionToken_PublicGuid_ReturnsNull()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.Null(repository.GetBySessionToken(person.Guid.ToString()));
+    }
+
+    [Fact]
+    public void TryAdd_TakenToken_ReturnsFalseAndKeepsTheFirstPerson()
+    {
+        var repository = new PersonRepository();
+        var first = NewPersonWithToken("token-a");
+        var second = NewPersonWithToken("token-a");
+        repository.TryAdd(first);
+
+        Assert.False(repository.TryAdd(second));
+        Assert.Same(first, repository.GetBySessionToken("token-a"));
+        Assert.Null(repository.Get(second.Guid));
+    }
+
+    [Fact]
+    public void TryAdd_TakenGuid_DoesNotIndexTheRejectedToken()
+    {
+        var repository = new PersonRepository();
+        var first = NewPersonWithToken("token-a");
+        repository.TryAdd(first);
+
+        Assert.False(repository.TryAdd(NewPersonWithToken("token-b", first.Guid)));
+        Assert.Null(repository.GetBySessionToken("token-b"));
+    }
+
+    [Fact]
+    public void Remove_DropsTheToken()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        repository.Remove(person.Guid);
+
+        Assert.Null(repository.GetBySessionToken("token-a"));
+    }
+
+    [Fact]
+    public void RemoveIf_Removed_DropsTheToken()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.True(repository.RemoveIf(person.Guid, _ => true));
+
+        Assert.Null(repository.GetBySessionToken("token-a"));
+    }
+
+    [Fact]
+    public void RemoveIf_Kept_KeepsTheToken()
+    {
+        var repository = new PersonRepository();
+        var person = NewPersonWithToken("token-a");
+        repository.TryAdd(person);
+
+        Assert.False(repository.RemoveIf(person.Guid, _ => false));
+
+        Assert.Same(person, repository.GetBySessionToken("token-a"));
+    }
+}

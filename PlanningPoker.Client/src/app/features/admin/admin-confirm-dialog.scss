@@ -1,0 +1,32 @@
+.content {
+  padding: 0 24px;
+
+  p {
+    margin: 0;
+    max-width: 24rem;
+    color: var(--text-color);
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1.25rem 24px 1rem;
+}
+
+.danger-button {
+  height: 42px;
+  padding: 0 1.25rem;
+  border: 1px solid var(--verdict-bad);
+  border-radius: 10px;
+  background: var(--verdict-bad);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(0.92);
+  }
+}
