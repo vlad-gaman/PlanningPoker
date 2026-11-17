@@ -62,6 +62,7 @@ export const STATISTICS = {
     ],
     highestMark: null,
     averageMark: 3,
+    voteCount: 2,
   },
   developers: { marks: [{ mark: '1', percentage: 100 }], highestMark: '1', averageMark: 1, voteCount: 1 },
   testers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5, voteCount: 1 },
