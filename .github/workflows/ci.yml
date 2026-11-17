@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [angular-migration]
+    branches: [main]
   pull_request:
-    branches: [angular-migration]
+    branches: [main]
   workflow_call:
 
 permissions:
