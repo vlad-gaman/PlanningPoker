@@ -108,6 +108,7 @@
     background: var(--primary-color);
   }
   input:checked + .track::after {
+    background: var(--on-primary);
     transform: translateX(18px);
   }
   input:focus-visible + .track {

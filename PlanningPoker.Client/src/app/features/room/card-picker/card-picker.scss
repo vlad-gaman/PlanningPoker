@@ -48,11 +48,11 @@
   &.selected {
     border-color: var(--primary-hover);
     background: var(--primary-color);
-    color: #fff;
+    color: var(--on-primary);
     box-shadow: 0 6px 18px var(--shadow-color);
 
     img {
-      background-color: #fff;
+      background-color: var(--on-primary);
     }
   }
 
