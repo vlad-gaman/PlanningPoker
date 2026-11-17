@@ -10,4 +10,7 @@ public class GroupStatisticsResponse
 
     /// <summary>Mean of the numeric marks, rounded to two decimals; null when none is numeric.</summary>
     public decimal? AverageMark { get; init; }
+
+    /// <summary>How many votes the group cast, observers excluded; 0 for a group without votes.</summary>
+    public int VoteCount { get; init; }
 }

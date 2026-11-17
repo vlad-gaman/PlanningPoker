@@ -48,6 +48,8 @@ export interface GroupStatistics {
   highestMark: string | null;
   /** Mean of the numeric marks, two decimals; null when none is numeric. */
   averageMark: number | null;
+  /** How many votes the group cast, observers excluded; 0 when none. */
+  voteCount: number;
 }
 
 export interface VoteStatistics {

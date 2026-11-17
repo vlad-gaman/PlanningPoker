@@ -11,7 +11,8 @@ public class GroupStatisticsResponseMapper(IMarkShareResponseMapper shareMapper)
         {
             Marks = group.Marks.Select(shareMapper.Map).ToList(),
             HighestMark = group.HighestMark,
-            AverageMark = group.AverageMark
+            AverageMark = group.AverageMark,
+            VoteCount = group.VoteCount
         };
     }
 }

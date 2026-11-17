@@ -115,10 +115,25 @@ public class VoteStatisticsMapperTests
     }
 
     [Fact]
+    public void Map_GroupVoteCount_CountsEachRolesVotes_AndIsZeroWhenNone()
+    {
+        var statistics = Map(Revealed(true,
+            (PersonTypes.Developer, "3"), (PersonTypes.Developer, "5"), (PersonTypes.Tester, "8"), (PersonTypes.Observer, "13")));
+
+        Assert.Equal(3, statistics.All.VoteCount);
+        Assert.Equal(2, statistics.Developers.VoteCount);
+        Assert.Equal(1, statistics.Testers.VoteCount);
+        Assert.Equal(0, statistics.Sres.VoteCount);
+    }
+
+    [Fact]
     public void Map_AVoteWithAnUnknownType_CountsOnlyInTheOverallGroup()
     {
         var statistics = Map(Revealed(true, (string.Empty, "3"), (PersonTypes.Developer, "5")));
 
+        Assert.Equal(2, statistics.All.VoteCount);
+        Assert.Equal(1, statistics.Developers.VoteCount);
+        Assert.Equal(0, statistics.Testers.VoteCount);
         Assert.Equal(2, statistics.All.Marks.Count);
         Assert.Equal([("5", 100m)], Shares(statistics.Developers));
         Assert.Empty(statistics.Testers.Marks);
