@@ -17,7 +17,6 @@ Already in place: `PlanningPoker.Api` serving the built SPA from `wwwroot` (`Map
 - `PlanningPokerUi/` entirely (Pages, Controllers, Hubs, Models, ViewModels, Services and the name-generator CSVs, `Startup.cs`, `Program.cs`, `wwwroot` including `lib` and `site.js`, publish profiles, its `Dockerfile` for .NET Core 3.1).
 - `PlanningPokerUi.sln`.
 - Root-level debug and test leftovers: `FIST_OF_FIVE_FIX.md`, `PARTIAL_VOTING_FIREWORKS_FIX.md`, `VOTING_FIX_SUMMARY.md`, `VotingBehaviorTest.md`, `VotingBehaviorTests.html`, `comprehensive-voting-test.js`, `fireworks-test.js`, `voting-debug.html`.
-- `ANGULAR_MIGRATION_CHECKLIST.md` once every box is ticked (decision 5).
 
 **Rewritten**: `README.md` (it still describes `PlanningPokerUi` and its tree), `.vscode/launch.json` and `.vscode/tasks.json` (they build `PlanningPokerUi.sln` and launch `PlanningPokerUi.dll`), and the workflows (section 4).
 
