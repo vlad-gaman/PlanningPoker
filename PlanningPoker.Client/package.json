@@ -10,7 +10,8 @@
     "lint": "ng lint",
     "e2e": "playwright test",
     "test:ci": "ng test --watch=false",
-    "build:api": "ng build && node scripts/copy-to-wwwroot.mjs"
+    "build:api": "ng build && node scripts/copy-to-wwwroot.mjs",
+    "check": "ng lint && ng test --watch=false && npm run build:api && playwright test"
   },
   "private": true,
   "packageManager": "npm@10.9.1",

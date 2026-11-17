@@ -14,5 +14,8 @@ Base branch is `main`. Repo: `vlad-gaman/PlanningPoker`.
    Manual `deploy-staging.yml` / `deploy-production.yml` (`gh workflow run ... --ref main`) reuse the `site` artifact of a passing CI run on the same commit and only rerun CI when there is none, so run them from `main` after merge when a deploy of main is wanted.
 5. **Merge.** Only when CI is green and the user asked to merge: `gh pr merge <n> --merge`. If it conflicts, merge `origin/main` into the branch, resolve, push, and return to step 3.
 6. **Clean up.** After merge: delete the remote and local branch, remove its worktree, and `git fetch --prune`. Never delete a branch whose PR is unmerged.
+   - Before `git worktree remove`, delete any `node_modules` junction or symlink inside the worktree with `cmd /c rmdir <path>`. A forced remove follows the link and empties the real folder. Never use `--force` on a worktree holding one.
+   - Give each worktree its own `npm ci`; don't link another checkout's `node_modules`.
+   - Delete the untracked scratch files agents left in `.claude/worktrees/` once the work is merged.
 
 Report PR link, CI result, deploy run link and merge state in a few lines. Anything skipped or unverified gets named.
