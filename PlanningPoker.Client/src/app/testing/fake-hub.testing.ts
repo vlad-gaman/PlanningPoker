@@ -63,18 +63,18 @@ export const STATISTICS = {
     highestMark: null,
     averageMark: 3,
   },
-  developers: { marks: [{ mark: '1', percentage: 100 }], highestMark: '1', averageMark: 1 },
-  testers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
-  sres: { marks: [], highestMark: null, averageMark: null },
+  developers: { marks: [{ mark: '1', percentage: 100 }], highestMark: '1', averageMark: 1, voteCount: 1 },
+  testers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5, voteCount: 1 },
+  sres: { marks: [], highestMark: null, averageMark: null, voteCount: 0 },
   voteCount: 2,
   consensus: false,
 };
 
 export const CONSENSUS_STATISTICS = {
-  all: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
-  developers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5 },
-  testers: { marks: [], highestMark: null, averageMark: null },
-  sres: { marks: [], highestMark: null, averageMark: null },
+  all: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5, voteCount: 2 },
+  developers: { marks: [{ mark: '5', percentage: 100 }], highestMark: '5', averageMark: 5, voteCount: 2 },
+  testers: { marks: [], highestMark: null, averageMark: null, voteCount: 0 },
+  sres: { marks: [], highestMark: null, averageMark: null, voteCount: 0 },
   voteCount: 2,
   consensus: true,
 };
