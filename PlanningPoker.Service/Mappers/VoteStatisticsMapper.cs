@@ -40,7 +40,8 @@ public class VoteStatisticsMapper : IVoteStatisticsMapper
                 .Select(entry => new MarkShare { Mark = entry.Mark, Percentage = Math.Round(entry.Count * 100m / votes.Count, StatisticsConstants.PercentageDecimals, MidpointRounding.AwayFromZero) })
                 .ToList(),
             HighestMark = counts.Count(entry => entry.Count == top) == 1 ? counts.First(entry => entry.Count == top).Mark : null,
-            AverageMark = numeric.Count == 0 ? null : Math.Round(numeric.Average(), StatisticsConstants.AverageDecimals, MidpointRounding.AwayFromZero)
+            AverageMark = numeric.Count == 0 ? null : Math.Round(numeric.Average(), StatisticsConstants.AverageDecimals, MidpointRounding.AwayFromZero),
+            VoteCount = votes.Count
         };
     }
 
