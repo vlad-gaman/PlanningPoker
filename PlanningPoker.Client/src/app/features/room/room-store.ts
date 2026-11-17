@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
+import { ResultsViewService } from '../../core/results-view.service';
 import { RoomTabLock } from '../../core/room-tab-lock';
 import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
@@ -59,6 +60,7 @@ export class RoomStore {
   private readonly router = inject(Router);
   private readonly flash = inject(FlashMessageService);
   private readonly tabLock = inject(RoomTabLock);
+  private readonly resultsView = inject(ResultsViewService);
   private stopWatchingTabs: (() => void) | null = null;
 
   private readonly peopleState = signal<Person[]>([]);
@@ -366,6 +368,7 @@ export class RoomStore {
   }
 
   private votesCleared(event: VotesClearedEvent): void {
+    this.resultsView.reset();
     this.myMarkState.set(null);
     this.applyVoteStatus({
       votes: {},

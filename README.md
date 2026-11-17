@@ -96,6 +96,7 @@ This application enables software development teams to conduct efficient, collab
 ### Vote Analysis
 - **Overall Statistics** - All participants combined
 - **Role-based Statistics** - Separate stats for Developers, Testers and SREs; observers are not counted
+- **By Role View** - A "By role" toggle on the revealed results replaces the per-role averages with one row per role: its average, its vote count and a split bar. Roles with no votes are hidden, and the toggle is off by default
 - **Average Calculations** - Numeric values only (excludes ?, ☕)
 - **Percentage Distribution** - Vote distribution with percentages
 - **Consensus Detection** - Everyone has voted, there are at least 2 votes, and all of them are the same mark
@@ -177,7 +178,7 @@ This application enables software development teams to conduct efficient, collab
 - **Default Settings** - Fallback values for all configurations
 - **Timer Management** - Configurable timer intervals
 - **Presence and Sweep Timings** - Grace period, removal window, empty-room lifetime and sweep intervals, overridable in the `Presence` and `Sweep` configuration sections
-- **Local Preferences** - The theme and the default room settings are kept in the browser's localStorage
+- **Local Preferences** - The theme, the default room settings and the "By role" results toggle (`pp-results-by-role`, switched off when a new round starts) are kept in the browser's localStorage
 
 ## Technical Architecture
 

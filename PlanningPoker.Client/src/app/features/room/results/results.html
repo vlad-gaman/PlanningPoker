@@ -23,6 +23,10 @@
         · {{ voters() }} {{ voters() === 1 ? 'vote' : 'votes' }}
       </span>
     </div>
+    <button type="button" class="role-toggle" role="switch" [attr.aria-checked]="byRole()" (click)="toggle()">
+      <span class="track"><span class="thumb"></span></span>
+      By role
+    </button>
   </div>
 
   <ul class="split" aria-label="How the votes split">
@@ -38,7 +42,35 @@
     }
   </ul>
 
-  @if (groups().length > 0) {
+  @if (byRole()) {
+    @if (roleRows().length > 0) {
+      <ul class="roles" aria-label="How the votes split by role">
+        @for (row of roleRows(); track row.label) {
+          <li class="role">
+            <div class="role-head">
+              <span class="role-average">{{ row.average }}</span>
+              <span class="role-label">{{ row.label }}</span>
+              <span class="role-count">{{ row.count }} {{ row.count === 1 ? 'vote' : 'votes' }}</span>
+            </div>
+            <ul class="split role-split">
+              @for (segment of row.segments; track segment.mark) {
+                <li class="segment" [style.flex-grow]="segment.count" [style.background]="'var(--seg-' + segment.colour + ')'">
+                  @if (segment.image; as src) {
+                    <img class="mark-image" [src]="src" [alt]="segment.mark" [style.--mark-mask]="'url(' + src + ')'" />
+                  } @else {
+                    <b>{{ segment.text }}</b>
+                  }
+                  <small>{{ segment.count }}</small>
+                </li>
+              }
+            </ul>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="roles-empty">No votes from Developers, Testers or SREs.</p>
+    }
+  } @else if (groups().length > 0) {
     <ul class="groups" aria-label="Averages by role">
       @for (item of groups(); track item.label) {
         <li>
