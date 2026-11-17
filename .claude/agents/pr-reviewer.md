@@ -11,7 +11,7 @@ Scope: `git diff main...HEAD` unless told a PR number (use `gh pr diff`). Read t
 Check against:
 - `CLAUDE.md` rules: Controller-Service-Repository projects, one class per file, Mapper classes for instantiation, `ServiceResponse` instead of exceptions, `ApiResponse` bodies, validation classes ending in `Validation`, constants in static classes, swagger on endpoints and responses, dark and light CSS, xUnit tests in the UnitTests project.
 - `GLOSSARY.md` terms: flag code, UI text or tests that use an `_Avoid_` word.
-- Behaviour: matches the relevant spec in `docs/` (the Razor app is gone, so the specs and `docs/parity` references are the source of truth); a test exists for each new method; e2e coverage for user-visible flows.
+- Behaviour: matches the relevant `docs/phase-*-spec.md` slice and any ADR in `docs/adr/`; a test exists for each new method; Playwright e2e coverage (`PlanningPoker.Client/e2e`) for user-visible flows.
 
 Report in four groups, most severe first, each item as `file:line` plus one sentence of why:
 1. **Major**: bugs, broken rules, missing tests for behaviour, security.
