@@ -207,6 +207,7 @@ public class RoomResponseMappersTests
             Developers = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 100m }], HighestMark = "3", AverageMark = 3m },
             Testers = new GroupStatistics { Marks = [], HighestMark = null, AverageMark = null },
             Sres = new GroupStatistics { Marks = [new MarkShare { Mark = "5", Percentage = 100m }], HighestMark = "5", AverageMark = 5m },
+            VoteCount = 3,
             Consensus = true
         };
     }
@@ -227,6 +228,7 @@ public class RoomResponseMappersTests
         Assert.Equal([("5", 100m)], statistics.Sres.Marks.Select(share => (share.Mark, share.Percentage)));
         Assert.Equal("5", statistics.Sres.HighestMark);
         Assert.Equal(5m, statistics.Sres.AverageMark);
+        Assert.Equal(3, statistics.VoteCount);
         Assert.True(statistics.Consensus);
     }
 

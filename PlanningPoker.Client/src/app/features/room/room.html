@@ -117,7 +117,7 @@
             }
           </ul>
           @if (store.statistics(); as statistics) {
-            <app-results [statistics]="statistics" [cards]="store.cards()" [voters]="voterCount()" />
+            <app-results [statistics]="statistics" [cards]="store.cards()" />
           }
         </div>
         <aside class="rail">
