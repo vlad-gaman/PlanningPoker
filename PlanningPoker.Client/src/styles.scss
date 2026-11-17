@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use './compact';
+@use './accents';
 
 // System font stack; no webfont, so Material controls and the page render the same face.
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
@@ -18,6 +19,10 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --card-border: #a8a8a8;
   --primary-color: #1b6ec2;
   --primary-hover: #1861ac;
+  // Text on an accent fill: white on the light fills, near-black on the brighter dark fills.
+  --on-primary: #ffffff;
+  --primary-container: #dbe8f5;
+  --on-primary-container: #0c3257;
   --shadow-color: rgba(0, 0, 0, 0.05);
   --navbar-bg: #fff;
   --footer-bg: #fff;
@@ -80,6 +85,9 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --card-border: #565656;
   --primary-color: #4dabf7;
   --primary-hover: #339af0;
+  --on-primary: #1a1a1a;
+  --primary-container: #29465c;
+  --on-primary-container: #d3eafd;
   --shadow-color: rgba(0, 0, 0, 0.3);
   --navbar-bg: #1a1a1a;
   --footer-bg: #1a1a1a;
@@ -178,6 +186,9 @@ html {
 
   // Material reads these system tokens; point them at the site's variables so both stay in sync.
   --mat-sys-primary: var(--primary-color);
+  --mat-sys-on-primary: var(--on-primary);
+  --mat-sys-primary-container: var(--primary-container);
+  --mat-sys-on-primary-container: var(--on-primary-container);
   --mat-sys-background: var(--bg-color);
   --mat-sys-surface: var(--bg-color);
   --mat-sys-on-background: var(--text-color);
@@ -285,7 +296,7 @@ a {
 .primary-button {
   border: 1px solid var(--primary-hover);
   background: var(--primary-color);
-  color: #fff;
+  color: var(--on-primary);
 
   &:hover {
     background: var(--primary-hover);

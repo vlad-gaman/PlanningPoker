@@ -24,6 +24,14 @@ main {
   padding: 0 0.75rem;
 }
 
+// The accent and theme selectors, side by side.
+.appearance {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .navbar {
   background: var(--navbar-bg);
   border-bottom: 1px solid var(--border-color);

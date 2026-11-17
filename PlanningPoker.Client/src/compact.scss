@@ -391,7 +391,7 @@ $compact-max: 520px;
 
         &[aria-pressed='true'] {
           background: var(--primary-color);
-          color: #fff;
+          color: var(--on-primary);
         }
       }
     }

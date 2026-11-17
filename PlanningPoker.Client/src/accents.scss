@@ -1,0 +1,97 @@
+// Accent presets, chosen in the accent dropdown and stored per browser (see core/accent.service.ts). Each preset sets
+// the primary colour and its hover shade, the Material primary tokens (through the variables styles.scss reads), and
+// the avatar gradient. Each preset has a light and a dark block. Blue is the default in styles.scss, so it has no block.
+// Every value meets WCAG AA in both themes (measured on the accent prototype, #144).
+//
+// The selectors are on :root with two attributes, so they win over the single-attribute theme blocks in styles.scss
+// and do not depend on the order of the files.
+
+:root[data-accent='indigo'] {
+  --primary-color: #4263eb;
+  --primary-hover: #3b5bdb;
+  --primary-container: #e1e6fc;
+  --on-primary-container: #1e2d6a;
+  --avatar-from: #4263eb;
+  --avatar-to: #7048e8;
+}
+
+:root[data-theme='dark'][data-accent='indigo'] {
+  --primary-color: #748ffc;
+  --primary-hover: #5c7cfa;
+  --primary-container: #353d5e;
+  --on-primary-container: #dce3fe;
+  --avatar-from: #748ffc;
+  --avatar-to: #b197fc;
+}
+
+:root[data-accent='violet'] {
+  --primary-color: #7048e8;
+  --primary-hover: #6741d9;
+  --primary-container: #e8e2fb;
+  --on-primary-container: #322068;
+  --avatar-from: #7048e8;
+  --avatar-to: #ae3ec9;
+}
+
+:root[data-theme='dark'][data-accent='violet'] {
+  --primary-color: #9775fa;
+  --primary-hover: #8f6cf9;
+  --primary-container: #40355d;
+  --on-primary-container: #e5ddfe;
+  --avatar-from: #9775fa;
+  --avatar-to: #da77f2;
+}
+
+:root[data-accent='magenta'] {
+  --primary-color: #c2255c;
+  --primary-hover: #a61e4d;
+  --primary-container: #f5dce5;
+  --on-primary-container: #571129;
+  --avatar-from: #c2255c;
+  --avatar-to: #7048e8;
+}
+
+:root[data-theme='dark'][data-accent='magenta'] {
+  --primary-color: #f06595;
+  --primary-hover: #e64980;
+  --primary-container: #5a313f;
+  --on-primary-container: #fbd9e5;
+  --avatar-from: #f06595;
+  --avatar-to: #b197fc;
+}
+
+:root[data-accent='cyan'] {
+  --primary-color: #0b7285;
+  --primary-hover: #095c6b;
+  --primary-container: #d8e8eb;
+  --on-primary-container: #05333c;
+  --avatar-from: #0b7285;
+  --avatar-to: #1b6ec2;
+}
+
+:root[data-theme='dark'][data-accent='cyan'] {
+  --primary-color: #3bc9db;
+  --primary-hover: #22b8cf;
+  --primary-container: #244f54;
+  --on-primary-container: #cef2f6;
+  --avatar-from: #3bc9db;
+  --avatar-to: #4dabf7;
+}
+
+:root[data-accent='graphite'] {
+  --primary-color: #495057;
+  --primary-hover: #343a40;
+  --primary-container: #e2e3e4;
+  --on-primary-container: #212427;
+  --avatar-from: #495057;
+  --avatar-to: #5c677d;
+}
+
+:root[data-theme='dark'][data-accent='graphite'] {
+  --primary-color: #adb5bd;
+  --primary-hover: #868e96;
+  --primary-container: #46494b;
+  --on-primary-container: #ebedef;
+  --avatar-from: #adb5bd;
+  --avatar-to: #8ea4c8;
+}
