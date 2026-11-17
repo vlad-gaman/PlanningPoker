@@ -157,3 +157,119 @@
 .segment .mark-image {
   background-color: #fff;
 }
+
+// The "By role" switch. Its colours are theme variables, so it follows light and dark.
+.role-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  .track {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--border-color);
+    transition: background 0.15s;
+  }
+
+  .thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s;
+  }
+
+  &[aria-checked='true'] {
+    border-color: var(--primary-color);
+
+    .track {
+      background: var(--primary-color);
+    }
+
+    .thumb {
+      transform: translateX(14px);
+    }
+  }
+}
+
+// By role: one row per role, a fixed column with the average, role and vote count, and a slimmer bar beside it.
+// The average spans both lines and is centred on them; the column fits "10.25", so the averages end at one edge.
+.roles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.role {
+  display: grid;
+  grid-template-columns: 11.5rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.role-head {
+  display: grid;
+  grid-template-columns: 4.25rem 1fr;
+  align-items: center;
+  column-gap: 0.5rem;
+  color: var(--muted-color);
+  font-size: 0.9rem;
+}
+
+.role-average {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--text-color);
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  text-align: right;
+}
+
+.role-label {
+  color: var(--text-color);
+}
+
+.role-count {
+  font-size: 0.75rem;
+}
+
+.role-split {
+  height: 32px;
+  border-radius: 10px;
+
+  .segment b {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .role {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}
+
+.roles-empty {
+  margin: 1rem 0 0;
+  color: var(--muted-color);
+  font-size: 0.9rem;
+}

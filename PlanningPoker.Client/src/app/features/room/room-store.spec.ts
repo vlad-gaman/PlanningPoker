@@ -4,6 +4,7 @@ import { FlashMessageService } from '../../core/flash-message.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { RoomTabLock } from '../../core/room-tab-lock';
 import { ApiRequestError } from '../../core/api-request-error';
+import { RESULTS_BY_ROLE_STORAGE_KEY } from '../../core/results-view.service';
 import { HUB_EVENTS } from '../../models/hub-events';
 import {
   ANN,
@@ -665,6 +666,14 @@ describe('RoomStore', () => {
       expect(store.votingFinished()).toBe(false);
       expect(store.hasEveryoneVoted()).toBe(false);
       expect(store.myMark()).toBeNull();
+    });
+
+    it('switches the by-role view off for every room when a new round starts', async () => {
+      localStorage.setItem(RESULTS_BY_ROLE_STORAGE_KEY, 'on');
+
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
+
+      expect(localStorage.getItem(RESULTS_BY_ROLE_STORAGE_KEY)).toBe('off');
     });
 
     it('replays voting events received during the join after the snapshot', async () => {

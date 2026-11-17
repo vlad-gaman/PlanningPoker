@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ResultsViewService } from '../../../core/results-view.service';
 import { CardOption, GroupStatistics, VoteStatistics } from '../../../models/room';
 import { cardImage, cardText } from '../card-picker/card-picker';
 
@@ -10,6 +11,11 @@ export interface Segment {
   text: string;
   image: string | null;
   count: number;
+}
+
+/** A role's split bar: its segments, each coloured as its mark is in the overall bar (1 to 6). */
+export interface RoleSegment extends Segment {
+  colour: number;
 }
 
 /** Agreement at or above this share is "strong"; 100 is unanimous. */
@@ -25,6 +31,11 @@ const STRONG_AGREEMENT = 60;
 export class Results {
   readonly statistics = input.required<VoteStatistics>();
   readonly cards = input.required<CardOption[]>();
+  private readonly resultsView = inject(ResultsViewService);
+
+  /** Whether the votes are split by role, instead of the averages list; kept per browser. */
+  protected readonly byRole = this.resultsView.byRole;
+
   /** How many people voted, fixed at the reveal; the statistics carry shares only, so counts are worked back from it. */
   protected readonly voters = computed(() => this.statistics().voteCount);
 
@@ -47,19 +58,10 @@ export class Results {
   });
 
   /** The marks cast, biggest share first. */
-  protected readonly segments = computed((): Segment[] =>
-    [...this.statistics().all.marks]
-      .sort((a, b) => b.percentage - a.percentage)
-      .map((share) => {
-        const card = this.cards().find((option) => option.value === share.mark);
-        return {
-          mark: share.mark,
-          text: (card && cardText(card)) ?? share.mark,
-          image: card ? cardImage(card) : null,
-          count: Math.round((share.percentage * this.voters()) / 100),
-        };
-      }),
-  );
+  protected readonly segments = computed(() => this.toSegments(this.statistics().all, this.voters()));
+
+  /** The colour of each mark in the overall bar, so a role's bar shows the same colour for the same mark. */
+  private readonly colours = computed(() => new Map(this.segments().map((segment, index) => [segment.mark, (index % 6) + 1])));
 
   /** What the winning mark shows as; null on a tie or without votes. */
   protected readonly leader = computed(() => {
@@ -75,16 +77,52 @@ export class Results {
     return numbers.length > 0 ? `${Math.min(...numbers)} – ${Math.max(...numbers)}` : '';
   });
 
-  /** The averages of the groups that voted. */
-  protected readonly groups = computed(() => {
+  private readonly roles = computed(() => {
     const { developers, testers, sres } = this.statistics();
-    const groups: { label: string; group: GroupStatistics }[] = [
+    return [
       { label: 'Developers', group: developers },
       { label: 'Testers', group: testers },
       { label: 'SREs', group: sres },
     ];
-    return groups
-      .filter(({ group }) => group.marks.length > 0)
-      .map(({ label, group }) => ({ label, average: group.averageMark?.toString() ?? '–' }));
   });
+
+  /** The averages of the groups that voted. */
+  protected readonly groups = computed(() =>
+    this.roles()
+      .filter(({ group }) => group.marks.length > 0)
+      .map(({ label, group }) => ({ label, average: group.averageMark?.toString() ?? '–' })),
+  );
+
+  /** By role: one row per role that voted, each with its own split bar. Observers belong to no role, so they are left out. */
+  protected readonly roleRows = computed(() =>
+    this.roles()
+      .filter(({ group }) => group.voteCount > 0)
+      .map(({ label, group }) => ({
+        label,
+        count: group.voteCount,
+        average: group.averageMark?.toString() ?? '–',
+        segments: this.toSegments(group, group.voteCount).map(
+          (segment): RoleSegment => ({ ...segment, colour: this.colours().get(segment.mark) ?? 1 }),
+        ),
+      })),
+  );
+
+  protected toggle(): void {
+    this.resultsView.toggle();
+  }
+
+  /** The marks of one group, biggest share first, with the count of each worked back from the group's own votes. */
+  private toSegments(group: GroupStatistics, voters: number): Segment[] {
+    return [...group.marks]
+      .sort((a, b) => b.percentage - a.percentage)
+      .map((share) => {
+        const card = this.cards().find((option) => option.value === share.mark);
+        return {
+          mark: share.mark,
+          text: (card && cardText(card)) ?? share.mark,
+          image: card ? cardImage(card) : null,
+          count: Math.round((share.percentage * voters) / 100),
+        };
+      });
+  }
 }
