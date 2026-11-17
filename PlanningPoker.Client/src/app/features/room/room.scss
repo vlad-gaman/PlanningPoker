@@ -245,6 +245,46 @@
   background: var(--panel-bg);
 }
 
+// Big screens (above the 520px breakpoint in compact.scss): the card set is a full-width strip directly above the
+// people list. Once votes are revealed (`revealed`) the row collapses to 0 with no gap, and it is hidden so it cannot
+// be focused. The 1fr to 0fr row transition needs the `.strip-clip` child to have no padding or border so it reaches
+// exactly 0. Under prefers-reduced-motion the change is instant. Colours come from the theme variables, so light and
+// dark mode both follow the page.
+@media (min-width: 521px) {
+  .strip {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition:
+      grid-template-rows 140ms ease,
+      visibility 140ms ease;
+  }
+
+  .strip.revealed {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+  }
+
+  .strip-clip {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  app-card-picker {
+    display: block;
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem 0.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--panel-bg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .strip {
+      transition: none;
+    }
+  }
+}
+
 .person {
   position: relative;
   overflow: hidden;

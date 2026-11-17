@@ -89,6 +89,16 @@
           @if (store.countdown(); as seconds) {
             <p class="countdown" role="status">Showing results in {{ seconds }}!</p>
           }
+          <div class="strip" [class.revealed]="store.votingFinished()">
+            <div class="strip-clip">
+              <app-card-picker
+                [cards]="store.cards()"
+                [selected]="store.myMark()"
+                [disabled]="store.votingFinished() || isObserver() || !store.connected()"
+                (markSelected)="store.vote($event)"
+              />
+            </div>
+          </div>
           <ul class="people" aria-label="Participants">
             @for (person of store.orderedPeople(); track person.guid) {
               <li class="person" [class.offgrid-person]="isOffgrid(person)" [attr.title]="isOffgrid(person) ? 'Not connected right now; their vote is kept' : null" [class.observer]="person.personType === 'obs'" [attr.data-role]="person.personType" [attr.data-short]="roleShort(person.personType)">
@@ -121,12 +131,6 @@
           }
         </div>
         <aside class="rail">
-          <app-card-picker
-            [cards]="store.cards()"
-            [selected]="store.myMark()"
-            [disabled]="store.votingFinished() || isObserver() || !store.connected()"
-            (markSelected)="store.vote($event)"
-          />
           <app-round-history [rounds]="store.roundHistory()" />
         </aside>
       </div>

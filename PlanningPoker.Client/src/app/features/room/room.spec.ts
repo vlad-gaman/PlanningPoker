@@ -766,4 +766,74 @@ describe('Room', () => {
       );
     });
   });
+
+  describe('the card set on big screens', () => {
+    const WATCHER = { guid: 'g-watch', name: 'Olga', personType: 'obs' } as const;
+
+    beforeEach(() => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+    });
+
+    function strip(element: HTMLElement): HTMLElement {
+      return element.querySelector<HTMLElement>('.strip')!;
+    }
+
+    it('places the card set above the people list, out of the rail', async () => {
+      const { element } = await render();
+
+      const people = element.querySelector('ul.people')!;
+      expect(strip(element).contains(element.querySelector('app-card-picker'))).toBe(true);
+      expect(strip(element).compareDocumentPosition(people) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(element.querySelector('.rail app-card-picker')).toBeNull();
+      expect(element.querySelector('.rail app-round-history')).not.toBeNull();
+    });
+
+    it('keeps the card set open while voting, including after the user has voted', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: ANN.guid });
+      await settle(fixture);
+
+      expect(strip(element).classList).not.toContain('revealed');
+    });
+
+    it('collapses the card set once the votes are revealed', async () => {
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      await settle(fixture);
+
+      expect(strip(element).classList).toContain('revealed');
+    });
+
+    it('reopens the card set when the next round voting opens', async () => {
+      const { fixture, element } = await render();
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      await settle(fixture);
+
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: '2026-01-01T12:10:00+00:00' });
+      await settle(fixture);
+
+      expect(strip(element).classList).not.toContain('revealed');
+    });
+
+    it('keeps the card set collapsed after a reload of a revealed round', async () => {
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB], voteStatus: revealed(STATISTICS) });
+
+      const { element } = await render();
+
+      expect(strip(element).classList).toContain('revealed');
+    });
+
+    it('collapses the card set for an observer once the votes are revealed', async () => {
+      me.get.mockReturnValue(of(WATCHER));
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
+      await settle(fixture);
+
+      expect(strip(element).classList).toContain('revealed');
+    });
+  });
 });
