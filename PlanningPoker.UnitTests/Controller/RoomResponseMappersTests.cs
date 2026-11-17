@@ -203,10 +203,10 @@ public class RoomResponseMappersTests
     {
         return new VoteStatistics
         {
-            All = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 66.7m }, new MarkShare { Mark = "5", Percentage = 33.3m }], HighestMark = "3", AverageMark = 3.67m },
-            Developers = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 100m }], HighestMark = "3", AverageMark = 3m },
-            Testers = new GroupStatistics { Marks = [], HighestMark = null, AverageMark = null },
-            Sres = new GroupStatistics { Marks = [new MarkShare { Mark = "5", Percentage = 100m }], HighestMark = "5", AverageMark = 5m },
+            All = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 66.7m }, new MarkShare { Mark = "5", Percentage = 33.3m }], HighestMark = "3", AverageMark = 3.67m, VoteCount = 3 },
+            Developers = new GroupStatistics { Marks = [new MarkShare { Mark = "3", Percentage = 100m }], HighestMark = "3", AverageMark = 3m, VoteCount = 2 },
+            Testers = new GroupStatistics { Marks = [], HighestMark = null, AverageMark = null, VoteCount = 0 },
+            Sres = new GroupStatistics { Marks = [new MarkShare { Mark = "5", Percentage = 100m }], HighestMark = "5", AverageMark = 5m, VoteCount = 1 },
             VoteCount = 3,
             Consensus = true
         };
@@ -228,6 +228,9 @@ public class RoomResponseMappersTests
         Assert.Equal([("5", 100m)], statistics.Sres.Marks.Select(share => (share.Mark, share.Percentage)));
         Assert.Equal("5", statistics.Sres.HighestMark);
         Assert.Equal(5m, statistics.Sres.AverageMark);
+        Assert.Equal(2, statistics.Developers.VoteCount);
+        Assert.Equal(0, statistics.Testers.VoteCount);
+        Assert.Equal(1, statistics.Sres.VoteCount);
         Assert.Equal(3, statistics.VoteCount);
         Assert.True(statistics.Consensus);
     }
