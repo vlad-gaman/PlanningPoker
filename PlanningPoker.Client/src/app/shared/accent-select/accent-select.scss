@@ -1,0 +1,32 @@
+// The accent dropdown: a native select, so the keyboard works without extra code. Colours come from the site
+// variables, so it reads in light and dark. The swatch shows the current accent.
+.accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+
+select {
+  height: 34px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text-color);
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}

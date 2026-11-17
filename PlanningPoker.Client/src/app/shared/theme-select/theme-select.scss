@@ -34,7 +34,7 @@
 
     &.on {
       background: var(--primary-color);
-      color: #fff;
+      color: var(--on-primary);
     }
 
     &:focus-visible {

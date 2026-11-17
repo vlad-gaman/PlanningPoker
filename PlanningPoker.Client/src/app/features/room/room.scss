@@ -64,7 +64,7 @@
   padding: 0.6rem 1rem;
   border-radius: 10px;
   background: var(--primary-color);
-  color: #fff;
+  color: var(--on-primary);
   font-weight: 700;
 }
 
@@ -101,7 +101,7 @@
   margin-bottom: 0.25rem;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--avatar-from), var(--avatar-to));
-  color: #fff;
+  color: var(--on-primary);
   font-size: 1.4rem;
   font-weight: 700;
 }
@@ -155,7 +155,7 @@
   border: 3px solid transparent;
   border-radius: 10px;
   background: var(--primary-color);
-  color: #fff;
+  color: var(--on-primary);
   font-size: calc(var(--card-w) * 0.29);
   font-weight: 700;
 
@@ -170,7 +170,7 @@
     width: calc(var(--card-w) * 0.33);
     // The fist-of-five images are black line art: the PNG is the mask and the fill is white on the card. The image
     // itself is pushed out of its box so only the recoloured mask shows.
-    background-color: #fff;
+    background-color: var(--on-primary);
     -webkit-mask: var(--mark-mask) center / contain no-repeat;
     mask: var(--mark-mask) center / contain no-repeat;
     object-fit: none;
@@ -358,7 +358,7 @@
   &.primary {
     border-color: var(--primary-hover);
     background: var(--primary-color);
-    color: #fff;
+    color: var(--on-primary);
 
     &:hover:not(:disabled) {
       background: var(--primary-hover);

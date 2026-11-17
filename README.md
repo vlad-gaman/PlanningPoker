@@ -178,7 +178,8 @@ This application enables software development teams to conduct efficient, collab
 - **Default Settings** - Fallback values for all configurations
 - **Timer Management** - Configurable timer intervals
 - **Presence and Sweep Timings** - Grace period, removal window, empty-room lifetime and sweep intervals, overridable in the `Presence` and `Sweep` configuration sections
-- **Local Preferences** - The theme, the default room settings and the "By role" results toggle (`pp-results-by-role`, switched off when a new round starts) are kept in the browser's localStorage
+- **Accent Colour** - Pick one of six accent colours from a dropdown beside the theme selector; stored per browser
+- **Local Preferences** - The theme, the accent colour (`pp-accent`), the default room settings and the "By role" results toggle (`pp-results-by-role`, switched off when a new round starts) are kept in the browser's localStorage
 
 ## Technical Architecture
 
