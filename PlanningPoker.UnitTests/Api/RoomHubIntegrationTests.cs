@@ -121,8 +121,11 @@ public class RoomHubIntegrationTests(ApiFactory factory) : IClassFixture<ApiFact
         await otherTab.StartAsync();
         await otherTab.InvokeAsync<JsonElement>("JoinRoom", room.RoomId);
         var otherTabReceivedBefore = otherTab.NextEvent("VoteCast");
+        var leavingConnectionReceivedBefore = room.Owner.NextEvent("VoteCast");
         await room.Guest.InvokeAsync<JsonElement>("Vote", "1");
+        // Both copies of the first vote must have landed, or a late one is counted as received after leaving.
         await otherTabReceivedBefore;
+        await leavingConnectionReceivedBefore;
         var leavingConnectionVotes = CountEvents(room.Owner, "VoteCast");
         var otherTabVotes = CountEvents(otherTab, "VoteCast");
 
