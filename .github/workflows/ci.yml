@@ -86,3 +86,26 @@ jobs:
           name: playwright-report
           path: PlanningPoker.Client/playwright-report
           retention-days: 7
+
+  # Pull requests only (in a workflow_call from deploy-staging the event is workflow_dispatch, so this is skipped).
+  # Pauses for manual approval: the "staging" environment needs Required reviewers (Settings > Environments).
+  deploy-staging:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: package-and-e2e
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency:
+      group: staging-slot
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+      - name: Unzip the site
+        run: unzip -q site.zip -d site
+      - uses: azure/webapps-deploy@5cfb776471c748b351e1ebf5770e208a54ace016 # v2.2.19
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          slot-name: staging
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: site
