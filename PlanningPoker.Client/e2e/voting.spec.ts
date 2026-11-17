@@ -36,6 +36,8 @@ async function join(page: Page, roomUrl: string, name: string, role?: string): P
 const mark = (page: Page, name: string) => page.locator('li.person').filter({ hasText: name }).locator('.mark');
 const card = (page: Page, value: string) => page.getByRole('radio', { name: value, exact: true });
 const pick = (page: Page, value: string) => page.locator('label.card').filter({ hasText: new RegExp(`^\\s*${value}\\s*$`) }).click();
+/** The card's radio input, found without the accessibility filter: a revealed card set is hidden but still disabled. */
+const cardInput = (page: Page, value: string) => page.locator('label.card').filter({ hasText: new RegExp(`^\\s*${value}\\s*$`) }).locator('input');
 const countdown = (page: Page) => page.locator('.countdown');
 
 async function closeAll(people: Person[]): Promise<void> {
@@ -60,8 +62,10 @@ test('a vote shows as a hidden marker, then everyone voting reveals the marks af
   await expect(mark(ann.page, 'Bob')).toHaveText('8');
   await expect(mark(bob.page, 'Ann')).toHaveText('5');
   await expect(countdown(ann.page)).toHaveCount(0);
-  await expect(card(ann.page, '5')).toBeDisabled();
-  await expect(card(bob.page, '1')).toBeDisabled();
+  await expect(ann.page.locator('.strip')).toHaveClass(/revealed/);
+  await expect(bob.page.locator('.strip')).toHaveClass(/revealed/);
+  await expect(cardInput(ann.page, '5')).toBeDisabled();
+  await expect(cardInput(bob.page, '1')).toBeDisabled();
 
   await closeAll([ann, bob]);
 });

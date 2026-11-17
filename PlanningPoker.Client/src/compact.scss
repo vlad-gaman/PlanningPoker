@@ -429,9 +429,15 @@ $compact-max: 520px;
       order: 3;
     }
 
+    // The desktop strip wrapper (room.scss) has no box here, so the picker stays a direct child of the layout.
+    .strip,
+    .strip-clip {
+      display: contents;
+    }
+
     app-card-picker {
       display: block;
-      order: 3;
+      order: 4;
       --card-w: 60px;
     }
 
