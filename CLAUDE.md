@@ -1,3 +1,6 @@
+# Checks
+    - Run `npm run check` in `PlanningPoker.Client` before every push; it runs everything CI runs on the client (lint, unit, build, e2e).
+
 # Decorations
     - Make sure to always update css when it comes to light vs dark mode
     - Attributations have their own separate page that can be accessed in the footer using a "Credits" link
