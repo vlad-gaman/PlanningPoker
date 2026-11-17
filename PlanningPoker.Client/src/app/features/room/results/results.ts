@@ -25,8 +25,8 @@ const STRONG_AGREEMENT = 60;
 export class Results {
   readonly statistics = input.required<VoteStatistics>();
   readonly cards = input.required<CardOption[]>();
-  /** How many people voted; the statistics carry shares only, so counts are worked back from it. */
-  readonly voters = input.required<number>();
+  /** How many people voted, fixed at the reveal; the statistics carry shares only, so counts are worked back from it. */
+  protected readonly voters = computed(() => this.statistics().voteCount);
 
   /** Blank (a dash) when no mark is numeric; a real zero still shows. */
   protected readonly average = computed(() => this.statistics().all.averageMark?.toString() ?? '–');

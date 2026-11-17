@@ -6,9 +6,8 @@ import { Results } from './results';
 describe('Results', () => {
   function render(statistics: unknown, voters: number, cards: CardOption[] = []) {
     const fixture = TestBed.createComponent(Results);
-    fixture.componentRef.setInput('statistics', statistics as VoteStatistics);
+    fixture.componentRef.setInput('statistics', { ...(statistics as VoteStatistics), voteCount: voters });
     fixture.componentRef.setInput('cards', cards);
-    fixture.componentRef.setInput('voters', voters);
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     const text = (selector: string) => element.querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim();

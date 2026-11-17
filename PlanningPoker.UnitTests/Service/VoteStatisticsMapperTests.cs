@@ -41,6 +41,14 @@ public class VoteStatisticsMapperTests
     }
 
     [Fact]
+    public void Map_VoteCount_CountsTheVotesOfNonObservers()
+    {
+        var statistics = Map(Revealed(true, (PersonTypes.Developer, "5"), (PersonTypes.Tester, "3"), (PersonTypes.Observer, "8")));
+
+        Assert.Equal(2, statistics.VoteCount);
+    }
+
+    [Fact]
     public void Map_PercentagesAreRoundedToOneDecimal()
     {
         var statistics = Map(Revealed(true, (PersonTypes.Developer, "3"), (PersonTypes.Developer, "3"), (PersonTypes.Developer, "5")));

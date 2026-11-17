@@ -55,6 +55,8 @@ export interface VoteStatistics {
   developers: GroupStatistics;
   testers: GroupStatistics;
   sres: GroupStatistics;
+  /** How many votes were counted at the reveal; later joins and role changes do not move it. */
+  voteCount: number;
   /** At least two votes, all the same mark, and everyone had voted. */
   consensus: boolean;
 }
