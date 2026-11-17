@@ -60,6 +60,7 @@ This application enables software development teams to conduct efficient, collab
 - **Grace Period** - A person who loses their connection still counts as online for 10 seconds, so a refresh goes unnoticed; after that they are shown offgrid
 - **Removal** - An offgrid person keeps their place and vote for 10 minutes, then is removed
 - **Room Disposal** - A room with nobody online for 10 seconds is deleted
+- **Never-Joined Rooms** - A room nobody has joined is deleted 1 minute after it was created (`Presence__NeverJoinedRoomLifetime`)
 - **Abandoned Rooms** - A separate sweep every 10 minutes (`Sweep__Interval`) removes rooms and people untouched for 24 hours (`Sweep__AbandonedAfter`)
 - **Restart Survival** - Live rooms, their people and votes are stored in a SQLite file (`Persistence:ConnectionString`, default `Data Source=planningpoker.db`) and restored on startup; on Azure App Service point it at the persistent mount, e.g. `Data Source=/home/data/planningpoker.db`, and keep staging slots on a different file
 - **Connection Recovery** - Automatic reconnection with exponential backoff
@@ -275,7 +276,12 @@ It prints the secret for `Operator__TotpSecret` and an `otpauth://` address. Add
 - **Session:** a cookie that is Secure (outside Development), HttpOnly and SameSite=Strict, valid for 30 minutes since the last use. Every action sends an anti-forgery token. When the session ends the page returns to the sign-in page and says so.
 
 ### HTTPS
-Turn on **HTTPS Only** for the web app and for the staging slot in App Service. The app also applies the forwarded headers (so it sees the real scheme and client address), sends HSTS for 7 days and redirects plain HTTP to HTTPS, all outside Development. Set `Https__Redirect=false` only for a host that is not reached through TLS at all. The Operator cookie is Secure outside Development, so signing in works over HTTPS only. In Development everything keeps working over plain HTTP.
+Turn on **HTTPS Only** for the web app and for the staging slot in App Service. The app also applies the forwarded headers from trusted senders (so it sees the real scheme and client address; see below), sends HSTS for 7 days and redirects plain HTTP to HTTPS, all outside Development. Set `Https__Redirect=false` only for a host that is not reached through TLS at all. The Operator cookie is Secure outside Development, so signing in works over HTTPS only. In Development everything keeps working over plain HTTP.
+
+Forwarded headers are trusted from loopback only unless the `ForwardedHeaders` settings say otherwise: `ForwardedHeaders__KnownProxies__0` (an address), `ForwardedHeaders__KnownNetworks__0` (a CIDR network) and `ForwardedHeaders__TrustAnySender` (`true` trusts every sender). `appsettings.Production.json` sets `TrustAnySender` to true for App Service, whose front end has no fixed address; set it to false, and list the proxies, for a host that can be reached directly. See `docs/adr/0001-forwarded-headers-trust-is-explicit.md`.
+
+### Rate limits
+Creating a person or a room needs no sign-in, so each client address (read after the forwarded headers) gets fixed one-minute windows: `PUT /api/me` 10, `POST /api/rooms` 10, `GET /api/rooms/{id}` 30, and 10 failed `JoinRoom` calls (successful joins never count). Past a limit the API answers 429 with the error code `rate_limited` and a `Retry-After` header. The `RateLimiting` settings change them: `RateLimiting__Enabled` (`false` switches every limit off, as the end-to-end run and the integration tests do) and, per rule, `RateLimiting__MeUpdate__PermitLimit`, `RateLimiting__RoomCreate__...`, `RateLimiting__RoomLookup__...`, `RateLimiting__FailedJoin__...` (each also has `Window`). See `docs/adr/0003-anonymous-creation-is-rate-limited-per-address.md`.
 
 ### Issues log
 Warnings, errors, startup restores, sweeps and the Operator's own actions are kept in the same SQLite file as the rooms: at most 500 entries and nothing older than 7 days (`IssueLog__MaxEntries`, `IssueLog__MaxAge`, `IssueLog__MaxMessageLength`). Messages are cut to one line without query strings or vote values, and the client address is kept only for failed sign-ins.

@@ -50,15 +50,27 @@ public class SweepEndpointTests : IClassFixture<FakeClockApiFactory>
     }
 
     [Fact]
-    public async Task Sweep_BeforeTtl_KeepsRoomAndPerson()
+    public async Task Sweep_BeforeTtl_KeepsPerson()
     {
         var cookie = await _factory.MintCookie("Bea");
-        var roomId = await _factory.CreateRoom(cookie);
 
         _factory.Time.Advance(SweepConstants.AbandonedAfter - TimeSpan.FromMinutes(1));
         _factory.Services.GetRequiredService<ISweepService>().Sweep();
 
+        Assert.Equal(HttpStatusCode.OK, (await Get("/api/me", cookie)).StatusCode);
+    }
+
+    [Fact]
+    public async Task NeverJoinedRoom_PastItsShortLifetime_IsDeletedLongBeforeTheAbandonedTtl()
+    {
+        var cookie = await _factory.MintCookie("Dee");
+        var roomId = await _factory.CreateRoom(cookie);
         Assert.Equal(HttpStatusCode.OK, (await Get($"/api/rooms/{roomId}", cookie)).StatusCode);
+
+        _factory.Time.Advance(PresenceConstants.NeverJoinedRoomLifetime + TimeSpan.FromSeconds(1));
+
+        await TestSession.WaitUntilAsync(async () => (await Get($"/api/rooms/{roomId}", cookie)).StatusCode == HttpStatusCode.NotFound, TimeSpan.FromSeconds(10));
+        Assert.True(PresenceConstants.NeverJoinedRoomLifetime < SweepConstants.AbandonedAfter);
         Assert.Equal(HttpStatusCode.OK, (await Get("/api/me", cookie)).StatusCode);
     }
 

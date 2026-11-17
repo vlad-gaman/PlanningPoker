@@ -50,6 +50,25 @@ public class RoomServiceManagementTests
 
     private string TypeOf(Guid personGuid) => _people.Get(personGuid)!.PersonType;
 
+    // Reveal and clear are open to every member, not only the owner
+
+    [Fact]
+    public void ForceShowVotes_AndClearVotes_AreAllowedForAMemberWhoIsNotTheOwner()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+
+        var revealed = _service.ForceShowVotes(people[1], "c2");
+
+        Assert.True(revealed.IsSuccess);
+        Assert.NotNull(_rooms.Get(roomId)!.Revealed);
+
+        var cleared = _service.ClearVotes(people[1], "c2");
+
+        Assert.True(cleared.IsSuccess);
+        Assert.Null(_rooms.Get(roomId)!.Revealed);
+    }
+
     // ChangePersonType
 
     [Fact]

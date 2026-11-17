@@ -28,8 +28,16 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>The <c>Https:Redirect</c> setting. The tests talk plain HTTP to a Production host, so they switch the redirect off; null leaves it unset.</summary>
     protected virtual bool? HttpsRedirect => false;
 
+    /// <summary>The <c>ForwardedHeaders:TrustAnySender</c> setting. The in-memory test server has no client address, so the tests trust any sender, as the deployed app does.</summary>
+    protected virtual bool TrustAnySender => true;
+
+    /// <summary>The <c>RateLimiting:Enabled</c> setting. Most tests make far more anonymous requests from one address than the limits allow, so it is off; <see cref="RateLimitedApiFactory"/> turns it on.</summary>
+    protected virtual bool RateLimitingEnabled => false;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseSetting($"{RateLimitingConstants.ConfigurationSection}:Enabled", RateLimitingEnabled.ToString());
+        builder.UseSetting($"{ForwardedHeadersConstants.ConfigurationSection}:{nameof(TrustAnySender)}", TrustAnySender.ToString());
         // Outside Development the static web assets manifest is ignored, so a wwwroot left in the API project by a
         // client build cannot shadow the test web root.
         builder.UseEnvironment(EnvironmentName);

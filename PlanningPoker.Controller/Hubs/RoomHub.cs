@@ -30,6 +30,7 @@ public class RoomHub(
     IRoomConfigurationRequestMapper configurationRequestMapper,
     IJoinRoomResponseMapper joinRoomResponseMapper,
     IApiResponseMapper apiResponseMapper,
+    IFailedJoinLimiter failedJoins,
     ILogger<RoomHub> logger) : Hub
 {
     /// <summary>Adds the caller to the room and returns the people in it.</summary>
@@ -41,10 +42,18 @@ public class RoomHub(
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(ServiceError.NoSession()));
         }
 
+        // An address that keeps failing to join is refused until its window passes; only failed joins count towards the limit.
+        var client = Context.GetHttpContext()?.Connection.RemoteIpAddress;
+        if (failedJoins.IsLimited(client))
+        {
+            return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(ServiceError.RateLimited()));
+        }
+
         // An id that is not a valid group name is refused before any group is touched.
         var identifier = identifierValidation.Validate(roomId);
         if (!identifier.IsSuccess)
         {
+            failedJoins.RecordFailure(client);
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(identifier));
         }
 
@@ -57,6 +66,7 @@ public class RoomHub(
         if (!joined.IsSuccess)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+            failedJoins.RecordFailure(client);
             return apiResponseMapper.Map(ServiceResponse<JoinRoomResponse>.Failure(joined));
         }
 
@@ -91,7 +101,10 @@ public class RoomHub(
         }
 
         await roomEvents.PublishPersonExitedAsync(exited.Data!);
-        await ApplyFollowUpAsync(exited.Data!.RoomId, exited.Data.FollowUp);
+        // Only this connection unsubscribes, whether or not the person left: another tab of theirs stays in the room
+        // and in the group. The person's own PersonExited above still reaches this connection before it goes.
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, exited.Data!.RoomId);
+        await ApplyFollowUpAsync(exited.Data.RoomId, exited.Data.FollowUp);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 

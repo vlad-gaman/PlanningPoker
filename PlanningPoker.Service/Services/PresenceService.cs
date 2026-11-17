@@ -147,8 +147,14 @@ public class PresenceService(
             .ToList();
         room.OffgridGuids.UnionWith(lapsed);
 
-        // Online means connected or still inside the grace period. A room that never had a member is left to the abandoned sweep.
+        // Online means connected or still inside the grace period. A room that never had a member lives for the never-joined lifetime.
         var hadMembers = removed.Count > 0 || room.MemberGuids.Count > 0;
+        if (!hadMembers && room.MemberConnections.Count == 0 && now - room.CreatedAt >= options.NeverJoinedRoomLifetime)
+        {
+            room.IsDisposed = true;
+            return new PresenceChange([], removed, null, null, Disposed: true);
+        }
+
         var nobodyOnline = room.MemberConnections.Count == 0 && !room.DroppedAt.Values.Any(dropped => now - dropped < options.GracePeriod);
         if (room.MemberConnections.Count > 0)
         {

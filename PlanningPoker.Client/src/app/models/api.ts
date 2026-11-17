@@ -21,6 +21,7 @@ export const ERROR_CODES = {
   adminTotpRequired: 'admin_totp_required',
   adminTotpInvalid: 'admin_totp_invalid',
   adminLoginExpired: 'admin_login_expired',
+  rateLimited: 'rate_limited',
 } as const;
 
 /** Metadata field name the server uses when a room id is malformed. */

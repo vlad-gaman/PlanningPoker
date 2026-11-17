@@ -9,7 +9,7 @@ The shared space where a team votes: it has an owner, members, settings and a se
 _Avoid_: Session, game, lobby
 
 **Round**:
-One cycle in a room: people vote, the votes are revealed, then cleared to start the next round.
+One cycle in a room: people vote, the votes are revealed, then cleared to start the next round. Any member may reveal or clear, not only the owner, as with physical cards.
 _Avoid_: Game, session
 
 **Round history**:
@@ -17,7 +17,7 @@ The list, newest first, of the rounds a room has revealed, each with its round n
 _Avoid_: Past votes, vote log, archive
 
 **Reveal**:
-The moment the votes in a room are shown to everyone, either after the countdown or when forced.
+The moment the votes in a room are shown to everyone, either after the countdown or when forced. Any member can force it, and any member can clear the votes afterwards; the owner has no special say here.
 _Avoid_: Flip, show-down
 
 **Round timer**:
@@ -25,7 +25,7 @@ The time elapsed since the room's last reveal, clear or creation. Casting or cha
 _Avoid_: Vote timer, idle timer, activity timer
 
 **Abandoned**:
-A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and neither it was created nor anything in it changed within the abandon time. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. This has nothing to do with the round timer, which only measures the current round.
+A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and neither it was created nor anything in it changed within the abandon time. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. A room nobody ever joined does not wait for this: the presence sweep deletes it `Presence:NeverJoinedRoomLifetime` (1 minute) after it was created. This has nothing to do with the round timer, which only measures the current round.
 _Avoid_: Idle, stale, expired, timed out
 
 **Online**:
@@ -57,7 +57,7 @@ What a person is in the room: Developer, Tester, SRE or Observer. Only Observer 
 _Avoid_: Person type, position
 
 **Owner**:
-The member who can change the room settings and manage the room. The creator is the owner from creation, but a creator who has not joined is not a member: the first person admitted to a room with no owner among its members becomes owner. A creator who arrives later joins as a regular member and does not get ownership back. When the owner leaves, ownership passes to another member.
+The member who can change the room settings and transfer ownership. Revealing and clearing votes are not owner powers: any member can do them. The creator is the owner from creation, but a creator who has not joined is not a member: the first person admitted to a room with no owner among its members becomes owner. A creator who arrives later joins as a regular member and does not get ownership back. When the owner leaves, ownership passes to another member.
 _Avoid_: Host, admin, creator (the creator is only the owner until someone else is admitted first)
 
 **Member**:
@@ -65,7 +65,7 @@ A person who has joined a room and has at least one open connection to it. Creat
 _Avoid_: Participant, user
 
 **Operator**:
-The single person who looks after the running app: they see the live rooms and people, and can close a room or remove a person, through the management page. An operator is not a member of any room and never votes; they cannot see votes. Closing a room tells everyone in it that an operator closed it.
+The single person who looks after the running app: they see the live rooms and people, and can close a room or remove a person, through the management page. An operator is not a member of any room and never votes; they cannot see votes. Closing a room tells everyone in it that an operator closed it. Failed sign-ins lock the Operator account for everyone, not just the sender (see [ADR 0002](docs/adr/0002-operator-sign-in-lockout-is-account-wide.md)).
 _Avoid_: Admin, user, moderator, owner (the owner belongs to one room)
 
 **Takeover**:
