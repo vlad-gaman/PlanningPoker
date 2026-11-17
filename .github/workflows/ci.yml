@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels that PR's older run. Pushes to main and workflow_call runs
+# (deploys) get a group of their own, so they always run to the end.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -31,9 +37,14 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: PlanningPoker.Client/.nvmrc
-          cache: npm
-          cache-dependency-path: PlanningPoker.Client/package-lock.json
-      - run: npm ci
+      # node_modules itself is cached (not just npm's download cache), so an unchanged lockfile skips npm ci.
+      - id: node-modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: PlanningPoker.Client/node_modules
+          key: node-modules-runner-${{ hashFiles('PlanningPoker.Client/.nvmrc', 'PlanningPoker.Client/package-lock.json') }}
+      - if: steps.node-modules.outputs.cache-hit != 'true'
+        run: npm ci
       - run: npx ng lint
       - run: npx ng test --watch=false
       - run: npm run build:api
@@ -43,37 +54,41 @@ jobs:
           path: PlanningPoker.Api/wwwroot
           retention-days: 1
 
+  # Runs in Playwright's image, which already has Node, Chromium and its system libraries.
+  # The tag must match the @playwright/test version pinned in PlanningPoker.Client/package.json.
   package-and-e2e:
     needs: [backend, client]
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: PlanningPoker.Client/.nvmrc
-          cache: npm
-          cache-dependency-path: PlanningPoker.Client/package-lock.json
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: wwwroot
           path: PlanningPoker.Api/wwwroot
       - name: Publish API with the built SPA
         run: dotnet publish PlanningPoker.Api --configuration Release --output publish
+      # The Playwright image has no zip, but it has python3.
       - name: Zip the site
-        run: cd publish && zip -r ../site.zip .
+        run: cd publish && python3 -m zipfile -c ../site.zip .
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site
           path: site.zip
           retention-days: 30
-      - name: Install Playwright
+      # Keyed apart from the client job's cache: the image's Node version differs from .nvmrc.
+      - id: node-modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: PlanningPoker.Client/node_modules
+          key: node-modules-playwright-image-${{ hashFiles('PlanningPoker.Client/package-lock.json') }}
+      - if: steps.node-modules.outputs.cache-hit != 'true'
         working-directory: PlanningPoker.Client
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
       - name: End-to-end tests against the published app
         working-directory: PlanningPoker.Client
         env:
