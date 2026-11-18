@@ -17,13 +17,12 @@ public class PresenceBackgroundServiceTests
 
     private readonly FakePresenceService _sweeps = new();
     private readonly FakeRoomPresenceNotifier _presence = new();
-    private readonly FakeRoomCountdownNotifier _countdown = new();
     private readonly FakeRoomTimerService _timer = new();
     private readonly FakeTimeProvider _time = new();
 
     private PresenceBackgroundService Create(ILogger<PresenceBackgroundService>? logger = null)
     {
-        return new PresenceBackgroundService(_sweeps, _presence, _countdown, _timer, Options.Create(new PresenceOptions { SweepInterval = Interval }), _time, logger ?? NullLogger<PresenceBackgroundService>.Instance);
+        return new PresenceBackgroundService(_sweeps, _presence, _timer, Options.Create(new PresenceOptions { SweepInterval = Interval }), _time, logger ?? NullLogger<PresenceBackgroundService>.Instance);
     }
 
     private static VotingFollowUp Countdown(long revision, int seconds)
@@ -42,8 +41,9 @@ public class PresenceBackgroundServiceTests
         await Create().RunOnceAsync();
 
         Assert.Equal("room", Assert.Single(_presence.Offgrid).RoomId);
-        Assert.Equal(("room", 9L), Assert.Single(_timer.Started));
-        Assert.Equal(("room", 3), Assert.Single(_countdown.Ticks));
+        var applied = Assert.Single(_timer.Applied);
+        Assert.Equal("room", applied.RoomId);
+        Assert.Equal((9L, 3), (applied.FollowUp.Countdown!.Revision, applied.FollowUp.Countdown.Seconds));
     }
 
     [Fact]
@@ -58,8 +58,7 @@ public class PresenceBackgroundServiceTests
         await Create().RunOnceAsync();
 
         Assert.Equal(Ann.Guid, Assert.Single(_presence.Removed).Person.Guid);
-        Assert.Same(status, Assert.Single(_countdown.Reveals).Status);
-        Assert.Empty(_timer.Started);
+        Assert.Same(status, Assert.Single(_timer.Applied).FollowUp.Revealed);
     }
 
     [Fact]
@@ -70,7 +69,7 @@ public class PresenceBackgroundServiceTests
         Assert.Equal(1, _sweeps.PresenceSweeps);
         Assert.Empty(_presence.Offgrid);
         Assert.Empty(_presence.Removed);
-        Assert.Empty(_timer.Started);
+        Assert.Empty(_timer.Applied);
     }
 
     [Fact]

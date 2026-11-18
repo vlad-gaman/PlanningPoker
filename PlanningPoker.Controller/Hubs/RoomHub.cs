@@ -104,7 +104,7 @@ public class RoomHub(
         // Only this connection unsubscribes, whether or not the person left: another tab of theirs stays in the room
         // and in the group. The person's own PersonExited above still reaches this connection before it goes.
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, exited.Data!.RoomId);
-        await ApplyFollowUpAsync(exited.Data.RoomId, exited.Data.FollowUp);
+        await timer.ApplyAsync(exited.Data.RoomId, exited.Data.FollowUp);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
@@ -123,7 +123,7 @@ public class RoomHub(
         }
 
         await roomEvents.PublishVoteCastAsync(voted.Data!);
-        await ApplyFollowUpAsync(voted.Data!.RoomId, voted.Data.FollowUp);
+        await timer.ApplyAsync(voted.Data!.RoomId, voted.Data.FollowUp);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
@@ -188,7 +188,7 @@ public class RoomHub(
         }
 
         await roomEvents.PublishPersonTypeChangedAsync(changed.Data!);
-        await ApplyFollowUpAsync(changed.Data!.RoomId, changed.Data.FollowUp);
+        await timer.ApplyAsync(changed.Data!.RoomId, changed.Data.FollowUp);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
@@ -213,7 +213,7 @@ public class RoomHub(
         }
 
         await roomEvents.PublishRoomConfigurationUpdatedAsync(updated.Data!);
-        await ApplyFollowUpAsync(updated.Data!.RoomId, updated.Data.FollowUp);
+        await timer.ApplyAsync(updated.Data!.RoomId, updated.Data.FollowUp);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
@@ -260,21 +260,7 @@ public class RoomHub(
         if (exited.IsSuccess)
         {
             await roomEvents.PublishPersonExitedAsync(exited.Data!);
-            await ApplyFollowUpAsync(exited.Data!.RoomId, exited.Data.FollowUp);
-        }
-    }
-
-    /// <summary>Starts the countdown ticker and sends its first second, or announces an immediate reveal.</summary>
-    private async Task ApplyFollowUpAsync(string roomId, VotingFollowUp followUp)
-    {
-        if (followUp.Revealed is { } revealed)
-        {
-            await roomEvents.PublishVotesShownAsync(roomId, revealed);
-        }
-        else if (followUp.Countdown is { } countdown)
-        {
-            timer.Start(roomId, countdown.Revision);
-            await roomEvents.PublishCountdownUpdateAsync(roomId, countdown.Seconds);
+            await timer.ApplyAsync(exited.Data!.RoomId, exited.Data.FollowUp);
         }
     }
 }

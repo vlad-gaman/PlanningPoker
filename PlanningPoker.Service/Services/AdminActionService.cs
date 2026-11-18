@@ -15,7 +15,6 @@ public class AdminActionService(
     IRoomService roomService,
     IRoomAdminNotifier adminNotifier,
     IRoomPresenceNotifier presenceNotifier,
-    IRoomCountdownNotifier countdownNotifier,
     IRoomTimerService timer,
     IIssueLog issues) : IAdminActionService
 {
@@ -85,7 +84,7 @@ public class AdminActionService(
         var followUp = change.Disposed ? VotingFollowUp.None : roomService.FollowUpAfterChange(roomId);
         await presenceNotifier.PersonRemovedAsync(exitRoomResultMapper.Map(
             roomId, snapshot, personLeft: true, roomDisposed: change.Disposed, newOwner, followUp, RoomEventReasons.RemovedByOperator, connectionIds));
-        await ApplyFollowUpAsync(roomId, followUp);
+        await timer.ApplyAsync(roomId, followUp);
         issues.Record(IssueLevel.Info, IssueLogConstants.AdminSource, $"Operator removed {snapshot.Name} from room \"{roomId}\" (removed by operator)");
         return ServiceResponse.Success();
     }
@@ -133,19 +132,6 @@ public class AdminActionService(
         return people.Update(personGuid, entity => personMapper.Map(entity), out var snapshot) ? snapshot : null;
     }
 
-    /// <summary>Starts the countdown ticker and sends its first second, or announces an immediate reveal.</summary>
-    private async Task ApplyFollowUpAsync(string roomId, VotingFollowUp followUp)
-    {
-        if (followUp.Revealed is { } revealed)
-        {
-            await countdownNotifier.VotesRevealedAsync(roomId, revealed);
-        }
-        else if (followUp.Countdown is { } countdown)
-        {
-            timer.Start(roomId, countdown.Revision);
-            await countdownNotifier.CountdownTickedAsync(roomId, countdown.Seconds);
-        }
-    }
 
     private sealed record MemberRemoval(bool WasMember, bool Disposed, Guid? NewOwnerGuid);
 }

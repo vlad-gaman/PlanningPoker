@@ -12,7 +12,6 @@ namespace PlanningPoker.Service.Services;
 public class PresenceBackgroundService(
     IPresenceService presence,
     IRoomPresenceNotifier presenceNotifier,
-    IRoomCountdownNotifier countdownNotifier,
     IRoomTimerService timer,
     IOptions<PresenceOptions> options,
     TimeProvider time,
@@ -43,13 +42,13 @@ public class PresenceBackgroundService(
             foreach (var offgrid in sweep.Offgrid)
             {
                 await presenceNotifier.PersonOffgridAsync(offgrid);
-                await ApplyFollowUpAsync(offgrid.RoomId, offgrid.FollowUp);
+                await timer.ApplyAsync(offgrid.RoomId, offgrid.FollowUp);
             }
 
             foreach (var removed in sweep.Removed)
             {
                 await presenceNotifier.PersonRemovedAsync(removed);
-                await ApplyFollowUpAsync(removed.RoomId, removed.FollowUp);
+                await timer.ApplyAsync(removed.RoomId, removed.FollowUp);
             }
 
             if (sweep.DisposedRoomIds.Count > 0)
@@ -63,17 +62,4 @@ public class PresenceBackgroundService(
         }
     }
 
-    /// <summary>Starts the countdown ticker and sends its first second, or announces an immediate reveal.</summary>
-    private async Task ApplyFollowUpAsync(string roomId, VotingFollowUp followUp)
-    {
-        if (followUp.Revealed is { } revealed)
-        {
-            await countdownNotifier.VotesRevealedAsync(roomId, revealed);
-        }
-        else if (followUp.Countdown is { } countdown)
-        {
-            timer.Start(roomId, countdown.Revision);
-            await countdownNotifier.CountdownTickedAsync(roomId, countdown.Seconds);
-        }
-    }
 }
