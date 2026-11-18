@@ -17,7 +17,7 @@ public class RoomRestorerTests
     private readonly Guid _ann = Guid.NewGuid();
     private readonly Guid _bob = Guid.NewGuid();
 
-    private RoomRestorer NewRestorer() => new(_store, _rooms, _people, NullLogger<RoomRestorer>.Instance);
+    private RoomRestorer NewRestorer() => new(_store, _rooms, _people, new RoomMembership(), NullLogger<RoomRestorer>.Instance);
 
     private void Store(Action<RoomEntity>? shape = null)
     {

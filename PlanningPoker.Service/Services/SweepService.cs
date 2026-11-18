@@ -4,7 +4,7 @@ using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Services;
 
-public class SweepService(IRoomRepository rooms, IPersonRepository people, IOptions<SweepOptions> options, TimeProvider time) : ISweepService
+public class SweepService(IRoomRepository rooms, IPersonRepository people, IRoomMembership membership, IOptions<SweepOptions> options, TimeProvider time) : ISweepService
 {
     public SweepResult Sweep()
     {
@@ -20,7 +20,7 @@ public class SweepService(IRoomRepository rooms, IPersonRepository people, IOpti
                     return false;
                 }
 
-                room.IsDisposed = true;
+                membership.Dispose(room);
                 return true;
             }, out var disposed) && disposed;
             if (abandoned && rooms.Remove(roomId))

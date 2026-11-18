@@ -14,6 +14,7 @@ public class PresenceService(
     IPersonMapper personMapper,
     IExitRoomResultMapper exitRoomResultMapper,
     IRoomService roomService,
+    IRoomMembership membership,
     TimeProvider time,
     IOptions<PresenceOptions> presence) : IPresenceService
 {
@@ -54,8 +55,7 @@ public class PresenceService(
 
             if (connections.Count == 0)
             {
-                room.MemberConnections.Remove(personGuid);
-                room.DroppedAt.TryAdd(personGuid, now);
+                membership.Drop(room, personGuid, now);
             }
 
             return true;
@@ -127,31 +127,26 @@ public class PresenceService(
     {
         var options = presence.Value;
         var removed = room.DroppedAt.Where(dropped => now - dropped.Value >= options.RemovalWindow).Select(dropped => dropped.Key).ToList();
+        var ownerAtStart = room.OwnerGuid;
         foreach (var guid in removed)
         {
-            room.MemberGuids.Remove(guid);
-            room.DroppedAt.Remove(guid);
-            room.OffgridGuids.Remove(guid);
-            room.Votes.Remove(guid);
-        }
-
-        if (removed.Count > 0)
-        {
-            // The people left may all have voted, and a running countdown no longer applies to the old group.
-            room.Revision++;
+            membership.Leave(room, guid, LeaveReason.Timeout);
         }
 
         var lapsed = room.DroppedAt
             .Where(dropped => now - dropped.Value >= options.GracePeriod && !room.OffgridGuids.Contains(dropped.Key))
             .Select(dropped => dropped.Key)
             .ToList();
-        room.OffgridGuids.UnionWith(lapsed);
+        foreach (var guid in lapsed)
+        {
+            membership.GoOffgrid(room, guid);
+        }
 
         // Online means connected or still inside the grace period. A room that never had a member lives for the never-joined lifetime.
         var hadMembers = removed.Count > 0 || room.MemberGuids.Count > 0;
         if (!hadMembers && room.MemberConnections.Count == 0 && now - room.CreatedAt >= options.NeverJoinedRoomLifetime)
         {
-            room.IsDisposed = true;
+            membership.Dispose(room);
             return new PresenceChange([], removed, null, null, Disposed: true);
         }
 
@@ -165,34 +160,18 @@ public class PresenceService(
         var awaitingReturn = room.AwaitingReturn && room.MemberGuids.Count > 0;
         if (hadMembers && nobodyOnline && !awaitingReturn && NobodyOnlineLongEnough(room, now, options))
         {
-            room.IsDisposed = true;
+            membership.Dispose(room);
             return new PresenceChange([], removed, null, null, Disposed: true);
         }
 
-        var previousOwner = removed.Contains(room.OwnerGuid) || lapsed.Contains(room.OwnerGuid) ? room.OwnerGuid : (Guid?)null;
-        var newOwner = previousOwner is null ? null : HandOver(room, removedOwner: removed.Contains(room.OwnerGuid));
-        return new PresenceChange(lapsed, removed, newOwner is null ? null : previousOwner, newOwner, Disposed: false);
-    }
-
-    /// <summary>
-    /// Gives the room to a random connected member right away. An owner who merely went offgrid keeps the room when nobody
-    /// else is connected; a removed owner still needs a successor from whoever is left.
-    /// </summary>
-    private static Guid? HandOver(RoomEntity room, bool removedOwner)
-    {
-        var candidates = room.MemberGuids.Where(guid => guid != room.OwnerGuid && room.MemberConnections.ContainsKey(guid)).ToList();
-        if (candidates.Count == 0 && removedOwner)
+        // A removed owner was already replaced by Leave; an owner who merely went offgrid is replaced here when someone else is connected.
+        if (room.OwnerGuid == ownerAtStart && lapsed.Contains(ownerAtStart))
         {
-            candidates = [.. room.MemberGuids];
+            membership.HandOver(room, ownerLeaving: false);
         }
 
-        if (candidates.Count == 0)
-        {
-            return null;
-        }
-
-        room.OwnerGuid = candidates[Random.Shared.Next(candidates.Count)];
-        return room.OwnerGuid;
+        Guid? newOwner = room.OwnerGuid == ownerAtStart ? null : room.OwnerGuid;
+        return new PresenceChange(lapsed, removed, newOwner is null ? null : ownerAtStart, newOwner, Disposed: false);
     }
 
     private static bool NobodyOnlineLongEnough(RoomEntity room, DateTimeOffset now, PresenceOptions options)

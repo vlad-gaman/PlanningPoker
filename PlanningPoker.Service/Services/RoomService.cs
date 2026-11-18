@@ -33,6 +33,7 @@ public class RoomService(
     IRoomConfigurationMapper configurationMapper,
     ICardSetService cardSets,
     IPlanningPokerMetrics metrics,
+    IRoomMembership membership,
     TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
@@ -95,52 +96,10 @@ public class RoomService(
 
         // The room lock decides admission. The connection joins the member's connection set in the same step, and the
         // person is only new to the room when no connection of theirs was already in it.
-        var admission = rooms.Update(roomId, room =>
-        {
-            if (room.IsDisposed)
-            {
-                return (Admitted: false, PersonAdded: false, WasOffgrid: false, ResetCountdown: false);
-            }
+        var isObserver = join.Person.PersonType == PersonTypes.Observer;
+        var admission = rooms.Update(roomId, room => membership.Join(room, personGuid, connectionId, isObserver), out var outcome) ? outcome : null;
 
-            var personAdded = !room.MemberGuids.Contains(personGuid);
-            var wasOffgrid = false;
-            var isVoter = join.Person.PersonType != PersonTypes.Observer;
-            if (personAdded)
-            {
-                // A room whose owner is not a member (the creator has not joined yet) is owned by the first person admitted.
-                if (!room.MemberGuids.Contains(room.OwnerGuid))
-                {
-                    room.OwnerGuid = personGuid;
-                }
-
-                room.MemberGuids.Add(personGuid);
-                var restored = RestoreDepartedVote(room, personGuid, join.Person);
-                if (room.VotingEnabled && isVoter && !restored)
-                {
-                    // A new voter has not voted yet, so a running countdown no longer applies.
-                    room.Revision++;
-                }
-            }
-            else
-            {
-                // A dropped member is back: they are online again, with the vote they had.
-                room.DroppedAt.Remove(personGuid);
-                wasOffgrid = room.OffgridGuids.Remove(personGuid);
-                if (wasOffgrid && room.VotingEnabled && isVoter && !room.Votes.ContainsKey(personGuid))
-                {
-                    // The room had stopped waiting for them; now a voter without a vote is back, so a running countdown no longer applies.
-                    room.Revision++;
-                }
-            }
-
-            var connections = room.MemberConnections.GetValueOrDefault(personGuid) ?? new HashSet<string>();
-            connections.Add(connectionId);
-            room.MemberConnections[personGuid] = connections;
-            var resetCountdown = room.VotingEnabled && isVoter && !(wasOffgrid && room.Votes.ContainsKey(personGuid));
-            return (Admitted: true, PersonAdded: personAdded, WasOffgrid: wasOffgrid, ResetCountdown: resetCountdown);
-        }, out var outcome) ? outcome : default;
-
-        if (!admission.Admitted)
+        if (admission is not { Admitted: true })
         {
             ReleaseConnection(personGuid, connectionId, roomId);
             return ServiceResponse<JoinRoomResult>.Failure(ServiceError.RoomNotFound(roomId));
@@ -221,28 +180,8 @@ public class RoomService(
                 return (Member: true, PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null);
             }
 
-            room.MemberConnections.Remove(personGuid);
-            room.MemberGuids.Remove(personGuid);
-            // The vote is parked, not dropped: a reconnect of the same person gets it back (see RestoreDepartedVote).
-            if (room.Votes.Remove(personGuid, out var mark))
-            {
-                room.DepartedVotes[personGuid] = mark;
-            }
-
-            room.Revision++;
-            if (room.MemberGuids.Count == 0)
-            {
-                room.IsDisposed = true;
-                return (Member: true, PersonLeft: true, Disposed: true, NewOwnerGuid: (Guid?)null);
-            }
-
-            if (room.OwnerGuid != personGuid)
-            {
-                return (Member: true, PersonLeft: true, Disposed: false, NewOwnerGuid: (Guid?)null);
-            }
-
-            room.OwnerGuid = room.MemberGuids[Random.Shared.Next(room.MemberGuids.Count)];
-            return (Member: true, PersonLeft: true, Disposed: false, NewOwnerGuid: (Guid?)room.OwnerGuid);
+            var change = membership.Leave(room, personGuid, LeaveReason.Deliberate);
+            return (Member: true, change.PersonLeft, change.Disposed, change.NewOwnerGuid);
         }, out var outcome);
         if (!left)
         {
@@ -590,26 +529,6 @@ public class RoomService(
             RoomId = roomId,
             NewOwner = outcome.Changed ? SnapshotPerson(targetPersonGuid) : null
         });
-    }
-
-    /// <summary>
-    /// Puts a parked vote back when its person rejoins an open round. A reveal, or a person who is an observer now, drops
-    /// it instead: a reveal has already frozen the votes without them, and observers do not vote. Runs under the room lock.
-    /// </summary>
-    private static bool RestoreDepartedVote(RoomEntity room, Guid personGuid, Person person)
-    {
-        if (!room.DepartedVotes.Remove(personGuid, out var mark))
-        {
-            return false;
-        }
-
-        if (room.Revealed is not null || !room.VotingEnabled || person.PersonType == PersonTypes.Observer)
-        {
-            return false;
-        }
-
-        room.Votes[personGuid] = mark;
-        return true;
     }
 
     /// <summary>The vote status of the room as it is now; null when the room is gone.</summary>

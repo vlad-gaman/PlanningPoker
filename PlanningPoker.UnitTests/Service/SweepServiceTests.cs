@@ -25,7 +25,7 @@ public class SweepServiceTests
 
     private SweepService CreateService(IRoomRepository? rooms = null, IPersonRepository? people = null)
     {
-        return new SweepService(rooms ?? _rooms, people ?? _people, Options.Create(new SweepOptions { AbandonedAfter = Ttl }), _time);
+        return new SweepService(rooms ?? _rooms, people ?? _people, new RoomMembership(), Options.Create(new SweepOptions { AbandonedAfter = Ttl }), _time);
     }
 
     private Guid AddPerson(DateTimeOffset? lastSeenAt = null, params string[] connections)
@@ -229,7 +229,7 @@ public class SweepServiceTests
     public void Sweep_UsesConfiguredAbandonedAfter()
     {
         var roomId = AddRoom(Guid.NewGuid(), Ago(TimeSpan.FromMinutes(5)));
-        var service = new SweepService(_rooms, _people, Options.Create(new SweepOptions { AbandonedAfter = TimeSpan.FromMinutes(1) }), _time);
+        var service = new SweepService(_rooms, _people, new RoomMembership(), Options.Create(new SweepOptions { AbandonedAfter = TimeSpan.FromMinutes(1) }), _time);
 
         service.Sweep();
 
