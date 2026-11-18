@@ -1,11 +1,16 @@
+using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 
 namespace PlanningPoker.UnitTests.Fakes;
 
-/// <summary>Records the countdowns the hub asked to start instead of ticking them.</summary>
+/// <summary>Records the follow-ups it was asked to carry out instead of ticking or announcing them.</summary>
 public sealed class FakeRoomTimerService : IRoomTimerService
 {
-    public List<(string RoomId, long Revision)> Started { get; } = [];
+    public List<(string RoomId, VotingFollowUp FollowUp)> Applied { get; } = [];
 
-    public void Start(string roomId, long revision) => Started.Add((roomId, revision));
+    public Task ApplyAsync(string roomId, VotingFollowUp followUp)
+    {
+        Applied.Add((roomId, followUp));
+        return Task.CompletedTask;
+    }
 }

@@ -187,7 +187,7 @@ public class RoomHubWorkflowTests
         Assert.Equal((Ann.Guid, ConnectionId), Assert.Single(_presence.DisconnectCalls));
         Assert.Empty(_rooms.ExitCalls);
         Assert.Empty(_publisher.Exited);
-        Assert.Empty(_timer.Started);
+        Assert.Empty(_timer.Applied);
     }
 
     [Fact]
@@ -257,15 +257,14 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
-    public async Task LeaveRoom_ExitWithCountdownFollowUp_RestartsTheTicker()
+    public async Task LeaveRoom_ExitWithFollowUp_HandsItToTheTimer()
     {
         var exit = RoomResults.Exit(Ann, followUp: new VotingFollowUp { Countdown = new CountdownStart { Revision = 9, Seconds = 3 } });
         _rooms.ExitResult = ServiceResponse<ExitRoomResult>.Success(exit);
 
         await NewHub(Ann).LeaveRoom();
 
-        Assert.Equal(("room", 9L), Assert.Single(_timer.Started));
-        Assert.Equal(("room", 3), Assert.Single(_publisher.CountdownUpdates));
+        Assert.Same(exit.FollowUp, AppliedFollowUp("room"));
     }
 
     [Fact]
@@ -338,7 +337,7 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
-    public async Task ChangePersonType_Success_PublishesTheChangeThenTheCountdownItCaused()
+    public async Task ChangePersonType_Success_PublishesTheChangeThenHandsTheFollowUpToTheTimer()
     {
         _rooms.ChangeTypeResult = ServiceResponse<PersonTypeChangeResult>.Success(TypeChange(new VotingFollowUp { Countdown = new CountdownStart { Revision = 7, Seconds = 5 } }));
 
@@ -346,19 +345,20 @@ public class RoomHubWorkflowTests
 
         Assert.Null(response.Errors);
         Assert.Equal((Ann.Guid, ConnectionId, "obs"), Assert.Single(_rooms.ChangeTypeCalls));
-        Assert.Equal(["PersonTypeChanged", "CountdownUpdate"], _publisher.Order);
-        Assert.Equal(("room", 7L), Assert.Single(_timer.Started));
+        Assert.Equal(["PersonTypeChanged"], _publisher.Order);
+        Assert.Equal(7L, AppliedFollowUp("room").Countdown!.Revision);
     }
 
     [Fact]
-    public async Task ChangePersonType_ThatRevealsAtOnce_PublishesTheChangeThenVotesShown()
+    public async Task ChangePersonType_ThatRevealsAtOnce_HandsTheRevealToTheTimer()
     {
         var revealed = new VoteStatus { Votes = new Dictionary<Guid, string>(), HasEveryoneVoted = true, VotingFinished = true };
         _rooms.ChangeTypeResult = ServiceResponse<PersonTypeChangeResult>.Success(TypeChange(new VotingFollowUp { Revealed = revealed }));
 
         await NewHub(Ann).ChangePersonType("obs");
 
-        Assert.Equal(["PersonTypeChanged", "VotesShown"], _publisher.Order);
+        Assert.Equal(["PersonTypeChanged"], _publisher.Order);
+        Assert.Same(revealed, AppliedFollowUp("room").Revealed);
     }
 
     [Fact]
@@ -370,7 +370,7 @@ public class RoomHubWorkflowTests
 
         Assert.Null(response.Errors);
         Assert.False(Assert.Single(_publisher.TypeChanges).Changed);
-        Assert.Empty(_timer.Started);
+        Assert.Equal(VotingFollowUp.None, AppliedFollowUp("room"));
     }
 
     [Fact]
@@ -406,7 +406,7 @@ public class RoomHubWorkflowTests
     }
 
     [Fact]
-    public async Task UpdateRoomConfiguration_Success_PublishesTheUpdateThenTheCountdownItRestarted()
+    public async Task UpdateRoomConfiguration_Success_PublishesTheUpdateThenHandsTheFollowUpToTheTimer()
     {
         _rooms.UpdateConfigurationResult = ServiceResponse<RoomConfigurationChangeResult>.Success(ConfigurationChange(new VotingFollowUp { Countdown = new CountdownStart { Revision = 3, Seconds = 8 } }));
 
@@ -415,8 +415,8 @@ public class RoomHubWorkflowTests
         Assert.Null(response.Errors);
         var call = Assert.Single(_rooms.UpdateConfigurationCalls);
         Assert.Equal((Ann.Guid, ConnectionId, "linear", 8), (call.PersonGuid, call.ConnectionId, call.Configuration.CardSet, call.Configuration.CountdownSeconds));
-        Assert.Equal(["RoomConfigurationUpdated", "CountdownUpdate"], _publisher.Order);
-        Assert.Equal(("room", 3L), Assert.Single(_timer.Started));
+        Assert.Equal(["RoomConfigurationUpdated"], _publisher.Order);
+        Assert.Equal(3L, AppliedFollowUp("room").Countdown!.Revision);
     }
 
     [Fact]
@@ -527,7 +527,7 @@ public class RoomHubWorkflowTests
 
         Assert.Equal(ErrorCodes.ObserverCannotVote, ErrorCode(response));
         Assert.Empty(_publisher.VoteCasts);
-        Assert.Empty(_timer.Started);
+        Assert.Empty(_timer.Applied);
     }
 
     [Fact]
@@ -540,33 +540,32 @@ public class RoomHubWorkflowTests
         Assert.Null(response.Errors);
         Assert.Equal((Ann.Guid, ConnectionId, "5"), Assert.Single(_rooms.VoteCalls));
         Assert.Single(_publisher.VoteCasts);
-        Assert.Empty(_timer.Started);
-        Assert.Empty(_publisher.CountdownUpdates);
+        Assert.Equal(VotingFollowUp.None, AppliedFollowUp("room"));
     }
 
     [Fact]
-    public async Task Vote_CountdownFollowUp_StartsTheTickerAndSendsTheFirstSecond()
+    public async Task Vote_CountdownFollowUp_HandsItToTheTimer()
     {
         var followUp = new VotingFollowUp { Countdown = new CountdownStart { Revision = 4, Seconds = 5 } };
         _rooms.VoteResult = ServiceResponse<VoteResult>.Success(VoteOutcome(followUp));
 
         await NewHub(Ann).Vote("5");
 
-        Assert.Equal(("room", 4L), Assert.Single(_timer.Started));
-        Assert.Equal(("room", 5), Assert.Single(_publisher.CountdownUpdates));
+        Assert.Same(followUp, AppliedFollowUp("room"));
     }
 
     [Fact]
-    public async Task Vote_ImmediateRevealFollowUp_AnnouncesTheVotesAndStartsNoTicker()
+    public async Task Vote_ImmediateRevealFollowUp_HandsTheRevealToTheTimer()
     {
         var status = new VoteStatus { Votes = new Dictionary<Guid, string> { [Ann.Guid] = "5" }, VotingFinished = true };
         _rooms.VoteResult = ServiceResponse<VoteResult>.Success(VoteOutcome(new VotingFollowUp { Revealed = status }));
 
         await NewHub(Ann).Vote("5");
 
-        Assert.Same(status, Assert.Single(_publisher.Shown).Status);
-        Assert.Empty(_timer.Started);
+        Assert.Same(status, AppliedFollowUp("room").Revealed);
     }
+
+    private VotingFollowUp AppliedFollowUp(string roomId) => Assert.Single(_timer.Applied, applied => applied.RoomId == roomId).FollowUp;
 
     private static readonly DateTimeOffset RoundStart = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 

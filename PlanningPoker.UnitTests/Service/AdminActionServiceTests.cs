@@ -6,6 +6,7 @@ using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
 using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Mappers;
+using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.UnitTests.Fakes;
 
@@ -19,7 +20,6 @@ public class AdminActionServiceTests
     private readonly RoomRepository _rooms;
     private readonly FakeRoomAdminNotifier _admin = new();
     private readonly FakeRoomPresenceNotifier _presence = new();
-    private readonly FakeRoomCountdownNotifier _countdown = new();
     private readonly FakeRoomTimerService _timer = new();
     private readonly FakeIssueLog _issues = new();
     private readonly AdminActionService _service;
@@ -32,7 +32,7 @@ public class AdminActionServiceTests
     {
         _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), _changes, _time);
         var roomService = RoomServiceFactory.Create(_rooms, _people, time: _time);
-        _service = new AdminActionService(_rooms, _people, new PersonMapper(), new ExitRoomResultMapper(), roomService, _admin, _presence, _countdown, _timer, _issues);
+        _service = new AdminActionService(_rooms, _people, new PersonMapper(), new ExitRoomResultMapper(), roomService, _admin, _presence, _timer, _issues);
         AddPerson(_ann, "Ann", "dev", "conn-ann");
         AddPerson(_bob, "Bob", "test", "conn-bob");
         AddPerson(_cat, "Cat", "dev", "conn-cat");
@@ -254,7 +254,7 @@ public class AdminActionServiceTests
         Assert.True(result.IsSuccess);
         Assert.Null(_rooms.Get("blue-fox"));
         Assert.True(Assert.Single(_presence.Removed).RoomDisposed);
-        Assert.Empty(_timer.Started);
+        Assert.Equal(VotingFollowUp.None, Assert.Single(_timer.Applied).FollowUp);
     }
 
     [Fact]
@@ -268,8 +268,9 @@ public class AdminActionServiceTests
 
         await _service.RemovePersonAsync("blue-fox", _bob);
 
-        Assert.Single(_timer.Started);
-        Assert.Equal(("blue-fox", 5), Assert.Single(_countdown.Ticks));
+        var applied = Assert.Single(_timer.Applied);
+        Assert.Equal("blue-fox", applied.RoomId);
+        Assert.Equal(5, applied.FollowUp.Countdown!.Seconds);
     }
 
     [Fact]
@@ -279,7 +280,7 @@ public class AdminActionServiceTests
 
         await _service.RemovePersonAsync("blue-fox", _bob);
 
-        Assert.Empty(_timer.Started);
+        Assert.Equal(VotingFollowUp.None, Assert.Single(_timer.Applied).FollowUp);
     }
 
     [Fact]

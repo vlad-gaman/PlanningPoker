@@ -10,7 +10,20 @@ public class RoomTimerService(IRoomService rooms, IRoomCountdownNotifier notifie
     private readonly Lock _gate = new();
     private readonly Dictionary<string, Ticker> _tickers = [];
 
-    public void Start(string roomId, long revision)
+    public async Task ApplyAsync(string roomId, VotingFollowUp followUp)
+    {
+        if (followUp.Revealed is { } revealed)
+        {
+            await notifier.VotesRevealedAsync(roomId, revealed);
+        }
+        else if (followUp.Countdown is { } countdown)
+        {
+            Start(roomId, countdown.Revision);
+            await notifier.CountdownTickedAsync(roomId, countdown.Seconds);
+        }
+    }
+
+    private void Start(string roomId, long revision)
     {
         Ticker ticker;
         lock (_gate)
