@@ -13,6 +13,7 @@ public class AdminActionService(
     IPersonMapper personMapper,
     IExitRoomResultMapper exitRoomResultMapper,
     IRoomService roomService,
+    IRoomMembership membership,
     IRoomAdminNotifier adminNotifier,
     IRoomPresenceNotifier presenceNotifier,
     IRoomTimerService timer,
@@ -23,7 +24,7 @@ public class AdminActionService(
         // Disposing inside the room lock means a Join that comes later is refused, so nobody gets in while the room is going.
         var found = rooms.Update(roomId, room =>
         {
-            room.IsDisposed = true;
+            membership.Dispose(room);
             return (People: room.MemberGuids.Count, Connections: room.MemberConnections.Values.SelectMany(connections => connections).ToList());
         }, out var closing);
         if (!found)
@@ -51,13 +52,13 @@ public class AdminActionService(
             return ServiceResponse.Failure(ServiceError.PersonNotFound(roomId, personGuid));
         }
 
-        var found = rooms.Update(roomId, room => RemoveMember(room, personGuid), out var change);
+        var found = rooms.Update(roomId, room => membership.Leave(room, personGuid, LeaveReason.OperatorRemoval), out var change);
         if (!found)
         {
             return ServiceResponse.Failure(ServiceError.RoomNotFound(roomId));
         }
 
-        if (change is null || !change.WasMember)
+        if (change is null || !change.PersonLeft)
         {
             return ServiceResponse.Failure(ServiceError.PersonNotFound(roomId, personGuid));
         }
@@ -89,49 +90,8 @@ public class AdminActionService(
         return ServiceResponse.Success();
     }
 
-    /// <summary>Takes the person out of the room, with their vote, whether they are online or offgrid. Runs under the room lock.</summary>
-    private static MemberRemoval RemoveMember(RoomEntity room, Guid personGuid)
-    {
-        if (!room.MemberGuids.Remove(personGuid))
-        {
-            return new MemberRemoval(false, false, null);
-        }
-
-        room.MemberConnections.Remove(personGuid);
-        room.DroppedAt.Remove(personGuid);
-        room.OffgridGuids.Remove(personGuid);
-        room.Votes.Remove(personGuid);
-        room.DepartedVotes.Remove(personGuid);
-
-        // The people left may all have voted, and a running countdown no longer applies to the old group.
-        room.Revision++;
-        if (room.MemberGuids.Count == 0)
-        {
-            room.IsDisposed = true;
-            return new MemberRemoval(true, true, null);
-        }
-
-        return new MemberRemoval(true, false, room.OwnerGuid == personGuid ? HandOver(room) : null);
-    }
-
-    /// <summary>Gives the room to a random connected member, or to any member when nobody is connected.</summary>
-    private static Guid HandOver(RoomEntity room)
-    {
-        var candidates = room.MemberGuids.Where(room.MemberConnections.ContainsKey).ToList();
-        if (candidates.Count == 0)
-        {
-            candidates = [.. room.MemberGuids];
-        }
-
-        room.OwnerGuid = candidates[Random.Shared.Next(candidates.Count)];
-        return room.OwnerGuid;
-    }
-
     private Person? SnapshotPerson(Guid personGuid)
     {
         return people.Update(personGuid, entity => personMapper.Map(entity), out var snapshot) ? snapshot : null;
     }
-
-
-    private sealed record MemberRemoval(bool WasMember, bool Disposed, Guid? NewOwnerGuid);
 }

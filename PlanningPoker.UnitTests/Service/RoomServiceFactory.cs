@@ -31,6 +31,7 @@ public static class RoomServiceFactory
             new RoomConfigurationMapper(),
             new CardSetService(),
             metrics ?? new FakePlanningPokerMetrics(),
+            new RoomMembership(),
             time ?? TimeProvider.System);
     }
 }

@@ -3,7 +3,7 @@ using PlanningPoker.Repository.Repositories;
 
 namespace PlanningPoker.Service.Services;
 
-public class RoomRestorer(IRoomStore store, IRoomRepository rooms, IPersonRepository people, ILogger<RoomRestorer> logger) : IRoomRestorer
+public class RoomRestorer(IRoomStore store, IRoomRepository rooms, IPersonRepository people, IRoomMembership membership, ILogger<RoomRestorer> logger) : IRoomRestorer
 {
     public int Restore()
     {
@@ -26,12 +26,12 @@ public class RoomRestorer(IRoomStore store, IRoomRepository rooms, IPersonReposi
             // Nobody is connected after a restart. The members who were online count as dropped when the room was last written,
             // so the downtime runs against their removal window; members who had already dropped keep their drop time.
             room.MemberConnections = [];
+            room.OffgridGuids = [];
             foreach (var guid in room.MemberGuids)
             {
-                room.DroppedAt.TryAdd(guid, stored.SavedAt);
+                membership.Drop(room, guid, stored.SavedAt);
+                membership.GoOffgrid(room, guid);
             }
-
-            room.OffgridGuids = [.. room.MemberGuids];
 
             // A running countdown is not resumed: voting stays open and the next change decides again.
             room.CountdownRevision = null;
