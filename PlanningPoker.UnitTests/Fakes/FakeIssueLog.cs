@@ -11,6 +11,9 @@ public sealed class FakeIssueLog : IIssueLog
 
     public List<(string? Address, bool Locked)> FailedLogins { get; } = [];
 
+    /// <summary>The browser data of each failed login, in the same order as <see cref="FailedLogins"/>.</summary>
+    public List<string?> FailedLoginBrowserData { get; } = [];
+
     public int Prunes { get; private set; }
 
     public void Record(IssueLevel level, string source, string message, Exception? exception = null)
@@ -18,9 +21,10 @@ public sealed class FakeIssueLog : IIssueLog
         Recorded.Add((level, source, message));
     }
 
-    public void RecordFailedLogin(string? ipAddress, bool locked)
+    public void RecordFailedLogin(string? ipAddress, bool locked, string? browserData = null)
     {
         FailedLogins.Add((ipAddress, locked));
+        FailedLoginBrowserData.Add(browserData);
     }
 
     public IReadOnlyList<IssueEntry> Recent(int limit) => [];

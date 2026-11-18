@@ -14,6 +14,9 @@ public static class IssueLogConstants
     /// <summary>A message is cut to this many characters.</summary>
     public const int MaxMessageLength = 500;
 
+    /// <summary>The browser data sent with a failed sign-in is cut to this many characters before it is noted.</summary>
+    public const int MaxBrowserDataLength = 1024;
+
     /// <summary>The source shown for entries about the Operator.</summary>
     public const string AdminSource = "Admin";
 }

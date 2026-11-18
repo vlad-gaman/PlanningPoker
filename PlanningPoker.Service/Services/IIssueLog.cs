@@ -11,8 +11,8 @@ public interface IIssueLog
 {
     void Record(IssueLevel level, string source, string message, Exception? exception = null);
 
-    /// <summary>Records a failed or refused Operator sign-in. The only entry that keeps the client address.</summary>
-    void RecordFailedLogin(string? ipAddress, bool locked);
+    /// <summary>Records a failed or refused Operator sign-in. The only entry that keeps the client address, and the only one that notes what the browser reports having saved (unverified).</summary>
+    void RecordFailedLogin(string? ipAddress, bool locked, string? browserData = null);
 
     /// <summary>The newest entries first; none when the store cannot be read.</summary>
     IReadOnlyList<IssueEntry> Recent(int limit);

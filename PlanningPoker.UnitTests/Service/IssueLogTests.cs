@@ -74,6 +74,33 @@ public class IssueLogTests
     }
 
     [Fact]
+    public void RecordFailedLogin_BrowserData_IsNotedAsUnverifiedOnOneLine()
+    {
+        Create().RecordFailedLogin("203.0.113.7", locked: false, "{\"person\":{\"name\":\"Ada\"}}\nsecond line");
+
+        var message = Assert.Single(_store.Entries).Message;
+        Assert.Contains("unverified", message);
+        Assert.Contains("Ada", message);
+        Assert.DoesNotContain("second line", message);
+    }
+
+    [Fact]
+    public void RecordFailedLogin_HugeBrowserData_IsCutToTheMessageLength()
+    {
+        Create().RecordFailedLogin("203.0.113.7", locked: false, new string('x', 50_000));
+
+        Assert.True(Assert.Single(_store.Entries).Message.Length <= _options.MaxMessageLength);
+    }
+
+    [Fact]
+    public void RecordFailedLogin_BlankBrowserData_AddsNothing()
+    {
+        Create().RecordFailedLogin("203.0.113.7", locked: false, "  ");
+
+        Assert.Equal("Operator sign-in failed", Assert.Single(_store.Entries).Message);
+    }
+
+    [Fact]
     public void RecordFailedLogin_NoAddress_StoresNone()
     {
         Create().RecordFailedLogin("  ", locked: false);

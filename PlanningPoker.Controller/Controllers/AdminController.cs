@@ -42,7 +42,7 @@ public class AdminController(
             return ToResult(ServiceResponse<OperatorIdentity>.Failure(validated), _ => sessionMapper.MapSignedOut());
         }
 
-        return await SignIn(await auth.AuthenticateAsync(request.Username, request.Password, HttpContext.Connection.RemoteIpAddress?.ToString()));
+        return await SignIn(await auth.AuthenticateAsync(request.Username, request.Password, HttpContext.Connection.RemoteIpAddress?.ToString(), request.BrowserData));
     }
 
     /// <summary>The code step of a sign-in with an authenticator: the challenge from the password step and a current code.</summary>
@@ -60,7 +60,7 @@ public class AdminController(
             return ToResult(ServiceResponse<OperatorIdentity>.Failure(validated), _ => sessionMapper.MapSignedOut());
         }
 
-        return await SignIn(await auth.CompleteTotpAsync(request.Challenge, request.Code, HttpContext.Connection.RemoteIpAddress?.ToString()));
+        return await SignIn(await auth.CompleteTotpAsync(request.Challenge, request.Code, HttpContext.Connection.RemoteIpAddress?.ToString(), request.BrowserData));
     }
 
     /// <summary>The current Operator session. When signed in, includes a fresh anti-forgery token.</summary>
