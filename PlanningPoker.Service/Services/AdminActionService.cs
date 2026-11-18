@@ -85,7 +85,7 @@ public class AdminActionService(
         var newOwner = change.NewOwnerGuid is { } ownerGuid ? SnapshotPerson(ownerGuid, change.NewOwnerPersonType!) : null;
         var followUp = change.Disposed ? VotingFollowUp.None : roomService.FollowUpAfterChange(roomId);
         await presenceNotifier.PersonRemovedAsync(exitRoomResultMapper.Map(
-            roomId, snapshot, personLeft: true, roomDisposed: change.Disposed, newOwner, followUp, RoomEventReasons.RemovedByOperator, connectionIds));
+            roomId, personMapper.Map(snapshot, change.PersonType), personLeft: true, roomDisposed: change.Disposed, newOwner, followUp, RoomEventReasons.RemovedByOperator, connectionIds));
         await timer.ApplyAsync(roomId, followUp);
         issues.Record(IssueLevel.Info, IssueLogConstants.AdminSource, $"Operator removed {snapshot.Name} from room \"{roomId}\" (removed by operator)");
         return ServiceResponse.Success();
