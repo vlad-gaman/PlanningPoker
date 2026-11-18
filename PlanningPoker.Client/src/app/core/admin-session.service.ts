@@ -6,6 +6,8 @@ import { ERROR_CODES } from '../models/api';
 import { ApiClient } from './api-client';
 import { ApiRequestError } from './api-request-error';
 import { FlashMessageService } from './flash-message.service';
+import { PERSON_DEFAULTS_STORAGE_KEY } from './person-defaults.service';
+import { ROOM_DEFAULTS_STORAGE_KEY } from './room-defaults.service';
 
 export const ADMIN_SIGN_IN_URL = '/admin/sign-in';
 export const ADMIN_SESSION_EXPIRED_MESSAGE = 'Your session expired. Sign in again.';
@@ -42,7 +44,7 @@ export class AdminSessionService {
   /** The password step. With an authenticator set up the server asks for a code instead and sends a challenge to send back with it. */
   async signIn(username: string, password: string): Promise<SignInStep> {
     try {
-      this.state.set(await firstValueFrom(this.api.post<AdminSession>('/api/admin/login', { username, password })));
+      this.state.set(await firstValueFrom(this.api.post<AdminSession>('/api/admin/login', { username, password, browserData: savedVotingData() })));
       return { kind: 'signedIn' };
     } catch (error) {
       const challenge = challengeOf(error);
@@ -55,7 +57,7 @@ export class AdminSessionService {
 
   /** The code step. */
   async completeCode(challenge: string, code: string): Promise<void> {
-    this.state.set(await firstValueFrom(this.api.post<AdminSession>('/api/admin/login/totp', { challenge, code })));
+    this.state.set(await firstValueFrom(this.api.post<AdminSession>('/api/admin/login/totp', { challenge, code, browserData: savedVotingData() })));
   }
 
   /** Ends the session. The page forgets it even when the server cannot be reached, and goes to the sign-in page. */
@@ -94,4 +96,26 @@ function challengeOf(error: unknown): string | null {
     return null;
   }
   return error.errors.find((item) => item.code === ERROR_CODES.adminTotpRequired)?.metadata?.['challenge'] ?? null;
+}
+
+/**
+ * What this browser has saved about voting (the name and role, and the room settings), sent with a sign-in so the server can note it
+ * when the sign-in fails. The server treats it as a hint only. Undefined when nothing is saved or storage cannot be read.
+ */
+function savedVotingData(): string | undefined {
+  const saved: Record<string, unknown> = {};
+  for (const [field, key] of [
+    ['person', PERSON_DEFAULTS_STORAGE_KEY],
+    ['room', ROOM_DEFAULTS_STORAGE_KEY],
+  ]) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        saved[field] = JSON.parse(raw);
+      }
+    } catch {
+      // Unreadable or unparseable: leave it out.
+    }
+  }
+  return Object.keys(saved).length > 0 ? JSON.stringify(saved) : undefined;
 }

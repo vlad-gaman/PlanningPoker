@@ -47,6 +47,31 @@ public class OperatorAuthServiceTests
     }
 
     [Fact]
+    public async Task Authenticate_WrongPassword_PassesTheBrowserDataToTheFailedLogin()
+    {
+        await Create().AuthenticateAsync(Username, "nope", Address, "{\"person\":{}}");
+
+        Assert.Equal("{\"person\":{}}", Assert.Single(_issues.FailedLoginBrowserData));
+    }
+
+    [Fact]
+    public async Task Authenticate_WhileLockedOut_PassesTheBrowserDataToTheRefusal()
+    {
+        var service = Create();
+        for (var attempt = 0; attempt < OperatorConstants.MaxFailedLogins; attempt++)
+        {
+            await service.AuthenticateAsync(Username, "nope", Address);
+        }
+
+        await service.AuthenticateAsync(Username, Password, Address, "{\"room\":{}}");
+
+        var refused = _issues.FailedLogins[^1];
+        var browserData = _issues.FailedLoginBrowserData[^1];
+        Assert.True(refused.Locked);
+        Assert.Equal("{\"room\":{}}", browserData);
+    }
+
+    [Fact]
     public async Task Authenticate_WrongPasswordAndUnknownUser_FailWithTheSameError()
     {
         var service = Create();

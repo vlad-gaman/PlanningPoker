@@ -60,6 +60,26 @@ describe('AdminSessionService', () => {
     expect(service.signedIn()).toBe(true);
   });
 
+  it('sends what the browser has saved about voting with both steps, and nothing when none is saved', async () => {
+    const signingIn = service.signIn('operator', 'secret');
+    const first = http.expectOne('/api/admin/login');
+    expect(first.request.body.browserData).toBeUndefined();
+    first.flush({ data: SIGNED_IN, errors: null });
+    await signingIn;
+
+    localStorage.setItem('pp-person', JSON.stringify({ name: 'Ada', personType: 'Developer' }));
+    localStorage.setItem('pp-room-defaults', 'not json');
+    try {
+      const completing = service.completeCode('abc.def', '123456');
+      const request = http.expectOne('/api/admin/login/totp');
+      expect(JSON.parse(request.request.body.browserData)).toEqual({ person: { name: 'Ada', personType: 'Developer' } });
+      request.flush({ data: SIGNED_IN, errors: null });
+      await completing;
+    } finally {
+      localStorage.clear();
+    }
+  });
+
   it('hands back the challenge when the server asks for a code, and is not signed in', async () => {
     const signingIn = service.signIn('operator', 'secret');
     http.expectOne('/api/admin/login').flush(

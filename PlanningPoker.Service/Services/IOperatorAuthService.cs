@@ -10,10 +10,10 @@ public interface IOperatorAuthService
 
     /// <summary>
     /// The password step. With a TOTP secret configured a correct password does not sign in: it fails with
-    /// <c>admin_totp_required</c> and a challenge for <see cref="CompleteTotpAsync"/>. Failures and lockout are as for any sign-in.
+    /// <c>admin_totp_required</c> and a challenge for <see cref="CompleteTotpAsync"/>. Failures and lockout are as for any sign-in. <paramref name="browserData"/> is what the browser reports having saved; it is only noted with a failure.
     /// </summary>
-    Task<ServiceResponse<OperatorIdentity>> AuthenticateAsync(string? username, string? password, string? ipAddress);
+    Task<ServiceResponse<OperatorIdentity>> AuthenticateAsync(string? username, string? password, string? ipAddress, string? browserData = null);
 
     /// <summary>The code step: a genuine challenge and a valid, unused code sign the Operator in. A wrong code counts toward the lockout like a wrong password.</summary>
-    Task<ServiceResponse<OperatorIdentity>> CompleteTotpAsync(string? challenge, string? code, string? ipAddress);
+    Task<ServiceResponse<OperatorIdentity>> CompleteTotpAsync(string? challenge, string? code, string? ipAddress, string? browserData = null);
 }

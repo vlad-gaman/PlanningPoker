@@ -302,6 +302,18 @@ public class OperatorAuthTotpTests
     }
 
     [Fact]
+    public async Task CompleteTotp_AWrongCode_PassesTheBrowserDataToTheFailedLogin()
+    {
+        var service = Create();
+        var challenge = ChallengeOf(await service.AuthenticateAsync(Username, Password, Address));
+        var wrong = TestTotp.CodeAt(_time.GetUtcNow().AddMinutes(10));
+
+        await service.CompleteTotpAsync(challenge, wrong, Address, "{\"person\":{}}");
+
+        Assert.Equal("{\"person\":{}}", Assert.Single(_issues.FailedLoginBrowserData));
+    }
+
+    [Fact]
     public async Task CompleteTotp_AReusedCode_Fails()
     {
         var service = Create();

@@ -44,12 +44,12 @@ public class OperatorAuthService : IOperatorAuthService
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(_options.Value.Username) && !string.IsNullOrWhiteSpace(_options.Value.PasswordHash);
 
-    public async Task<ServiceResponse<OperatorIdentity>> AuthenticateAsync(string? username, string? password, string? ipAddress)
+    public async Task<ServiceResponse<OperatorIdentity>> AuthenticateAsync(string? username, string? password, string? ipAddress, string? browserData = null)
     {
         if (_lockout.IsLocked(ipAddress))
         {
             _logger.LogWarning("Operator sign-in refused for {IpAddress}: locked out.", ipAddress);
-            _issues.RecordFailedLogin(ipAddress, locked: true);
+            _issues.RecordFailedLogin(ipAddress, locked: true, browserData);
             return ServiceResponse<OperatorIdentity>.Failure(ServiceError.AdminLoginLocked());
         }
 
@@ -68,15 +68,15 @@ public class OperatorAuthService : IOperatorAuthService
             return SignedIn(settings.Username!, ipAddress);
         }
 
-        return await FailAsync(ipAddress, ServiceError.AdminInvalidCredentials());
+        return await FailAsync(ipAddress, browserData, ServiceError.AdminInvalidCredentials());
     }
 
-    public async Task<ServiceResponse<OperatorIdentity>> CompleteTotpAsync(string? challenge, string? code, string? ipAddress)
+    public async Task<ServiceResponse<OperatorIdentity>> CompleteTotpAsync(string? challenge, string? code, string? ipAddress, string? browserData = null)
     {
         if (_lockout.IsLocked(ipAddress))
         {
             _logger.LogWarning("Operator sign-in refused for {IpAddress}: locked out.", ipAddress);
-            _issues.RecordFailedLogin(ipAddress, locked: true);
+            _issues.RecordFailedLogin(ipAddress, locked: true, browserData);
             return ServiceResponse<OperatorIdentity>.Failure(ServiceError.AdminLoginLocked());
         }
 
@@ -88,7 +88,7 @@ public class OperatorAuthService : IOperatorAuthService
 
         return _totp.Verify(code)
             ? SignedIn(username, ipAddress)
-            : await FailAsync(ipAddress, ServiceError.AdminTotpInvalid());
+            : await FailAsync(ipAddress, browserData, ServiceError.AdminTotpInvalid());
     }
 
     private ServiceResponse<OperatorIdentity> SignedIn(string username, string? ipAddress)
@@ -99,11 +99,11 @@ public class OperatorAuthService : IOperatorAuthService
         return ServiceResponse<OperatorIdentity>.Success(new OperatorIdentity { Username = username });
     }
 
-    private async Task<ServiceResponse<OperatorIdentity>> FailAsync(string? ipAddress, ServiceError error)
+    private async Task<ServiceResponse<OperatorIdentity>> FailAsync(string? ipAddress, string? browserData, ServiceError error)
     {
         _lockout.RecordFailure(ipAddress);
         _logger.LogWarning("Operator sign-in failed from {IpAddress}.", ipAddress);
-        _issues.RecordFailedLogin(ipAddress, locked: false);
+        _issues.RecordFailedLogin(ipAddress, locked: false, browserData);
         if (_options.Value.FailureDelay > TimeSpan.Zero)
         {
             await Task.Delay(_options.Value.FailureDelay);

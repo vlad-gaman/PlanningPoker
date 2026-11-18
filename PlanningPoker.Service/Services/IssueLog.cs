@@ -23,9 +23,15 @@ public class IssueLog(
         Write(level, source, text, null);
     }
 
-    public void RecordFailedLogin(string? ipAddress, bool locked)
+    public void RecordFailedLogin(string? ipAddress, bool locked, string? browserData = null)
     {
         var message = locked ? "Operator sign-in refused: locked out" : "Operator sign-in failed";
+        if (!string.IsNullOrWhiteSpace(browserData))
+        {
+            var hint = redactor.Redact(browserData[..Math.Min(browserData.Length, IssueLogConstants.MaxBrowserDataLength)]);
+            message = $"{message}; browser reports (unverified): {hint}";
+        }
+
         Write(IssueLevel.Warning, IssueLogConstants.AdminSource, message, string.IsNullOrWhiteSpace(ipAddress) ? null : ipAddress);
     }
 
