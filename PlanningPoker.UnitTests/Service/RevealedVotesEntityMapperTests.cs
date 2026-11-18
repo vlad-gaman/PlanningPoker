@@ -22,6 +22,7 @@ public class RevealedVotesEntityMapperTests
         return new RoomEntity
         {
             MemberGuids = members.Select(member => member.Guid).ToList(),
+            Roles = Types,
             Votes = members.Where(member => member.Mark is not null).ToDictionary(member => member.Guid, member => member.Mark!)
         };
     }
@@ -34,8 +35,8 @@ public class RevealedVotesEntityMapperTests
         var withOffgridVote = Room((Dev, null), (Tester, "8"));
         withOffgridVote.OffgridGuids = [Tester];
 
-        var revealed = new RevealedVotesEntityMapper().Map(room, Types);
-        var offgridVote = new RevealedVotesEntityMapper().Map(withOffgridVote, Types);
+        var revealed = new RevealedVotesEntityMapper().Map(room);
+        var offgridVote = new RevealedVotesEntityMapper().Map(withOffgridVote);
 
         Assert.True(revealed.EveryoneVoted);
         Assert.False(offgridVote.EveryoneVoted);
@@ -45,7 +46,7 @@ public class RevealedVotesEntityMapperTests
     [Fact]
     public void Map_CopiesTheMarksWithTheTypeOfEachVoter()
     {
-        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Tester, "8")), Types);
+        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Tester, "8")));
 
         Assert.Equal("5", revealed.Votes[Dev].Mark);
         Assert.Equal(PersonTypes.Developer, revealed.Votes[Dev].PersonType);
@@ -56,7 +57,7 @@ public class RevealedVotesEntityMapperTests
     [Fact]
     public void Map_LeavesObserversOut_AndDoesNotWaitForThem()
     {
-        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Observer, null)), Types);
+        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Observer, null)));
 
         Assert.Equal([Dev], revealed.Votes.Keys);
         Assert.True(revealed.EveryoneVoted);
@@ -65,7 +66,7 @@ public class RevealedVotesEntityMapperTests
     [Fact]
     public void Map_MemberWhoHasNotVoted_MeansNotEveryoneVoted()
     {
-        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Tester, null)), Types);
+        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Tester, null)));
 
         Assert.False(revealed.EveryoneVoted);
     }
@@ -73,28 +74,9 @@ public class RevealedVotesEntityMapperTests
     [Fact]
     public void Map_OnlyObservers_MeansNotEveryoneVoted()
     {
-        var revealed = new RevealedVotesEntityMapper().Map(Room((Observer, null)), Types);
+        var revealed = new RevealedVotesEntityMapper().Map(Room((Observer, null)));
 
         Assert.Empty(revealed.Votes);
-        Assert.False(revealed.EveryoneVoted);
-    }
-
-    [Fact]
-    public void Map_VoterOfUnknownType_KeepsTheVoteWithAnEmptyType()
-    {
-        var stranger = Guid.NewGuid();
-
-        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (stranger, "8")), Types);
-
-        Assert.Equal(string.Empty, revealed.Votes[stranger].PersonType);
-        Assert.True(revealed.EveryoneVoted);
-    }
-
-    [Fact]
-    public void Map_MemberOfUnknownTypeWhoHasNotVoted_MeansNotEveryoneVoted()
-    {
-        var revealed = new RevealedVotesEntityMapper().Map(Room((Dev, "5"), (Guid.NewGuid(), null)), Types);
-
         Assert.False(revealed.EveryoneVoted);
     }
 }

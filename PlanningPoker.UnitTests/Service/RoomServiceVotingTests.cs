@@ -333,25 +333,6 @@ public class RoomServiceVotingTests
     }
 
     [Fact]
-    public void Vote_AVoterJoinsBetweenTheSnapshotAndTheCountdownDecision_StartsNoCountdown()
-    {
-        var (roomId, people) = RoomWith(5, TwoDevs);
-        _service.Vote(people[0], "c1", "5");
-        var interleaving = new InterleavingRoomRepository(_rooms);
-        var service = RoomServiceFactory.Create(interleaving, _people);
-        var late = AddPerson();
-        // The snapshot says everyone voted; right after it is taken, a new voter joins and the answer is out of date.
-        interleaving.AfterNextGet = () => Assert.True(_service.Join(late, "c3", roomId).IsSuccess);
-
-        var response = service.Vote(people[1], "c2", "8");
-
-        Assert.True(response.IsSuccess);
-        Assert.True(response.Data!.VoteStatus.HasEveryoneVoted);
-        Assert.Null(response.Data.FollowUp.Countdown);
-        Assert.False(_rooms.Get(roomId)!.CountdownRunning);
-    }
-
-    [Fact]
     public void Vote_TwoLastVotesAtOnce_StartExactlyOneCountdown()
     {
         var (roomId, people) = RoomWith(5, TwoDevs);

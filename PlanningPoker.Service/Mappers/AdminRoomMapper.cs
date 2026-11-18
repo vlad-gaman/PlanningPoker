@@ -39,7 +39,7 @@ public class AdminRoomMapper : IAdminRoomMapper
         {
             Id = guid,
             Name = person.Name,
-            PersonType = person.PersonType,
+            PersonType = room.RoleOf(guid),
             IsOwner = room.OwnerGuid == guid,
             Status = room.OffgridGuids.Contains(guid) ? AdminPersonStatus.Offgrid : AdminPersonStatus.Online,
             LastSeenAt = room.DroppedAt.TryGetValue(guid, out var droppedAt) ? droppedAt : null

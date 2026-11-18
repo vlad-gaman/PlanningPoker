@@ -1,3 +1,4 @@
+using PlanningPoker.UnitTests.Builders;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
@@ -17,7 +18,7 @@ public class RoomRestorerTests
     private readonly Guid _ann = Guid.NewGuid();
     private readonly Guid _bob = Guid.NewGuid();
 
-    private RoomRestorer NewRestorer() => new(_store, _rooms, _people, new RoomMembership(), NullLogger<RoomRestorer>.Instance);
+    private RoomRestorer NewRestorer() => new(_store, _rooms, _people, Rounds.Membership(), NullLogger<RoomRestorer>.Instance);
 
     private void Store(Action<RoomEntity>? shape = null)
     {
@@ -157,5 +158,27 @@ public class RoomRestorerTests
         Assert.Equal("Bob", _people.Get(_bob)!.Name);
         Assert.Null(_people.Get(_bob)!.SessionToken);
         Assert.Contains(_bob, _rooms.Get("r")!.MemberGuids);
+    }
+
+    [Fact]
+    public void Restore_ARoomSavedWithoutRoles_TakesEachMembersRoleFromTheirProfile()
+    {
+        Store();
+
+        NewRestorer().Restore();
+
+        var room = _rooms.Get("r")!;
+        Assert.Equal("dev", room.RoleOf(_ann));
+        Assert.Equal("test", room.RoleOf(_bob));
+    }
+
+    [Fact]
+    public void Restore_ARoleSavedInTheRoom_WinsOverTheProfile()
+    {
+        Store(room => room.Roles[_bob] = "obs");
+
+        NewRestorer().Restore();
+
+        Assert.Equal("obs", _rooms.Get("r")!.RoleOf(_bob));
     }
 }

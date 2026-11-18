@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using PlanningPoker.Common.Constants;
 
 namespace PlanningPoker.Repository.Models;
 
@@ -29,6 +30,12 @@ public class RoomEntity
     /// </summary>
     public HashSet<Guid> OffgridGuids { get; set; } = [];
 
+    /// <summary>
+    /// The role (a <see cref="PersonTypes"/> value) of each member in this room. Set when the person is admitted and changed only
+    /// by a role change in the room; the person's profile is a default for the next join and is never read for a round decision.
+    /// </summary>
+    public Dictionary<Guid, string> Roles { get; set; } = [];
+
     public Dictionary<Guid, string> Votes { get; set; } = [];
 
     /// <summary>
@@ -45,7 +52,7 @@ public class RoomEntity
 
     /// <summary>
     /// Bumped, inside the room lock, by every change that cancels a running countdown: a stored vote, clearing, a reveal,
-    /// a voter joining while voting is open, a person leaving, and (while voting is open) a person type or settings change.
+    /// a voter joining while voting is open, a person leaving, and (while voting is open) a role or settings change.
     /// </summary>
     public long Revision { get; set; }
 
@@ -54,6 +61,23 @@ public class RoomEntity
 
     public int CountdownRemaining { get; set; }
 
+    /// <summary>The member's role; empty for someone who is not a member.</summary>
+    public string RoleOf(Guid personGuid)
+    {
+        return Roles.GetValueOrDefault(personGuid, string.Empty);
+    }
+
+    /// <summary>True when at least one voter is online and every online voter has voted. Observers and offgrid members are not waited for.</summary>
+    [JsonIgnore]
+    public bool EveryoneVoted
+    {
+        get
+        {
+            var voters = MemberGuids.Where(guid => RoleOf(guid) != PersonTypes.Observer && !OffgridGuids.Contains(guid)).ToList();
+            return voters.Count > 0 && voters.All(Votes.ContainsKey);
+        }
+    }
+
     /// <summary>A countdown runs until a later change bumps the revision past the one it started at.</summary>
     public bool CountdownRunning => CountdownRevision == Revision;
 
@@ -61,8 +85,8 @@ public class RoomEntity
     public bool IsDisposed { get; set; }
 
     /// <summary>
-    /// When the current round began, in UTC: set at creation and reset by every reveal and clear. Votes, joins, exits, person
-    /// type changes and settings changes leave it alone.
+    /// When the current round began, in UTC: set at creation and reset by every reveal and clear. Votes, joins, exits, role
+    /// changes and settings changes leave it alone.
     /// </summary>
     public DateTimeOffset RoundStartedAt { get; set; }
 

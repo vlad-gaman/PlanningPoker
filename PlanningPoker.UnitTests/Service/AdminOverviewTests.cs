@@ -141,6 +141,7 @@ public class AdminRoomMapperTests
             Id = "blue-fox",
             OwnerGuid = _owner,
             MemberGuids = [_owner, _member],
+            Roles = new Dictionary<Guid, string> { [_owner] = "dev", [_member] = "obs" },
             VotingEnabled = true,
             CreatedAt = new DateTimeOffset(2026, 3, 1, 9, 0, 0, TimeSpan.Zero),
             LastActivityAt = new DateTimeOffset(2026, 3, 1, 10, 0, 0, TimeSpan.Zero)

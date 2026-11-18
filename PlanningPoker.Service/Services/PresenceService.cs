@@ -89,9 +89,9 @@ public class PresenceService(
             }
 
             // Read after the room lock is released: person details come from their own person locks.
-            var roomOffgrid = change.Offgrid.Select(guid => SnapshotPerson(guid, isOffgrid: true)).OfType<Person>().ToList();
-            var roomRemoved = change.Removed.Select(guid => SnapshotPerson(guid)).OfType<Person>().ToList();
-            var newOwner = change.NewOwnerGuid is { } ownerGuid ? SnapshotPerson(ownerGuid) : null;
+            var roomOffgrid = change.Offgrid.Select(guid => SnapshotPerson(guid, change.Roles[guid], isOffgrid: true)).OfType<Person>().ToList();
+            var roomRemoved = change.Removed.Select(guid => SnapshotPerson(guid, change.Roles[guid])).OfType<Person>().ToList();
+            var newOwner = change.NewOwnerGuid is { } ownerGuid ? SnapshotPerson(ownerGuid, change.Roles[ownerGuid]) : null;
 
             // One decision per room for everything that changed: the people still online may all have voted now.
             var followUp = roomService.FollowUpAfterChange(roomId);
@@ -128,9 +128,10 @@ public class PresenceService(
         var options = presence.Value;
         var removed = room.DroppedAt.Where(dropped => now - dropped.Value >= options.RemovalWindow).Select(dropped => dropped.Key).ToList();
         var ownerAtStart = room.OwnerGuid;
+        var roles = new Dictionary<Guid, string>();
         foreach (var guid in removed)
         {
-            membership.Leave(room, guid, LeaveReason.Timeout);
+            roles[guid] = membership.Leave(room, guid, LeaveReason.Timeout).PersonType;
         }
 
         var lapsed = room.DroppedAt
@@ -139,6 +140,7 @@ public class PresenceService(
             .ToList();
         foreach (var guid in lapsed)
         {
+            roles[guid] = room.RoleOf(guid);
             membership.GoOffgrid(room, guid);
         }
 
@@ -147,7 +149,7 @@ public class PresenceService(
         if (!hadMembers && room.MemberConnections.Count == 0 && now - room.CreatedAt >= options.NeverJoinedRoomLifetime)
         {
             membership.Dispose(room);
-            return new PresenceChange([], removed, null, null, Disposed: true);
+            return new PresenceChange([], removed, null, null, roles, Disposed: true);
         }
 
         var nobodyOnline = room.MemberConnections.Count == 0 && !room.DroppedAt.Values.Any(dropped => now - dropped < options.GracePeriod);
@@ -161,7 +163,7 @@ public class PresenceService(
         if (hadMembers && nobodyOnline && !awaitingReturn && NobodyOnlineLongEnough(room, now, options))
         {
             membership.Dispose(room);
-            return new PresenceChange([], removed, null, null, Disposed: true);
+            return new PresenceChange([], removed, null, null, roles, Disposed: true);
         }
 
         // A removed owner was already replaced by Leave; an owner who merely went offgrid is replaced here when someone else is connected.
@@ -171,7 +173,12 @@ public class PresenceService(
         }
 
         Guid? newOwner = room.OwnerGuid == ownerAtStart ? null : room.OwnerGuid;
-        return new PresenceChange(lapsed, removed, newOwner is null ? null : ownerAtStart, newOwner, Disposed: false);
+        if (newOwner is { } ownerGuid)
+        {
+            roles[ownerGuid] = room.RoleOf(ownerGuid);
+        }
+
+        return new PresenceChange(lapsed, removed, newOwner is null ? null : ownerAtStart, newOwner, roles, Disposed: false);
     }
 
     private static bool NobodyOnlineLongEnough(RoomEntity room, DateTimeOffset now, PresenceOptions options)
@@ -184,8 +191,10 @@ public class PresenceService(
         // The last moment anyone was online is when the latest dropped member's grace period lapsed.
         return room.DroppedAt.Count > 0 && now - (room.DroppedAt.Values.Max() + options.GracePeriod) >= options.EmptyRoomLifetime;
     }
-    private Person? SnapshotPerson(Guid personGuid, bool isOffgrid = false)
+
+    /// <summary>Maps a person under their lock. The type is their role in the room, not the one on their profile.</summary>
+    private Person? SnapshotPerson(Guid personGuid, string personType, bool isOffgrid = false)
     {
-        return people.Update(personGuid, entity => personMapper.Map(entity, isOffgrid), out var snapshot) ? snapshot : null;
+        return people.Update(personGuid, entity => personMapper.Map(entity, isOffgrid, personType), out var snapshot) ? snapshot : null;
     }
 }

@@ -21,6 +21,12 @@ public class RoomRestorer(IRoomStore store, IRoomRepository rooms, IPersonReposi
                 person.Connections = [];
                 person.IsRemoved = false;
                 people.TryAdd(person);
+
+                // A room saved before roles lived in it has none: the profile's type is the role the member had.
+                if (room.MemberGuids.Contains(person.Guid))
+                {
+                    room.Roles.TryAdd(person.Guid, person.PersonType);
+                }
             }
 
             // Nobody is connected after a restart. The members who were online count as dropped when the room was last written,

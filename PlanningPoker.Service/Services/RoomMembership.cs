@@ -1,11 +1,12 @@
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Services;
 
-public class RoomMembership : IRoomMembership
+public class RoomMembership(IRoomRound round) : IRoomMembership
 {
-    public MembershipJoined Join(RoomEntity room, Guid personGuid, string connectionId, bool isObserver)
+    public MembershipJoined Join(RoomEntity room, Guid personGuid, string connectionId, string personType)
     {
         if (room.IsDisposed)
         {
@@ -14,6 +15,12 @@ public class RoomMembership : IRoomMembership
 
         var personAdded = !room.MemberGuids.Contains(personGuid);
         var wasOffgrid = false;
+        if (personAdded)
+        {
+            room.Roles[personGuid] = personType;
+        }
+
+        var isObserver = room.RoleOf(personGuid) == PersonTypes.Observer;
         var isVoter = !isObserver;
         if (personAdded)
         {
@@ -28,7 +35,7 @@ public class RoomMembership : IRoomMembership
             if (room.VotingEnabled && isVoter && !restored)
             {
                 // A new voter has not voted yet, so a running countdown no longer applies.
-                room.Revision++;
+                round.InvalidateCountdown(room);
             }
         }
         else
@@ -37,7 +44,7 @@ public class RoomMembership : IRoomMembership
             if (wasOffgrid && room.VotingEnabled && isVoter && !room.Votes.ContainsKey(personGuid))
             {
                 // The room had stopped waiting for them; now a voter without a vote is back, so a running countdown no longer applies.
-                room.Revision++;
+                round.InvalidateCountdown(room);
             }
         }
 
@@ -70,11 +77,13 @@ public class RoomMembership : IRoomMembership
         room.MemberConnections.Remove(personGuid);
         room.DroppedAt.Remove(personGuid);
         room.OffgridGuids.Remove(personGuid);
+        var personType = room.RoleOf(personGuid);
         if (!room.MemberGuids.Remove(personGuid))
         {
-            return new MembershipLeft(false, false, null);
+            return new MembershipLeft(false, false, null, string.Empty, null);
         }
 
+        room.Roles.Remove(personGuid);
         room.DepartedVotes.Remove(personGuid);
         if (room.Votes.Remove(personGuid, out var mark) && reason == LeaveReason.Deliberate)
         {
@@ -83,14 +92,15 @@ public class RoomMembership : IRoomMembership
         }
 
         // The people left may all have voted, and a running countdown no longer applies to the old group.
-        room.Revision++;
+        round.InvalidateCountdown(room);
         if (room.MemberGuids.Count == 0)
         {
             Dispose(room);
-            return new MembershipLeft(true, true, null);
+            return new MembershipLeft(true, true, null, personType, null);
         }
 
-        return new MembershipLeft(true, false, room.OwnerGuid == personGuid ? HandOver(room, ownerLeaving: true) : null);
+        var newOwner = room.OwnerGuid == personGuid ? HandOver(room, ownerLeaving: true) : null;
+        return new MembershipLeft(true, false, newOwner, personType, newOwner is { } guid ? room.RoleOf(guid) : null);
     }
 
     public Guid? HandOver(RoomEntity room, bool ownerLeaving)

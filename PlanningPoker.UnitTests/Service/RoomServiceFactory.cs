@@ -20,8 +20,6 @@ public static class RoomServiceFactory
             new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper()),
             new PersonMapper(),
             VoteStatusMappers.Create(),
-            new RevealedVotesEntityMapper(),
-            new RoundResultEntityMapper(),
             new JoinRoomResultMapper(),
             new ExitRoomResultMapper(),
             new RoomIdentifierValidation(),
@@ -31,7 +29,8 @@ public static class RoomServiceFactory
             new RoomConfigurationMapper(),
             new CardSetService(),
             metrics ?? new FakePlanningPokerMetrics(),
-            new RoomMembership(),
+            Rounds.Membership(time),
+            Rounds.Create(time),
             time ?? TimeProvider.System);
     }
 }
