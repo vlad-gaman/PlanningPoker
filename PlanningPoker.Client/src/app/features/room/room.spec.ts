@@ -70,9 +70,9 @@ describe('Room', () => {
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
 
-  async function render(): Promise<{ fixture: ComponentFixture<Room>; element: HTMLElement }> {
+  async function render(id = 'room-1'): Promise<{ fixture: ComponentFixture<Room>; element: HTMLElement }> {
     const fixture = TestBed.createComponent(Room);
-    fixture.componentRef.setInput('id', 'room-1');
+    fixture.componentRef.setInput('id', id);
     fixture.detectChanges();
     await settle(fixture);
     return { fixture, element: fixture.nativeElement as HTMLElement };
@@ -92,6 +92,43 @@ describe('Room', () => {
     expect(element.textContent).toContain('Ann');
     expect(element.querySelector('.person .crown')).not.toBeNull();
     expect(element.textContent).not.toContain('(owner)');
+  });
+
+  it('links each word of a fun room name to a Google search, except words that are not linkable', async () => {
+    me.get.mockReturnValue(of(ANN));
+    rooms.exists.mockReturnValue(
+      of({
+        id: '42_Adoring_Lewd_people',
+        exists: true,
+        nameWords: [
+          { text: 'Adoring', linkable: true },
+          { text: 'Lewd', linkable: false },
+          { text: 'people', linkable: true },
+        ],
+      }),
+    );
+
+    const { element } = await render('42_Adoring_Lewd_people');
+
+    const heading = element.querySelector('h1') as HTMLElement;
+    const links = Array.from(heading.querySelectorAll('a'));
+    expect(heading.textContent?.replace(/\s+/g, ' ').trim()).toBe('Room 42_Adoring_Lewd_people');
+    expect(links.map((link) => link.textContent)).toEqual(['Adoring', 'people']);
+    expect(links[0].getAttribute('href')).toBe('https://www.google.com/search?q=adoring+meaning');
+    expect(links[0].getAttribute('target')).toBe('_blank');
+    expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
+    expect(links[0].getAttribute('aria-label')).toBe('Search Google for Adoring');
+  });
+
+  it('shows a room name that is not a fun name as plain text', async () => {
+    me.get.mockReturnValue(of(ANN));
+    rooms.exists.mockReturnValue(of({ id: 'sprint_42', exists: true, nameWords: null }));
+
+    const { element } = await render('sprint_42');
+
+    const heading = element.querySelector('h1') as HTMLElement;
+    expect(heading.querySelector('a')).toBeNull();
+    expect(heading.textContent?.trim()).toBe('Room sprint_42');
   });
 
   it('sends the visitor home with the operator message when an operator removes them', async () => {

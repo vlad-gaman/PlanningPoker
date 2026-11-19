@@ -1,6 +1,12 @@
 <section class="page room">
   <div class="title">
-    <h1>Room {{ id() }}</h1>
+    <h1>
+      @if (nameWords(); as words) {
+        Room {{ namePrefix() }}@for (word of words; track $index) {_@if (word.linkable) {<a class="word-link" [href]="searchUrl(word)" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Search Google for ' + word.text">{{ word.text }}</a>} @else {{{ word.text }}}}
+      } @else {
+        Room {{ id() }}
+      }
+    </h1>
     <button type="button" class="copy icon" title="Copy room name" aria-label="Copy room name" (click)="copy('name')">
       @if (copied() === 'name') {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>

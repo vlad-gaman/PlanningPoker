@@ -58,6 +58,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IPersonTypeChangedEventMapper, PersonTypeChangedEventMapper>();
         services.AddSingleton<IRoomConfigurationUpdatedEventMapper, RoomConfigurationUpdatedEventMapper>();
         services.AddSingleton<ICardResponseMapper, CardResponseMapper>();
+        services.AddSingleton<IRoomNameWordResponseMapper, RoomNameWordResponseMapper>();
         services.AddSingleton<RoomEventPublisher>();
         services.AddSingleton<IRoomEventPublisher>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<IRoomCountdownNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());

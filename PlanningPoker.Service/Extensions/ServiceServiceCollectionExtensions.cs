@@ -34,7 +34,9 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<RoomExistsValidation>();
         services.AddSingleton<VoteMarkValidation>();
         services.AddSingleton<IWordListLoader, WordListLoader>();
-        services.AddSingleton<IRoomNameGenerator>(provider => new RoomNameGenerator(provider.GetRequiredService<IWordListLoader>().Load()));
+        services.AddSingleton(provider => provider.GetRequiredService<IWordListLoader>().Load());
+        services.AddSingleton<IRoomNameGenerator, RoomNameGenerator>();
+        services.AddSingleton<IRoomNameParser, RoomNameParser>();
         services.AddSingleton<ICardSetService, CardSetService>();
         services.AddSingleton<IPlanningPokerMetrics, PlanningPokerMetrics>();
         services.AddSingleton<IRoomRound, RoomRound>();

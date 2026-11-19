@@ -2,6 +2,7 @@ using PlanningPoker.Common.Models;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
 using PlanningPoker.Service.Models;
+using PlanningPoker.Service.Services;
 using PlanningPoker.UnitTests.Builders;
 
 namespace PlanningPoker.UnitTests.Controller;
@@ -60,10 +61,34 @@ public class RoomResponseMappersTests
     [Fact]
     public void RoomExistsResponseMapper_ReturnsIdAndExistsTrue()
     {
-        var response = new RoomExistsResponseMapper().Map("room");
+        var response = new RoomExistsResponseMapper(ParserFor(), new RoomNameWordResponseMapper()).Map("room");
 
         Assert.Equal("room", response.Id);
         Assert.True(response.Exists);
+        Assert.Null(response.NameWords);
+    }
+
+    [Fact]
+    public void RoomExistsResponseMapper_FunName_ReturnsItsWords()
+    {
+        var response = new RoomExistsResponseMapper(ParserFor(), new RoomNameWordResponseMapper()).Map("3_Big_Round_cat");
+
+        Assert.Equal(["Big", "Round", "cat"], response.NameWords!.Select(w => w.Text));
+        Assert.All(response.NameWords!, w => Assert.True(w.Linkable));
+    }
+
+    [Fact]
+    public void RoomNameWordResponseMapper_CopiesTextAndLinkable()
+    {
+        var response = new RoomNameWordResponseMapper().Map(new RoomNameWord { Text = "x", Linkable = false });
+
+        Assert.Equal("x", response.Text);
+        Assert.False(response.Linkable);
+    }
+
+    private static RoomNameParser ParserFor()
+    {
+        return new RoomNameParser(new WordLists { Opinion = ["Big"], Shape = ["Round"], Nouns = ["cat"] });
     }
 
     [Fact]

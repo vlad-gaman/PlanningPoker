@@ -26,6 +26,7 @@ import { RoomHubClient } from '../../core/room-hub.client';
 import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES, Person, PersonType } from '../../models/person';
+import { RoomNameWord } from '../../models/room';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
 import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
@@ -80,6 +81,10 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected readonly phase = signal<Phase>('loading');
   protected readonly error = signal<string | null>(null);
   protected readonly copied = signal<'name' | 'link' | null>(null);
+  /** The words of a fun room name, once the existence check has returned them; null for any other name. */
+  protected readonly nameWords = signal<RoomNameWord[] | null>(null);
+  /** The number a fun room name starts with, shown before its linked words. */
+  protected readonly namePrefix = computed(() => this.id().split('_')[0]);
 
   protected readonly form = createPersonForm(inject(FormBuilder));
 
@@ -300,6 +305,11 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     await this.enter();
   }
 
+  /** The Google search a word of a fun room name links to. */
+  protected searchUrl(word: RoomNameWord): string {
+    return `https://www.google.com/search?q=${encodeURIComponent(word.text.toLowerCase())}+meaning`;
+  }
+
   /** Joins straight away when the visitor has a name, otherwise asks for one. */
   private async enter(): Promise<void> {
     const gen = ++this.generation;
@@ -334,7 +344,11 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private async checkRoomExists(gen: number): Promise<boolean> {
     let gone: boolean;
     try {
-      gone = !(await firstValueFrom(this.rooms.exists(this.id()))).exists;
+      const result = await firstValueFrom(this.rooms.exists(this.id()));
+      gone = !result.exists;
+      if (gen === this.generation) {
+        this.nameWords.set(result.nameWords ?? null);
+      }
     } catch (error) {
       gone = isRoomGone(error);
     }
