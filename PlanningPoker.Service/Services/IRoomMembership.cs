@@ -10,8 +10,11 @@ namespace PlanningPoker.Service.Services;
 /// </summary>
 public interface IRoomMembership
 {
-    /// <summary>Adds a connection of the person, admitting them when new and bringing them back when dropped or offgrid.</summary>
-    MembershipJoined Join(RoomEntity room, Guid personGuid, string connectionId, bool isObserver);
+    /// <summary>
+    /// Adds a connection of the person, admitting them when new and bringing them back when dropped or offgrid. A new member
+    /// takes <paramref name="personType"/> (their profile's type) as their role; a returning member keeps the role the room has.
+    /// </summary>
+    MembershipJoined Join(RoomEntity room, Guid personGuid, string connectionId, string personType);
 
     /// <summary>Marks a dropped or offgrid member as online again; true when they had been offgrid.</summary>
     bool Return(RoomEntity room, Guid personGuid);

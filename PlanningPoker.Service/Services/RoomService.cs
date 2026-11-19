@@ -22,8 +22,6 @@ public class RoomService(
     IRoomMapper roomMapper,
     IPersonMapper personMapper,
     IVoteStatusMapper voteStatusMapper,
-    IRevealedVotesEntityMapper revealedMapper,
-    IRoundResultEntityMapper roundResultEntityMapper,
     IJoinRoomResultMapper joinRoomResultMapper,
     IExitRoomResultMapper exitRoomResultMapper,
     RoomIdentifierValidation identifierValidation,
@@ -34,6 +32,7 @@ public class RoomService(
     ICardSetService cardSets,
     IPlanningPokerMetrics metrics,
     IRoomMembership membership,
+    IRoomRound round,
     TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
@@ -96,8 +95,7 @@ public class RoomService(
 
         // The room lock decides admission. The connection joins the member's connection set in the same step, and the
         // person is only new to the room when no connection of theirs was already in it.
-        var isObserver = join.Person.PersonType == PersonTypes.Observer;
-        var admission = rooms.Update(roomId, room => membership.Join(room, personGuid, connectionId, isObserver), out var outcome) ? outcome : null;
+        var admission = rooms.Update(roomId, room => membership.Join(room, personGuid, connectionId, join.Person.PersonType), out var outcome) ? outcome : null;
 
         if (admission is not { Admitted: true })
         {
@@ -117,7 +115,7 @@ public class RoomService(
         var members = Members(snapshot);
         return ServiceResponse<JoinRoomResult>.Success(joinRoomResultMapper.Map(
             roomMapper.Map(snapshot),
-            join.Person,
+            personMapper.Map(join.Person, snapshot.RoleOf(personGuid)),
             members,
             voteStatusMapper.Map(snapshot, members),
             cardSets.GetCards(snapshot.Configuration.CardSet).Data!,
@@ -172,16 +170,18 @@ public class RoomService(
             var connections = room.MemberConnections.GetValueOrDefault(personGuid);
             if (connections is null || !connections.Remove(connectionId))
             {
-                return (Member: false, PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null);
+                return (Member: false, Role: room.RoleOf(personGuid), PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null, NewOwnerRole: (string?)null, Decision: RoundDecision.None);
             }
 
             if (connections.Count > 0)
             {
-                return (Member: true, PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null);
+                return (Member: true, Role: room.RoleOf(personGuid), PersonLeft: false, Disposed: false, NewOwnerGuid: (Guid?)null, NewOwnerRole: (string?)null, Decision: RoundDecision.None);
             }
 
+            // The people left may all have voted: the round decides in the same step as the leave.
             var change = membership.Leave(room, personGuid, LeaveReason.Deliberate);
-            return (Member: true, change.PersonLeft, change.Disposed, change.NewOwnerGuid);
+            var decision = change.PersonLeft && !change.Disposed ? round.Decide(room) : RoundDecision.None;
+            return (Member: true, Role: change.PersonType, change.PersonLeft, change.Disposed, change.NewOwnerGuid, NewOwnerRole: change.NewOwnerPersonType, Decision: decision);
         }, out var outcome);
         if (!left)
         {
@@ -199,11 +199,11 @@ public class RoomService(
         }
 
         // Read after the room lock is released: the new owner's details are looked up under their own person lock.
-        var newOwner = outcome.NewOwnerGuid is { } newOwnerGuid ? SnapshotPerson(newOwnerGuid) : null;
-        var followUp = outcome.PersonLeft && !outcome.Disposed ? FollowUpAfterChange(index.RoomId) : VotingFollowUp.None;
+        var newOwner = outcome.NewOwnerGuid is { } newOwnerGuid ? SnapshotPerson(newOwnerGuid, outcome.NewOwnerRole!) : null;
+        var followUp = outcome.Decision.IsNone ? VotingFollowUp.None : ToFollowUp(outcome.Decision, CurrentStatus(index.RoomId));
         return ServiceResponse<ExitRoomResult>.Success(exitRoomResultMapper.Map(
             index.RoomId,
-            index.Person,
+            personMapper.Map(index.Person, outcome.Role),
             outcome.PersonLeft,
             outcome.Disposed,
             newOwner,
@@ -218,77 +218,62 @@ public class RoomService(
             return ServiceResponse<VoteResult>.Failure(located);
         }
 
-        var (roomId, person) = located.Data;
-        if (person.PersonType == PersonTypes.Observer)
-        {
-            return ServiceResponse<VoteResult>.Failure(ServiceError.ObserverCannotVote());
-        }
-
+        var roomId = located.Data.RoomId;
         string? cardSet = null;
         var found = rooms.Update(roomId, room =>
         {
             if (!IsMember(room, personGuid, connectionId))
             {
-                return ServiceResponse.Failure(ServiceError.NotInRoom());
+                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Decision: RoundDecision.None);
+            }
+
+            if (room.RoleOf(personGuid) == PersonTypes.Observer)
+            {
+                return (Response: ServiceResponse.Failure(ServiceError.ObserverCannotVote()), Decision: RoundDecision.None);
             }
 
             if (!room.VotingEnabled)
             {
-                return ServiceResponse.Failure(ServiceError.VotingClosed());
+                return (Response: ServiceResponse.Failure(ServiceError.VotingClosed()), Decision: RoundDecision.None);
             }
 
             var valid = voteMarkValidation.Validate(room.Configuration.CardSet, mark);
             if (!valid.IsSuccess)
             {
-                return valid;
+                return (Response: valid, Decision: RoundDecision.None);
             }
 
-            room.Votes[personGuid] = mark;
             cardSet = room.Configuration.CardSet;
-            room.Revision++;
-            return ServiceResponse.Success();
-        }, out var stored);
+            return (Response: ServiceResponse.Success(), Decision: round.Vote(room, personGuid, mark));
+        }, out var outcome);
         if (!found)
         {
             return ServiceResponse<VoteResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
-        if (!stored!.IsSuccess)
+        if (!outcome.Response.IsSuccess)
         {
-            return ServiceResponse<VoteResult>.Failure(stored);
+            return ServiceResponse<VoteResult>.Failure(outcome.Response);
         }
 
         metrics.VoteCast(cardSet!);
 
-        // Read after the room lock is released: member types come from their own person locks.
-        var snapshot = rooms.Get(roomId);
-        if (snapshot is null)
+        var status = CurrentStatus(roomId);
+        if (status is null)
         {
             return ServiceResponse<VoteResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
-        var members = Members(snapshot);
-        var status = voteStatusMapper.Map(snapshot, members);
-        var followUp = Decide(snapshot, status);
-        if (followUp.Countdown is not null && rooms.Get(roomId) is { } started)
-        {
-            status = voteStatusMapper.Map(started, members);
-        }
-
-        return ServiceResponse<VoteResult>.Success(new VoteResult { RoomId = roomId, PersonGuid = personGuid, VoteStatus = status, FollowUp = followUp });
+        return ServiceResponse<VoteResult>.Success(new VoteResult { RoomId = roomId, PersonGuid = personGuid, VoteStatus = status, FollowUp = ToFollowUp(outcome.Decision, status) });
     }
 
     public ServiceResponse<ClearVotesResult> ClearVotes(Guid personGuid, string connectionId)
     {
-        var roundStartedAt = time.GetUtcNow();
+        var roundStartedAt = DateTimeOffset.MinValue;
         var cleared = InRoom(personGuid, connectionId, room =>
         {
-            room.Votes.Clear();
-            room.DepartedVotes.Clear();
-            room.Revealed = null;
-            room.VotingEnabled = true;
-            room.RoundStartedAt = roundStartedAt;
-            room.Revision++;
+            round.Clear(room, restartTimer: true);
+            roundStartedAt = room.RoundStartedAt;
             return true;
         });
         return cleared.IsSuccess
@@ -298,45 +283,14 @@ public class RoomService(
 
     public ServiceResponse<RevealResult> ForceShowVotes(Guid personGuid, string connectionId)
     {
-        var located = Locate(personGuid, connectionId);
-        if (!located.IsSuccess)
+        var revealed = InRoom(personGuid, connectionId, round.Reveal);
+        if (!revealed.IsSuccess)
         {
-            return ServiceResponse<RevealResult>.Failure(located);
+            return ServiceResponse<RevealResult>.Failure(revealed);
         }
 
-        var roomId = located.Data.RoomId;
-        var found = UpdateRevealing(roomId, (room, freeze) =>
-        {
-            if (!IsMember(room, personGuid, connectionId))
-            {
-                return (Outcome: (Member: false, Changed: false), NeedsTypes: false);
-            }
-
-            if (!room.VotingEnabled)
-            {
-                return (Outcome: (Member: true, Changed: false), NeedsTypes: false);
-            }
-
-            var frozen = freeze(room);
-            if (frozen is null)
-            {
-                return (Outcome: default, NeedsTypes: true);
-            }
-
-            RecordReveal(room, frozen);
-            return (Outcome: (Member: true, Changed: true), NeedsTypes: false);
-        }, out var outcome);
-        if (!found)
-        {
-            return ServiceResponse<RevealResult>.Failure(ServiceError.RoomNotFound(roomId));
-        }
-
-        if (!outcome.Member)
-        {
-            return ServiceResponse<RevealResult>.Failure(ServiceError.NotInRoom());
-        }
-
-        return ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = roomId, VoteStatus = outcome.Changed ? RevealedStatus(roomId) : null });
+        var roomId = revealed.Data!.RoomId;
+        return ServiceResponse<RevealResult>.Success(new RevealResult { RoomId = roomId, VoteStatus = revealed.Data.Changed ? CurrentStatus(roomId) : null });
     }
 
     public ServiceResponse<PersonTypeChangeResult> ChangePersonType(Guid personGuid, string connectionId, string personType)
@@ -347,49 +301,20 @@ public class RoomService(
             return ServiceResponse<PersonTypeChangeResult>.Failure(located);
         }
 
-        // Person lock first, on its own: the reveal freeze reads types through the person lock, so a reveal after this point sees the new one.
-        var (roomId, before) = located.Data;
-        var typeSet = people.Update(personGuid, entity =>
-        {
-            var differs = entity.PersonType != personType;
-            entity.PersonType = personType;
-            return differs;
-        }, out var changed);
-        if (!typeSet)
-        {
-            return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.NoSession());
-        }
-
-        var person = new Person { Guid = before.Guid, Name = before.Name, PersonType = personType };
-        if (!changed)
-        {
-            var current = CurrentStatus(roomId);
-            return current is null
-                ? ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.RoomNotFound(roomId))
-                : ServiceResponse<PersonTypeChangeResult>.Success(new PersonTypeChangeResult { RoomId = roomId, Person = person, Changed = false, VoteStatus = current });
-        }
-
-        // Room lock second: while voting is open the change cancels a running countdown. After the reveal nothing moves.
-        var found = rooms.Update(roomId, room =>
-        {
-            if (!IsMember(room, personGuid, connectionId))
-            {
-                return false;
-            }
-
-            if (room.VotingEnabled)
-            {
-                room.Revision++;
-            }
-
-            return true;
-        }, out var member);
+        // The room alone holds the role: it changes under the room lock, which cancels a running countdown while voting is open.
+        var (roomId, profile) = located.Data;
+        var found = rooms.Update(
+            roomId,
+            room => IsMember(room, personGuid, connectionId)
+                ? (Member: true, Change: round.ChangeRole(room, personGuid, personType))
+                : (Member: false, Change: new RoleChange(false, RoundDecision.None)),
+            out var outcome);
         if (!found)
         {
             return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
-        if (!member)
+        if (!outcome.Member)
         {
             return ServiceResponse<PersonTypeChangeResult>.Failure(ServiceError.NotInRoom());
         }
@@ -403,10 +328,10 @@ public class RoomService(
         return ServiceResponse<PersonTypeChangeResult>.Success(new PersonTypeChangeResult
         {
             RoomId = roomId,
-            Person = person,
-            Changed = true,
+            Person = personMapper.Map(profile, personType),
+            Changed = outcome.Change.Changed,
             VoteStatus = status,
-            FollowUp = FollowUpAfterChange(roomId)
+            FollowUp = ToFollowUp(outcome.Change.Decision, status)
         });
     }
 
@@ -429,12 +354,12 @@ public class RoomService(
         {
             if (!IsMember(room, personGuid, connectionId))
             {
-                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Cleared: false);
+                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Cleared: false, Decision: RoundDecision.None);
             }
 
             if (room.OwnerGuid != personGuid)
             {
-                return (Response: ServiceResponse.Failure(ServiceError.NotRoomOwner()), Cleared: false);
+                return (Response: ServiceResponse.Failure(ServiceError.NotRoomOwner()), Cleared: false, Decision: RoundDecision.None);
             }
 
             // Shown votes are dropped (the old rule). So are votes cast for another card set: their marks are not cards of the new one.
@@ -442,14 +367,13 @@ public class RoomService(
             room.Configuration = configurationEntityMapper.Map(configuration);
             if (cleared)
             {
-                room.Votes.Clear();
-                room.DepartedVotes.Clear();
-                room.Revealed = null;
-                room.VotingEnabled = true;
+                round.Clear(room, restartTimer: false);
+                return (Response: ServiceResponse.Success(), Cleared: true, Decision: RoundDecision.None);
             }
 
-            room.Revision++;
-            return (Response: ServiceResponse.Success(), Cleared: cleared);
+            // The new settings may change the countdown, so the round decides again.
+            round.InvalidateCountdown(room);
+            return (Response: ServiceResponse.Success(), Cleared: false, Decision: round.Decide(room));
         }, out var outcome);
         if (!found)
         {
@@ -467,6 +391,7 @@ public class RoomService(
             return ServiceResponse<RoomConfigurationChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
         }
 
+        var status = voteStatusMapper.Map(snapshot, Members(snapshot));
         return ServiceResponse<RoomConfigurationChangeResult>.Success(new RoomConfigurationChangeResult
         {
             RoomId = roomId,
@@ -474,8 +399,8 @@ public class RoomService(
             Cards = cards.Data!,
             UpdatedBy = person.Name,
             VotesCleared = outcome.Cleared,
-            VoteStatus = voteStatusMapper.Map(snapshot, Members(snapshot)),
-            FollowUp = outcome.Cleared ? VotingFollowUp.None : FollowUpAfterChange(roomId)
+            VoteStatus = status,
+            FollowUp = ToFollowUp(outcome.Decision, status)
         });
     }
 
@@ -492,26 +417,26 @@ public class RoomService(
         {
             if (!IsMember(room, personGuid, connectionId))
             {
-                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Changed: false);
+                return (Response: ServiceResponse.Failure(ServiceError.NotInRoom()), Changed: false, Role: string.Empty);
             }
 
             if (room.OwnerGuid != personGuid)
             {
-                return (Response: ServiceResponse.Failure(ServiceError.NotRoomOwner()), Changed: false);
+                return (Response: ServiceResponse.Failure(ServiceError.NotRoomOwner()), Changed: false, Role: string.Empty);
             }
 
             if (!room.MemberGuids.Contains(targetPersonGuid))
             {
-                return (Response: ServiceResponse.Failure(ServiceError.ValidationFailed("targetPersonGuid", "not_a_member")), Changed: false);
+                return (Response: ServiceResponse.Failure(ServiceError.ValidationFailed("targetPersonGuid", "not_a_member")), Changed: false, Role: string.Empty);
             }
 
             if (room.OwnerGuid == targetPersonGuid)
             {
-                return (Response: ServiceResponse.Success(), Changed: false);
+                return (Response: ServiceResponse.Success(), Changed: false, Role: string.Empty);
             }
 
             room.OwnerGuid = targetPersonGuid;
-            return (Response: ServiceResponse.Success(), Changed: true);
+            return (Response: ServiceResponse.Success(), Changed: true, Role: room.RoleOf(targetPersonGuid));
         }, out var outcome);
         if (!found)
         {
@@ -527,7 +452,7 @@ public class RoomService(
         return ServiceResponse<OwnershipTransferResult>.Success(new OwnershipTransferResult
         {
             RoomId = roomId,
-            NewOwner = outcome.Changed ? SnapshotPerson(targetPersonGuid) : null
+            NewOwner = outcome.Changed ? SnapshotPerson(targetPersonGuid, outcome.Role) : null
         });
     }
 
@@ -540,30 +465,7 @@ public class RoomService(
 
     public TickResult Tick(string roomId, long revision)
     {
-        var found = UpdateRevealing(roomId, (room, freeze) =>
-        {
-            if (!room.VotingEnabled || room.CountdownRevision != revision || room.Revision != revision)
-            {
-                return (Outcome: (Outcome: TickOutcome.Stale, Remaining: 0), NeedsTypes: false);
-            }
-
-            if (room.CountdownRemaining > 1)
-            {
-                room.CountdownRemaining--;
-                return (Outcome: (Outcome: TickOutcome.Ticked, Remaining: room.CountdownRemaining), NeedsTypes: false);
-            }
-
-            var frozen = freeze(room);
-            if (frozen is null)
-            {
-                return (Outcome: default, NeedsTypes: true);
-            }
-
-            room.CountdownRemaining = 0;
-            RecordReveal(room, frozen);
-            return (Outcome: (Outcome: TickOutcome.Revealed, Remaining: 0), NeedsTypes: false);
-        }, out var tick);
-        if (!found || tick.Outcome == TickOutcome.Stale)
+        if (!rooms.Update(roomId, room => round.Tick(room, revision), out var tick) || tick is null || tick.Outcome == TickOutcome.Stale)
         {
             return new TickResult { Outcome = TickOutcome.Stale };
         }
@@ -572,7 +474,7 @@ public class RoomService(
         {
             Outcome = tick.Outcome,
             Remaining = tick.Remaining,
-            Revealed = tick.Outcome == TickOutcome.Revealed ? RevealedStatus(roomId) : null
+            Revealed = tick.Outcome == TickOutcome.Revealed ? CurrentStatus(roomId) : null
         };
     }
 
@@ -622,147 +524,33 @@ public class RoomService(
             : ServiceResponse<RoomChange>.Failure(ServiceError.NotInRoom());
     }
 
-    /// <summary>The follow-up to a change that may have left everyone voted (a person leaving): read a snapshot, then decide.</summary>
+    /// <summary>The follow-up to a change that may have left everyone voted (a person leaving): the round decides under the room lock.</summary>
     public VotingFollowUp FollowUpAfterChange(string roomId)
     {
-        var snapshot = rooms.Get(roomId);
-        return snapshot is { VotingEnabled: true } ? Decide(snapshot, voteStatusMapper.Map(snapshot, Members(snapshot))) : VotingFollowUp.None;
-    }
-
-    /// <summary>
-    /// Starts the countdown (or reveals at once for a countdown of 0) when everyone voted, but only if no other change
-    /// reached the room since the snapshot: that newer change makes its own decision, so the last one wins.
-    /// </summary>
-    private VotingFollowUp Decide(RoomEntity snapshot, VoteStatus status)
-    {
-        if (!snapshot.VotingEnabled || !status.HasEveryoneVoted)
+        if (!rooms.Update(roomId, round.Decide, out var decision) || decision is null || decision.IsNone)
         {
             return VotingFollowUp.None;
         }
 
-        var seconds = snapshot.Configuration.CountdownSeconds;
-        var found = UpdateRevealing(snapshot.Id, (room, freeze) =>
-        {
-            // A countdown already running at this revision means a concurrent change made the same decision first.
-            if (room.Revision != snapshot.Revision || !room.VotingEnabled || room.CountdownRevision == room.Revision)
-            {
-                return (Outcome: false, NeedsTypes: false);
-            }
-
-            if (seconds == 0)
-            {
-                var frozen = freeze(room);
-                if (frozen is null)
-                {
-                    return (Outcome: false, NeedsTypes: true);
-                }
-
-                RecordReveal(room, frozen);
-            }
-            else
-            {
-                room.CountdownRevision = room.Revision;
-                room.CountdownRemaining = seconds;
-            }
-
-            return (Outcome: true, NeedsTypes: false);
-        }, out var applied);
-        if (!found || !applied)
-        {
-            return VotingFollowUp.None;
-        }
-
-        return seconds > 0
-            ? new VotingFollowUp { Countdown = new CountdownStart { Revision = snapshot.Revision, Seconds = seconds } }
-            : new VotingFollowUp { Revealed = RevealedStatus(snapshot.Id) };
+        return ToFollowUp(decision, CurrentStatus(roomId));
     }
 
-    /// <summary>
-    /// Freezes the round at its reveal: the votes are kept for the statistics, the round timer restarts, and the round is added to the
-    /// room's history (numbered, with the average of its votes). The oldest entries are dropped beyond the limit. Runs under the room lock.
-    /// </summary>
-    private void RecordReveal(RoomEntity room, RevealedVotesEntity frozen)
+    /// <summary>Maps what the round decided to the follow-up the caller acts on; <paramref name="status"/> is the room's status after the change.</summary>
+    private static VotingFollowUp ToFollowUp(RoundDecision decision, VoteStatus? status)
     {
-        var now = time.GetUtcNow();
-        room.Revealed = frozen;
-        room.VotingEnabled = false;
-        room.RoundStartedAt = now;
-        room.Revision++;
-        room.RoundsRevealed++;
-        room.RoundHistory.Add(roundResultEntityMapper.Map(room.RoundsRevealed, frozen, now));
-        if (room.RoundHistory.Count > RoomConstraints.RoundHistoryLimit)
-        {
-            room.RoundHistory.RemoveRange(0, room.RoundHistory.Count - RoomConstraints.RoundHistoryLimit);
-        }
-    }
-
-    private VoteStatus? RevealedStatus(string roomId)
-    {
-        var snapshot = rooms.Get(roomId);
-        return snapshot is null ? null : voteStatusMapper.Map(snapshot, Members(snapshot));
+        return decision.IsNone ? VotingFollowUp.None : new VotingFollowUp { Countdown = decision.Countdown, Revealed = decision.Revealed ? status : null };
     }
 
     private sealed record RoomChange(string RoomId, bool Changed);
 
-    /// <summary>
-    /// Runs a room change that may reveal the votes. Freezing the votes needs the person type of every member, which
-    /// lives behind the person lock and must not be read under the room lock. So the change first runs without the
-    /// types and asks for them (NeedsTypes); the types are read from a snapshot and the change runs again, and the
-    /// freeze step refuses types that miss a member who joined in between. After a few rounds it freezes with what it
-    /// has, so a busy room can delay a reveal but never block it; a voter of unknown type then counts only in the
-    /// overall group.
-    /// </summary>
-    private bool UpdateRevealing<T>(
-        string roomId,
-        Func<RoomEntity, Func<RoomEntity, RevealedVotesEntity?>, (T Outcome, bool NeedsTypes)> change,
-        out T? outcome)
-    {
-        IReadOnlyDictionary<Guid, string>? types = null;
-        for (var round = 0; ; round++)
-        {
-            var known = types;
-            var last = round >= RoomConstraints.TypeResolutionRounds;
-            var found = rooms.Update(roomId, room => change(room, current => Freeze(current, known, last)), out var step);
-            if (!found)
-            {
-                outcome = default;
-                return false;
-            }
-
-            if (!step.NeedsTypes)
-            {
-                outcome = step.Outcome;
-                return true;
-            }
-
-            types = ResolveTypes(roomId);
-        }
-    }
-
-    private RevealedVotesEntity? Freeze(RoomEntity room, IReadOnlyDictionary<Guid, string>? types, bool last)
-    {
-        if (types is null || (!last && !room.MemberGuids.All(types.ContainsKey)))
-        {
-            return null;
-        }
-
-        return revealedMapper.Map(room, types);
-    }
-
-    private Dictionary<Guid, string> ResolveTypes(string roomId)
-    {
-        var snapshot = rooms.Get(roomId);
-        return snapshot is null ? [] : Members(snapshot).ToDictionary(member => member.Guid, member => member.PersonType);
-    }
-
     private List<Person> Members(RoomEntity room)
     {
-        return room.MemberGuids.Select(guid => SnapshotPerson(guid, room.OffgridGuids.Contains(guid))).OfType<Person>().ToList();
+        return room.MemberGuids.Select(guid => SnapshotPerson(guid, room.RoleOf(guid), room.OffgridGuids.Contains(guid))).OfType<Person>().ToList();
     }
 
-    /// <summary>Maps a person under their lock, so the copy never reads a half-applied change.</summary>
-    private Person? SnapshotPerson(Guid personGuid, bool isOffgrid = false)
+    /// <summary>Maps a person under their lock, so the copy never reads a half-applied change. The type is their role in the room.</summary>
+    private Person? SnapshotPerson(Guid personGuid, string personType, bool isOffgrid = false)
     {
-        return people.Update(personGuid, entity => personMapper.Map(entity, isOffgrid), out var snapshot) ? snapshot : null;
+        return people.Update(personGuid, entity => personMapper.Map(entity, isOffgrid, personType), out var snapshot) ? snapshot : null;
     }
 }

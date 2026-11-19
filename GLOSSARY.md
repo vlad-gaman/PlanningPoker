@@ -53,7 +53,7 @@ A person in the room who cannot vote. Observers are listed after all voters in t
 _Avoid_: Spectator, viewer
 
 **Role**:
-What a person is in the room: Developer, Tester, SRE or Observer. Only Observer does not vote. Developer, Tester and SRE votes count in the All statistics, and each of those roles also has its own breakdown chart.
+What a person is in the room: Developer, Tester, SRE or Observer. Only Observer does not vote. Developer, Tester and SRE votes count in the All statistics, and each of those roles also has its own breakdown chart. The room holds each member's role: a person's profile gives the role they start with when they join, and changing it in the room changes the room only, so it is not carried to the next join. A role change while voting is open cancels a running countdown; a vote already cast stays, and the reveal counts it under the role held at that moment.
 _Avoid_: Person type, position
 
 **Owner**:

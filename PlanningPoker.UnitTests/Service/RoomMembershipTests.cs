@@ -1,3 +1,5 @@
+using PlanningPoker.UnitTests.Builders;
+using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
@@ -8,7 +10,7 @@ public class RoomMembershipTests
 {
     private static readonly DateTimeOffset Now = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    private readonly RoomMembership _membership = new();
+    private readonly RoomMembership _membership = Rounds.Membership();
     private readonly Guid _ann = Guid.NewGuid();
     private readonly Guid _bob = Guid.NewGuid();
     private readonly Guid _cat = Guid.NewGuid();
@@ -18,7 +20,7 @@ public class RoomMembershipTests
         var room = new RoomEntity { Id = "blue-fox", OwnerGuid = members.Length > 0 ? members[0] : Guid.Empty, VotingEnabled = true };
         foreach (var member in members)
         {
-            _membership.Join(room, member, $"conn-{member}", isObserver: false);
+            _membership.Join(room, member, $"conn-{member}", personType: PersonTypes.Developer);
         }
 
         return room;
@@ -29,7 +31,7 @@ public class RoomMembershipTests
     {
         var room = new RoomEntity { Id = "blue-fox", OwnerGuid = Guid.NewGuid() };
 
-        var joined = _membership.Join(room, _ann, "c1", isObserver: false);
+        var joined = _membership.Join(room, _ann, "c1", personType: PersonTypes.Developer);
 
         Assert.True(joined.Admitted);
         Assert.True(joined.PersonAdded);
@@ -43,7 +45,7 @@ public class RoomMembershipTests
     {
         var room = new RoomEntity { IsDisposed = true };
 
-        var joined = _membership.Join(room, _ann, "c1", isObserver: false);
+        var joined = _membership.Join(room, _ann, "c1", personType: PersonTypes.Developer);
 
         Assert.False(joined.Admitted);
         Assert.Empty(room.MemberGuids);
@@ -55,7 +57,7 @@ public class RoomMembershipTests
         var room = RoomWith(_ann);
         var before = room.Revision;
 
-        var joined = _membership.Join(room, _bob, "c2", isObserver: false);
+        var joined = _membership.Join(room, _bob, "c2", personType: PersonTypes.Developer);
 
         Assert.True(joined.ResetCountdown);
         Assert.Equal(before + 1, room.Revision);
@@ -67,7 +69,7 @@ public class RoomMembershipTests
         var room = RoomWith(_ann);
         var before = room.Revision;
 
-        _membership.Join(room, _bob, "c2", isObserver: true);
+        _membership.Join(room, _bob, "c2", personType: PersonTypes.Observer);
 
         Assert.Equal(before, room.Revision);
     }
@@ -77,7 +79,7 @@ public class RoomMembershipTests
     {
         var room = RoomWith(_ann);
 
-        var joined = _membership.Join(room, _ann, "c2", isObserver: false);
+        var joined = _membership.Join(room, _ann, "c2", personType: PersonTypes.Developer);
 
         Assert.False(joined.PersonAdded);
         Assert.Equal(2, room.MemberConnections[_ann].Count);
@@ -92,7 +94,7 @@ public class RoomMembershipTests
         _membership.Drop(room, _bob, Now);
         _membership.GoOffgrid(room, _bob);
 
-        var joined = _membership.Join(room, _bob, "c3", isObserver: false);
+        var joined = _membership.Join(room, _bob, "c3", personType: PersonTypes.Developer);
 
         Assert.True(joined.WasOffgrid);
         Assert.False(joined.ResetCountdown);
@@ -108,7 +110,7 @@ public class RoomMembershipTests
         room.Votes[_bob] = "8";
         _membership.Leave(room, _bob, LeaveReason.Deliberate);
 
-        var joined = _membership.Join(room, _bob, "c3", isObserver: false);
+        var joined = _membership.Join(room, _bob, "c3", personType: PersonTypes.Developer);
 
         Assert.True(joined.PersonAdded);
         Assert.Equal("8", room.Votes[_bob]);
@@ -124,7 +126,7 @@ public class RoomMembershipTests
         room.VotingEnabled = false;
         room.Revealed = new RevealedVotesEntity();
 
-        _membership.Join(room, _bob, "c3", isObserver: false);
+        _membership.Join(room, _bob, "c3", personType: PersonTypes.Developer);
 
         Assert.DoesNotContain(_bob, room.Votes.Keys);
         Assert.Empty(room.DepartedVotes);
@@ -137,7 +139,7 @@ public class RoomMembershipTests
         room.Votes[_bob] = "8";
         _membership.Leave(room, _bob, LeaveReason.Deliberate);
 
-        _membership.Join(room, _bob, "c3", isObserver: true);
+        _membership.Join(room, _bob, "c3", personType: PersonTypes.Observer);
 
         Assert.DoesNotContain(_bob, room.Votes.Keys);
         Assert.Empty(room.DepartedVotes);
@@ -319,5 +321,65 @@ public class RoomMembershipTests
         _membership.Dispose(room);
 
         Assert.True(room.IsDisposed);
+    }
+
+    [Fact]
+    public void Join_NewPersonTakesTheGivenTypeAsTheirRole()
+    {
+        var room = new RoomEntity { Id = "blue-fox", OwnerGuid = _ann };
+
+        _membership.Join(room, _ann, "c1", personType: PersonTypes.Tester);
+
+        Assert.Equal(PersonTypes.Tester, room.RoleOf(_ann));
+    }
+
+    [Fact]
+    public void Join_ReturningMemberKeepsTheRoleTheRoomHas_NotTheProfilesType()
+    {
+        var room = RoomWith(_ann, _bob);
+        room.Roles[_bob] = PersonTypes.Observer;
+        var before = room.Revision;
+
+        var joined = _membership.Join(room, _bob, "c3", personType: PersonTypes.Developer);
+
+        Assert.False(joined.PersonAdded);
+        Assert.Equal(PersonTypes.Observer, room.RoleOf(_bob));
+        Assert.False(joined.ResetCountdown);
+        Assert.Equal(before, room.Revision);
+    }
+
+    [Fact]
+    public void Leave_RemovesTheRoleAndReportsIt()
+    {
+        var room = RoomWith(_ann, _bob);
+        room.Roles[_bob] = PersonTypes.Sre;
+
+        var left = _membership.Leave(room, _bob, LeaveReason.Deliberate);
+
+        Assert.Equal(PersonTypes.Sre, left.PersonType);
+        Assert.DoesNotContain(_bob, room.Roles.Keys);
+    }
+
+    [Fact]
+    public void Leave_OfTheOwner_ReportsTheNewOwnersRole()
+    {
+        var room = RoomWith(_ann, _bob);
+        room.Roles[_bob] = PersonTypes.Tester;
+
+        var left = _membership.Leave(room, _ann, LeaveReason.Deliberate);
+
+        Assert.Equal(_bob, left.NewOwnerGuid);
+        Assert.Equal(PersonTypes.Tester, left.NewOwnerPersonType);
+    }
+
+    [Fact]
+    public void Leave_OfSomeoneWhoIsNotAMember_ReportsNothing()
+    {
+        var room = RoomWith(_ann);
+
+        var left = _membership.Leave(room, _cat, LeaveReason.Deliberate);
+
+        Assert.False(left.PersonLeft);
+        Assert.Equal(string.Empty, left.PersonType);
     }
 }

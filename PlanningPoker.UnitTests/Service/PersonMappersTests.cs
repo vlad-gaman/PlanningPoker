@@ -1,3 +1,4 @@
+using PlanningPoker.Service.Models;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Service.Mappers;
@@ -66,5 +67,30 @@ public class PersonMappersTests
         Assert.Equal(entity.Guid, session.Person.Guid);
         Assert.Equal("Ann", session.Person.Name);
         Assert.Equal("token-ann", session.SessionToken);
+    }
+
+    [Fact]
+    public void PersonMapper_MapsTheRoleInTheRoomInsteadOfTheProfilesType()
+    {
+        var entity = new PersonEntity { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "dev" };
+
+        var person = new PersonMapper().Map(entity, isOffgrid: true, "obs");
+
+        Assert.Equal("obs", person.PersonType);
+        Assert.Equal("Ann", person.Name);
+        Assert.True(person.IsOffgrid);
+    }
+
+    [Fact]
+    public void PersonMapper_RetypesAPersonAndKeepsTheRest()
+    {
+        var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "dev", IsOffgrid = true };
+
+        var retyped = new PersonMapper().Map(person, "test");
+
+        Assert.Equal("test", retyped.PersonType);
+        Assert.Equal(person.Guid, retyped.Guid);
+        Assert.Equal("Ann", retyped.Name);
+        Assert.True(retyped.IsOffgrid);
     }
 }

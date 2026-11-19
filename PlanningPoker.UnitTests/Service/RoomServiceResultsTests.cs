@@ -170,56 +170,6 @@ public class RoomServiceResultsTests
     }
 
     [Fact]
-    public void ForceShowVotes_AVoterJoinsAndVotesWhileTheTypesAreRead_IsStillFrozenWithTheirType()
-    {
-        var (roomId, people) = RoomWith(5, PersonTypes.Developer, PersonTypes.Developer);
-        _service.Vote(people[0], "c1", "3");
-        var interleaving = new InterleavingRoomRepository(_rooms);
-        var service = RoomServiceFactory.Create(interleaving, _people);
-        var late = AddPerson(PersonTypes.Tester);
-        interleaving.AfterNextGet = () =>
-        {
-            Assert.True(_service.Join(late, "c3", roomId).IsSuccess);
-            Assert.True(_service.Vote(late, "c3", "8").IsSuccess);
-        };
-
-        service.ForceShowVotes(people[0], "c1");
-
-        var revealed = _rooms.Get(roomId)!.Revealed!;
-        Assert.Equal(PersonTypes.Tester, revealed.Votes[late].PersonType);
-        Assert.Equal("8", revealed.Votes[late].Mark);
-    }
-
-    [Fact]
-    public void ForceShowVotes_VotersKeepJoiningWhileTheTypesAreRead_StillRevealsAndOnlyTheLastTypeIsUnknown()
-    {
-        var (roomId, people) = RoomWith(5, PersonTypes.Developer, PersonTypes.Developer);
-        var interleaving = new InterleavingRoomRepository(_rooms);
-        var service = RoomServiceFactory.Create(interleaving, _people);
-        var joined = new List<Guid>();
-        Action? hook = null;
-        hook = () =>
-        {
-            var next = AddPerson();
-            joined.Add(next);
-            var connection = $"x{joined.Count}";
-            Assert.True(_service.Join(next, connection, roomId).IsSuccess);
-            Assert.True(_service.Vote(next, connection, "8").IsSuccess);
-            // The reveal reads the room again afterwards, where voting is closed: stop interfering after three rounds.
-            interleaving.AfterNextGet = joined.Count < RoomConstraints.TypeResolutionRounds ? hook : null;
-        };
-        interleaving.AfterNextGet = hook;
-
-        var response = service.ForceShowVotes(people[0], "c1");
-
-        Assert.True(response.IsSuccess);
-        Assert.NotNull(response.Data!.VoteStatus);
-        var revealed = _rooms.Get(roomId)!.Revealed!;
-        Assert.Equal(PersonTypes.Developer, revealed.Votes[joined[0]].PersonType);
-        Assert.Equal(string.Empty, revealed.Votes[joined[^1]].PersonType);
-    }
-
-    [Fact]
     public void ForceShowVotes_TwoRevealsAtOnce_FreezeOnceAndAnnounceOnce()
     {
         var (roomId, people) = RoomWith(5, PersonTypes.Developer, PersonTypes.Developer);

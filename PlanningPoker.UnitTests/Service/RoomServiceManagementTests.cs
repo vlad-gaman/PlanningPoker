@@ -48,7 +48,7 @@ public class RoomServiceManagementTests
         return (roomId, people);
     }
 
-    private string TypeOf(Guid personGuid) => _people.Get(personGuid)!.PersonType;
+    private string RoleOf(string roomId, Guid personGuid) => _rooms.Get(roomId)!.RoleOf(personGuid);
 
     // Reveal and clear are open to every member, not only the owner
 
@@ -83,7 +83,8 @@ public class RoomServiceManagementTests
         Assert.Equal(roomId, response.Data.RoomId);
         Assert.Equal(PersonTypes.Tester, response.Data.Person.PersonType);
         Assert.Equal(people[1], response.Data.Person.Guid);
-        Assert.Equal(PersonTypes.Tester, TypeOf(people[1]));
+        Assert.Equal(PersonTypes.Tester, RoleOf(roomId, people[1]));
+        Assert.Equal(PersonTypes.Developer, _people.Get(people[1])!.PersonType);
     }
 
     [Fact]
@@ -104,12 +105,12 @@ public class RoomServiceManagementTests
     [Fact]
     public void ChangePersonType_UnknownConnection_FailsNotInRoom()
     {
-        var (_, people) = RoomWith(5, TwoDevs);
+        var (roomId, people) = RoomWith(5, TwoDevs);
 
         var response = _service.ChangePersonType(people[0], "elsewhere", PersonTypes.Tester);
 
         Assert.Equal(ErrorCodes.NotInRoom, response.Errors.Single().Code);
-        Assert.Equal(PersonTypes.Developer, TypeOf(people[0]));
+        Assert.Equal(PersonTypes.Developer, RoleOf(roomId, people[0]));
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public class RoomServiceManagementTests
 
         Assert.True(_rooms.Get(roomId)!.Revision > countdown.Revision);
         Assert.Equal(TickOutcome.Stale, _service.Tick(roomId, countdown.Revision).Outcome);
-        Assert.Null(response.Data!.VoteStatus.Countdown);
+        Assert.True(response.Data!.FollowUp.Countdown!.Revision > countdown.Revision);
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class RoomServiceManagementTests
         Assert.Equal(5, start.Seconds);
         Assert.Equal(_rooms.Get(roomId)!.Revision, start.Revision);
         Assert.True(response.Data.VoteStatus.HasEveryoneVoted);
-        Assert.Null(response.Data.VoteStatus.Countdown);
+        Assert.Equal(5, response.Data.VoteStatus.Countdown);
     }
 
     [Fact]
@@ -224,26 +225,6 @@ public class RoomServiceManagementTests
 
         var types = _rooms.Get(roomId)!.Revealed!.Votes.ToDictionary(vote => vote.Key, vote => vote.Value.PersonType);
         Assert.Equal(PersonTypes.Tester, types[people[1]]);
-    }
-
-    [Fact]
-    public void ChangePersonType_ARevealBetweenTheTwoLocks_KeepsTheRevealAndDoesNotRestartAnything()
-    {
-        var interleaving = new InterleavingPersonRepository(_people);
-        var service = RoomServiceFactory.Create(_rooms, interleaving);
-        var (roomId, people) = RoomWith(5, TwoDevs);
-        service.Vote(people[0], "c1", "5");
-        // The first person update is the lookup of the caller's room; the reveal lands after the second one, the type change itself.
-        interleaving.AfterNextUpdate = () => interleaving.AfterNextUpdate = () => service.ForceShowVotes(people[0], "c1");
-
-        var response = service.ChangePersonType(people[1], "c2", PersonTypes.Observer);
-
-        var room = _rooms.Get(roomId)!;
-        Assert.True(response.IsSuccess);
-        Assert.False(room.VotingEnabled);
-        Assert.Equal(PersonTypes.Developer, room.Revealed!.Votes[people[0]].PersonType);
-        Assert.Same(VotingFollowUp.None, response.Data!.FollowUp);
-        Assert.False(room.CountdownRunning);
     }
 
     // UpdateConfiguration
@@ -492,5 +473,48 @@ public class RoomServiceManagementTests
         Assert.NotNull(exit.Data!.NewOwner);
         Assert.Equal(exit.Data.NewOwner!.Guid, _rooms.Get(roomId)!.OwnerGuid);
         Assert.NotEqual(people[1], _rooms.Get(roomId)!.OwnerGuid);
+    }
+
+    [Fact]
+    public void ChangePersonType_ThenAnotherConnectionJoins_CarriesTheRoleOfTheRoomNotTheProfile()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.ChangePersonType(people[1], "c2", PersonTypes.Observer);
+
+        var joined = _service.Join(people[1], "c2b", roomId).Data!;
+
+        Assert.Equal(PersonTypes.Observer, joined.Person.PersonType);
+        Assert.Equal(PersonTypes.Observer, joined.People.Single(person => person.Guid == people[1]).PersonType);
+    }
+
+    [Fact]
+    public void ChangePersonType_AfterTheReveal_LeavesTheRevealAndTheRevisionAlone()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[0], "c1", "5");
+        _service.ForceShowVotes(people[0], "c1");
+        var revision = _rooms.Get(roomId)!.Revision;
+
+        var response = _service.ChangePersonType(people[1], "c2", PersonTypes.Observer);
+
+        var room = _rooms.Get(roomId)!;
+        Assert.True(response.Data!.Changed);
+        Assert.Same(VotingFollowUp.None, response.Data.FollowUp);
+        Assert.Equal(revision, room.Revision);
+        Assert.False(room.VotingEnabled);
+        Assert.Equal(PersonTypes.Observer, room.RoleOf(people[1]));
+    }
+
+    [Fact]
+    public void ChangePersonType_MidRound_KeepsTheVoteAndTheGroupFollowsTheRoleAtTheReveal()
+    {
+        var (roomId, people) = RoomWith(5, TwoDevs);
+        _service.Vote(people[1], "c2", "8");
+        _service.ChangePersonType(people[1], "c2", PersonTypes.Tester);
+
+        Assert.Equal("8", _rooms.Get(roomId)!.Votes[people[1]]);
+        _service.ForceShowVotes(people[0], "c1");
+
+        Assert.Equal(PersonTypes.Tester, _rooms.Get(roomId)!.Revealed!.Votes[people[1]].PersonType);
     }
 }

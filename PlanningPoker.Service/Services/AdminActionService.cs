@@ -41,12 +41,13 @@ public class AdminActionService(
 
     public async Task<ServiceResponse> RemovePersonAsync(string roomId, Guid personGuid)
     {
-        if (rooms.Get(roomId) is null)
+        var room = rooms.Get(roomId);
+        if (room is null)
         {
             return ServiceResponse.Failure(ServiceError.RoomNotFound(roomId));
         }
 
-        var snapshot = people.Get(personGuid) is null ? null : SnapshotPerson(personGuid);
+        var snapshot = people.Get(personGuid) is null ? null : SnapshotPerson(personGuid, room.RoleOf(personGuid));
         if (snapshot is null)
         {
             return ServiceResponse.Failure(ServiceError.PersonNotFound(roomId, personGuid));
@@ -81,17 +82,17 @@ public class AdminActionService(
             rooms.Remove(roomId);
         }
 
-        var newOwner = change.NewOwnerGuid is { } ownerGuid ? SnapshotPerson(ownerGuid) : null;
+        var newOwner = change.NewOwnerGuid is { } ownerGuid ? SnapshotPerson(ownerGuid, change.NewOwnerPersonType!) : null;
         var followUp = change.Disposed ? VotingFollowUp.None : roomService.FollowUpAfterChange(roomId);
         await presenceNotifier.PersonRemovedAsync(exitRoomResultMapper.Map(
-            roomId, snapshot, personLeft: true, roomDisposed: change.Disposed, newOwner, followUp, RoomEventReasons.RemovedByOperator, connectionIds));
+            roomId, personMapper.Map(snapshot, change.PersonType), personLeft: true, roomDisposed: change.Disposed, newOwner, followUp, RoomEventReasons.RemovedByOperator, connectionIds));
         await timer.ApplyAsync(roomId, followUp);
         issues.Record(IssueLevel.Info, IssueLogConstants.AdminSource, $"Operator removed {snapshot.Name} from room \"{roomId}\" (removed by operator)");
         return ServiceResponse.Success();
     }
 
-    private Person? SnapshotPerson(Guid personGuid)
+    private Person? SnapshotPerson(Guid personGuid, string personType)
     {
-        return people.Update(personGuid, entity => personMapper.Map(entity), out var snapshot) ? snapshot : null;
+        return people.Update(personGuid, entity => personMapper.Map(entity, isOffgrid: false, personType), out var snapshot) ? snapshot : null;
     }
 }

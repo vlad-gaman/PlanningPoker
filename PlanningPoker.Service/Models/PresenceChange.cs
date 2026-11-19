@@ -5,8 +5,9 @@ namespace PlanningPoker.Service.Models;
 /// <param name="Removed">Members whose removal window passed in this pass.</param>
 /// <param name="PreviousOwnerGuid">The owner who went offgrid or was removed, when the room had to hand over.</param>
 /// <param name="NewOwnerGuid">Who the room was handed to.</param>
+/// <param name="Roles">The roles in the room of everyone named above, read under the lock (a removed member's role is gone from the room after it).</param>
 /// <param name="Disposed">True when nobody had been online long enough and the room was disposed.</param>
-internal sealed record PresenceChange(List<Guid> Offgrid, List<Guid> Removed, Guid? PreviousOwnerGuid, Guid? NewOwnerGuid, bool Disposed)
+internal sealed record PresenceChange(List<Guid> Offgrid, List<Guid> Removed, Guid? PreviousOwnerGuid, Guid? NewOwnerGuid, Dictionary<Guid, string> Roles, bool Disposed)
 {
     public bool IsEmpty => !Disposed && Offgrid.Count == 0 && Removed.Count == 0;
 }

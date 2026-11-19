@@ -1,3 +1,4 @@
+using PlanningPoker.UnitTests.Builders;
 using Microsoft.Extensions.Time.Testing;
 using PlanningPoker.Common.Constants;
 using PlanningPoker.Common.Models;
@@ -32,7 +33,7 @@ public class AdminActionServiceTests
     {
         _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), _changes, _time);
         var roomService = RoomServiceFactory.Create(_rooms, _people, time: _time);
-        _service = new AdminActionService(_rooms, _people, new PersonMapper(), new ExitRoomResultMapper(), roomService, new RoomMembership(), _admin, _presence, _timer, _issues);
+        _service = new AdminActionService(_rooms, _people, new PersonMapper(), new ExitRoomResultMapper(), roomService, Rounds.Membership(), _admin, _presence, _timer, _issues);
         AddPerson(_ann, "Ann", "dev", "conn-ann");
         AddPerson(_bob, "Bob", "test", "conn-bob");
         AddPerson(_cat, "Cat", "dev", "conn-cat");

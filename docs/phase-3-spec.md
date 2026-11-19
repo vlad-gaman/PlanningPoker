@@ -87,6 +87,8 @@ None added.
 
 `RoomEntity` gains `RevealedVotes` (person GUID -> `RevealedVoteEntity { Mark, PersonType }`), null while voting is open. It is the frozen input of the statistics; the statistics themselves are computed from it by a pure `IVoteStatisticsCalculator` (singleton, interface, takes `IReadOnlyCollection<RevealedVote>` plus the card order of the room's set) and mapped by `VoteStatisticsMapper` when a `VoteStatus` is built. Freezing the input rather than the result keeps the Repository layer free of service models and makes the calculator trivially testable.
 
+> **Superseded (issue #158):** each member's role now lives in `RoomEntity.Roles`, so a reveal reads it under the room lock in one pass. The `NeedTypes` retry below no longer exists; the round decisions live in `RoomRound` (`IRoomRound`).
+
 Person types live behind the per-person lock, which must never be nested inside the room lock. So the three reveal paths (`ForceShowVotes`, `Tick` reaching 0, and the zero-second countdown reveal in `Vote` and `Exit`) share one routine:
 
 1. outside any lock, read the `PersonType` of the room's current members through the person repository (as `Join` already does for the vote status);
