@@ -16,6 +16,16 @@
     color: var(--muted-color);
     word-break: break-all;
   }
+
+  .word-link {
+    color: inherit;
+    text-decoration: underline dotted;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--text-color);
+    }
+  }
 }
 
 .copy {

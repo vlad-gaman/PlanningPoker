@@ -8,6 +8,10 @@ A web app where a team estimates work by voting with cards in a shared room and 
 The shared space where a team votes: it has an owner, members, settings and a series of rounds. It is disposed when its last member leaves, and a server restart restores it from the store.
 _Avoid_: Session, game, lobby
 
+**Fun room name**:
+A room name the app generated: a number, two adjectives and a noun joined by underscores, such as `42_Adoring_Big_people`. In the room header each of its three words is a link to a Google search for that word, so unfamiliar words are easy to look up; the number is not. A word on the unsafe-word list is shown without a link. A name is recognised as fun by its shape and words, not by who made it, so any other name, such as `sprint_42_planning`, has no links.
+_Avoid_: Random name, generated name
+
 **Round**:
 One cycle in a room: people vote, the votes are revealed, then cleared to start the next round. Any member may reveal or clear, not only the owner, as with physical cards.
 _Avoid_: Game, session

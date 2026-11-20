@@ -17,7 +17,8 @@ public class WordListLoader : IWordListLoader
             Colour = Read("ColourAdjectives"),
             Origin = Read("OriginAdjectives"),
             Material = Read("MaterialAdjectives"),
-            Nouns = Read("Nouns")
+            Nouns = Read("Nouns"),
+            Unsafe = Read("UnsafeWords")
         };
     }
 

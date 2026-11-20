@@ -17,4 +17,7 @@ public class WordLists
     public IReadOnlyList<string> Material { get; init; } = [];
 
     public IReadOnlyList<string> Nouns { get; init; } = [];
+
+    /// <summary>Words that are never offered as a search link.</summary>
+    public IReadOnlyList<string> Unsafe { get; init; } = [];
 }

@@ -21,9 +21,17 @@ export interface RoomCreated {
   id: string;
 }
 
+/** One word of a fun room name; a word that is not linkable is shown without a search link. */
+export interface RoomNameWord {
+  text: string;
+  linkable: boolean;
+}
+
 export interface RoomExists {
   id: string;
   exists: boolean;
+  /** The words of a fun room name, or null for any other name. */
+  nameWords?: RoomNameWord[] | null;
 }
 
 export interface CardOption {

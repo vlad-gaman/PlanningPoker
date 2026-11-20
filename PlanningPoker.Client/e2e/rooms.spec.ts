@@ -41,6 +41,21 @@ test('creating a room with a fun name shows the owner as the only participant', 
   await expect(rows(page).first().locator('.crown')).toBeVisible();
 });
 
+test('a fun room name links its words, but not its number, to a Google search', async ({ page }) => {
+  await createRoom(page, 'Ann', { funName: true });
+
+  const links = page.locator('h1 a');
+  const heading = await page.locator('h1').innerText();
+  const [, ...words] = heading.replace('Room ', '').split('_');
+  const count = await links.count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThanOrEqual(3);
+  expect(words).toHaveLength(3);
+  for (let i = 0; i < count; i++) {
+    expect(await links.nth(i).getAttribute('href')).toMatch(/^https:\/\/www\.google\.com\/search\?q=[^&]+\+meaning$/);
+  }
+});
+
 test('creating a room without a fun name uses a GUID', async ({ page }) => {
   await createRoom(page, 'Ann', { funName: false });
 
