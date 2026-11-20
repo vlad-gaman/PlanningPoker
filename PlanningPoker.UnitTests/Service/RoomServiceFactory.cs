@@ -14,6 +14,7 @@ public static class RoomServiceFactory
     {
         return new RoomService(
             rooms,
+            new RoomUpdater(rooms, time ?? TimeProvider.System),
             people,
             generator ?? new StubRoomNameGenerator("unused"),
             new RoomEntityMapper(new RoomConfigurationEntityMapper(), time ?? TimeProvider.System),

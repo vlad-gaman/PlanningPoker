@@ -3,6 +3,7 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.UnitTests.Fakes;
@@ -22,7 +23,7 @@ public class PresenceServiceTests
 
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(), new RoomChangeLog());
     private readonly RoomService _service;
     private readonly PresenceService _presence;
 
@@ -750,7 +751,7 @@ public class PresenceServiceTests
         var (roomId, people) = RoomWith(PersonTypes.Developer, PersonTypes.Developer);
         _presence.Disconnect(people[0], "c1");
         _presence.Disconnect(people[1], "c2");
-        _rooms.Update(roomId, room => room.AwaitingReturn = true, out _);
+        _rooms.Edit(roomId, room => room.AwaitingReturn = true);
 
         SweepAfter(Grace + Grace + TimeSpan.FromMinutes(1));
         Assert.NotNull(_rooms.Get(roomId));
@@ -763,7 +764,7 @@ public class PresenceServiceTests
     public void SweepPresence_RestoredRoomOnceSomeoneIsConnected_StopsAwaitingReturn()
     {
         var (roomId, _) = RoomWith(PersonTypes.Developer);
-        _rooms.Update(roomId, room => room.AwaitingReturn = true, out _);
+        _rooms.Edit(roomId, room => room.AwaitingReturn = true);
 
         SweepAfter(TimeSpan.FromSeconds(1));
 

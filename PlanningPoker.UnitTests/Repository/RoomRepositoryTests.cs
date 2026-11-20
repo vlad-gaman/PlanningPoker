@@ -1,12 +1,13 @@
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 
 namespace PlanningPoker.UnitTests.Repository;
 
 public class RoomRepositoryTests
 {
-    private static RoomRepository NewRepository() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private static RoomRepository NewRepository() => new(new RoomEntityCopyMapper(), new RoomChangeLog());
 
     private static RoomEntity NewRoom(string id = "room", Guid? owner = null)
     {
@@ -66,7 +67,7 @@ public class RoomRepositoryTests
     [Fact]
     public void Update_Unknown_ReturnsFalse()
     {
-        var found = NewRepository().Update("nope", _ => 1, out var result);
+        var found = NewRepository().Update("nope", _ => RoomUpdate.Unchanged(1), out var result);
 
         Assert.False(found);
         Assert.Equal(0, result);
@@ -82,7 +83,7 @@ public class RoomRepositoryTests
         var found = repository.Update("room", room =>
         {
             room.MemberGuids.Add(person);
-            return room.MemberGuids.Count;
+            return RoomUpdate.Changed(room.MemberGuids.Count);
         }, out var count);
 
         Assert.True(found);
@@ -121,7 +122,7 @@ public class RoomRepositoryTests
         Parallel.For(0, 500, _ => repository.Update("room", room =>
         {
             room.Votes[counter] = (int.Parse(room.Votes.GetValueOrDefault(counter, "0")) + 1).ToString();
-            return 0;
+            return RoomUpdate.Changed(0);
         }, out _));
 
         Assert.Equal("500", repository.Get("room")!.Votes[counter]);

@@ -1,10 +1,11 @@
 using Microsoft.Extensions.Options;
+using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
 using PlanningPoker.Service.Models;
 
 namespace PlanningPoker.Service.Services;
 
-public class SweepService(IRoomRepository rooms, IPersonRepository people, IRoomMembership membership, IOptions<SweepOptions> options, TimeProvider time) : ISweepService
+public class SweepService(IRoomRepository rooms, IRoomUpdater roomUpdater, IPersonRepository people, IRoomMembership membership, IOptions<SweepOptions> options, TimeProvider time) : ISweepService
 {
     public SweepResult Sweep()
     {
@@ -13,15 +14,15 @@ public class SweepService(IRoomRepository rooms, IPersonRepository people, IRoom
         foreach (var roomId in rooms.Ids())
         {
             // Disposing inside the room lock means a Join that comes later is refused, so the room cannot gain a member after the check.
-            var abandoned = rooms.Update(roomId, room =>
+            var abandoned = roomUpdater.Update(roomId, room =>
             {
                 if (room.MemberConnections.Count > 0 || room.CreatedAt >= cutoff || room.LastActivityAt >= cutoff)
                 {
-                    return false;
+                    return RoomUpdate.Unchanged(false);
                 }
 
                 membership.Dispose(room);
-                return true;
+                return RoomUpdate.Changed(true);
             }, out var disposed) && disposed;
             if (abandoned && rooms.Remove(roomId))
             {

@@ -9,6 +9,7 @@ namespace PlanningPoker.Service.Services;
 
 public class AdminActionService(
     IRoomRepository rooms,
+    IRoomUpdater roomUpdater,
     IPersonRepository people,
     IPersonMapper personMapper,
     IExitRoomResultMapper exitRoomResultMapper,
@@ -22,10 +23,10 @@ public class AdminActionService(
     public async Task<ServiceResponse> CloseRoomAsync(string roomId)
     {
         // Disposing inside the room lock means a Join that comes later is refused, so nobody gets in while the room is going.
-        var found = rooms.Update(roomId, room =>
+        var found = roomUpdater.Update(roomId, room =>
         {
             membership.Dispose(room);
-            return (People: room.MemberGuids.Count, Connections: room.MemberConnections.Values.SelectMany(connections => connections).ToList());
+            return RoomUpdate.Changed((People: room.MemberGuids.Count, Connections: room.MemberConnections.Values.SelectMany(connections => connections).ToList()));
         }, out var closing);
         if (!found)
         {
@@ -53,7 +54,11 @@ public class AdminActionService(
             return ServiceResponse.Failure(ServiceError.PersonNotFound(roomId, personGuid));
         }
 
-        var found = rooms.Update(roomId, room => membership.Leave(room, personGuid, LeaveReason.OperatorRemoval), out var change);
+        var found = roomUpdater.Update(roomId, room =>
+        {
+            var left = membership.Leave(room, personGuid, LeaveReason.OperatorRemoval);
+            return RoomUpdate.Of(left, left.PersonLeft);
+        }, out var change);
         if (!found)
         {
             return ServiceResponse.Failure(ServiceError.RoomNotFound(roomId));

@@ -12,8 +12,6 @@ public static class RepositoryServiceCollectionExtensions
 {
     public static IServiceCollection AddRepositoryLayer(this IServiceCollection services)
     {
-        services.AddSingleton<IRoomConfigurationEntityCopyMapper, RoomConfigurationEntityCopyMapper>();
-        services.AddSingleton<IRevealedVotesEntityCopyMapper, RevealedVotesEntityCopyMapper>();
         services.AddSingleton<IRoomEntityCopyMapper, RoomEntityCopyMapper>();
         services.AddSingleton<IStoredRoomMapper, StoredRoomMapper>();
         services.TryAddSingleton(TimeProvider.System);

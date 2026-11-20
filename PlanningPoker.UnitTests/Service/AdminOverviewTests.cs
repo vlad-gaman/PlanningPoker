@@ -317,7 +317,7 @@ public class AdminOverviewServiceTests
 
     public AdminOverviewServiceTests()
     {
-        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), time: _time);
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(), new RoomChangeLog());
         _server = new ServerStatistics(_time);
         var options = Options.Create(new IssueLogOptions());
         var log = new IssueLog(_store, new IssueRedactor(options), new IssueEntryMapper(), options, _time, NullLogger<IssueLog>.Instance);

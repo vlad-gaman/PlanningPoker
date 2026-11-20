@@ -5,6 +5,7 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 
@@ -14,7 +15,7 @@ public class PlanningPokerMetricsTests
 {
     private readonly IMeterFactory _meterFactory = new ServiceCollection().AddMetrics().BuildServiceProvider().GetRequiredService<IMeterFactory>();
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(), new RoomChangeLog());
     private readonly PlanningPokerMetrics _metrics;
 
     public PlanningPokerMetricsTests()

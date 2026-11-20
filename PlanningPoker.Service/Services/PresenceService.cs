@@ -10,6 +10,7 @@ namespace PlanningPoker.Service.Services;
 /// <summary>Follows the same locking as <see cref="RoomService"/>: membership is decided under the room lock, person details are read after it.</summary>
 public class PresenceService(
     IRoomRepository rooms,
+    IRoomUpdater roomUpdater,
     IPersonRepository people,
     IPersonMapper personMapper,
     IExitRoomResultMapper exitRoomResultMapper,
@@ -45,12 +46,12 @@ public class PresenceService(
 
         // Step 2 (room lock): the member is dropped only when this was their last connection to the room. The first drop
         // time stays, and a Join that ran before this point keeps them online.
-        var found = rooms.Update(index.RoomId, room =>
+        var found = roomUpdater.Update(index.RoomId, room =>
         {
             var connections = room.MemberConnections.GetValueOrDefault(personGuid);
             if (connections is null || !connections.Remove(connectionId))
             {
-                return false;
+                return RoomUpdate.Unchanged(false);
             }
 
             if (connections.Count == 0)
@@ -58,7 +59,7 @@ public class PresenceService(
                 membership.Drop(room, personGuid, now);
             }
 
-            return true;
+            return RoomUpdate.Changed(true);
         }, out var member);
         if (!found)
         {
@@ -76,7 +77,7 @@ public class PresenceService(
         foreach (var roomId in rooms.Ids())
         {
             var now = time.GetUtcNow();
-            if (!rooms.Update(roomId, room => ApplyPresence(room, now), out var change) || change is null || change.IsEmpty)
+            if (!roomUpdater.Update(roomId, room => ApplyPresenceTracked(room, now), out var change) || change is null || change.IsEmpty)
             {
                 continue;
             }
@@ -117,6 +118,14 @@ public class PresenceService(
         }
 
         return new PresenceSweepResult { Offgrid = offgrid, Removed = removed, DisposedRoomIds = disposed };
+    }
+
+    /// <summary>Applies the presence pass and reports whether it changed the room: a member moved, the room was disposed, or a restored room's wait for its people ended.</summary>
+    private RoomUpdate<PresenceChange> ApplyPresenceTracked(RoomEntity room, DateTimeOffset now)
+    {
+        var awaitingReturn = room.AwaitingReturn;
+        var change = ApplyPresence(room, now);
+        return RoomUpdate.Of(change, !change.IsEmpty || room.AwaitingReturn != awaitingReturn);
     }
 
     /// <summary>

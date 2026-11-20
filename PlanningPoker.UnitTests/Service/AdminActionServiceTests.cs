@@ -31,9 +31,9 @@ public class AdminActionServiceTests
 
     public AdminActionServiceTests()
     {
-        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), _changes, _time);
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(), _changes);
         var roomService = RoomServiceFactory.Create(_rooms, _people, time: _time);
-        _service = new AdminActionService(_rooms, _people, new PersonMapper(), new ExitRoomResultMapper(), roomService, Rounds.Membership(), _admin, _presence, _timer, _issues);
+        _service = new AdminActionService(_rooms, new RoomUpdater(_rooms, _time), _people, new PersonMapper(), new ExitRoomResultMapper(), roomService, Rounds.Membership(), _admin, _presence, _timer, _issues);
         AddPerson(_ann, "Ann", "dev", "conn-ann");
         AddPerson(_bob, "Bob", "test", "conn-bob");
         AddPerson(_cat, "Cat", "dev", "conn-cat");

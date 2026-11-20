@@ -5,6 +5,7 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.UnitTests.Fakes;
@@ -21,12 +22,12 @@ public class SweepServiceTests
 
     public SweepServiceTests()
     {
-        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), new PlanningPoker.Repository.Services.RoomChangeLog(), _time);
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(), new PlanningPoker.Repository.Services.RoomChangeLog());
     }
 
     private SweepService CreateService(IRoomRepository? rooms = null, IPersonRepository? people = null)
     {
-        return new SweepService(rooms ?? _rooms, people ?? _people, Rounds.Membership(), Options.Create(new SweepOptions { AbandonedAfter = Ttl }), _time);
+        return new SweepService(rooms ?? _rooms, new RoomUpdater(rooms ?? _rooms, _time), people ?? _people, Rounds.Membership(), Options.Create(new SweepOptions { AbandonedAfter = Ttl }), _time);
     }
 
     private Guid AddPerson(DateTimeOffset? lastSeenAt = null, params string[] connections)
@@ -230,7 +231,7 @@ public class SweepServiceTests
     public void Sweep_UsesConfiguredAbandonedAfter()
     {
         var roomId = AddRoom(Guid.NewGuid(), Ago(TimeSpan.FromMinutes(5)));
-        var service = new SweepService(_rooms, _people, Rounds.Membership(), Options.Create(new SweepOptions { AbandonedAfter = TimeSpan.FromMinutes(1) }), _time);
+        var service = new SweepService(_rooms, new RoomUpdater(_rooms, _time), _people, Rounds.Membership(), Options.Create(new SweepOptions { AbandonedAfter = TimeSpan.FromMinutes(1) }), _time);
 
         service.Sweep();
 
@@ -309,7 +310,7 @@ public class SweepServiceTests
     public void Sweep_OldRoomThatChangedRecently_IsKept()
     {
         var roomId = AddRoom(Guid.NewGuid(), Ago(Ttl * 3));
-        _rooms.Update(roomId, room => room.VotingEnabled = true, out _);
+        new RoomUpdater(_rooms, _time).Update(roomId, room => RoomUpdate.Changed(room.VotingEnabled = true), out _);
         _time.Advance(Ttl - TimeSpan.FromHours(1));
 
         var result = CreateService().Sweep();

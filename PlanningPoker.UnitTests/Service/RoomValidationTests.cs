@@ -2,13 +2,14 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Validations;
 
 namespace PlanningPoker.UnitTests.Service;
 
 public class RoomValidationTests
 {
-    private static RoomRepository NewRooms() => new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private static RoomRepository NewRooms() => new(new RoomEntityCopyMapper(), new RoomChangeLog());
 
     [Theory]
     [InlineData("room")]

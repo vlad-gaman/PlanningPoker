@@ -41,6 +41,7 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<IPlanningPokerMetrics, PlanningPokerMetrics>();
         services.AddSingleton<IRoomRound, RoomRound>();
         services.AddSingleton<IRoomMembership, RoomMembership>();
+        services.AddSingleton<IRoomUpdater, RoomUpdater>();
         services.AddSingleton<IRoomService, RoomService>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IRoomTimerService, RoomTimerService>();

@@ -4,6 +4,7 @@ using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
@@ -17,7 +18,7 @@ public class RoundHistoryTests
     private static readonly string[] TwoDevs = [PersonTypes.Developer, PersonTypes.Developer];
 
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(), new RoomChangeLog());
     private readonly RoomService _service;
 
     public RoundHistoryTests()
@@ -404,7 +405,7 @@ public class RoundResultMapperTests
     {
         var source = new RoomEntity { Id = "r", RoundsRevealed = 7, RoundHistory = [new RoundResultEntity { Round = 7, AverageMark = 3m, RevealedAt = At }] };
 
-        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(source);
+        var copy = new RoomEntityCopyMapper().Map(source);
         source.RoundHistory[0].AverageMark = 99m;
         source.RoundHistory.Add(new RoundResultEntity { Round = 8 });
 
