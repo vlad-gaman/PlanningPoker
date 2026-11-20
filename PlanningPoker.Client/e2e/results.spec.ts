@@ -45,6 +45,7 @@ const pick = (page: Page, value: string) =>
     .click();
 const results = (page: Page) => page.locator('app-results');
 const fireworks = (page: Page) => page.locator('app-fireworks canvas');
+const redPanda = (page: Page) => page.getByRole('link', { name: 'Why fireworks hurt red pandas' });
 const verdict = (page: Page) => results(page).locator('.verdict .label');
 const average = (page: Page) => results(page).locator('.ring .average');
 const groups = (page: Page) => results(page).locator('.groups li');
@@ -119,6 +120,27 @@ test('a consensus is unanimous and launches the fireworks, and Clear votes remov
   await closeAll([ann, bob]);
 });
 
+test('a red panda visits during the fireworks and links to a search about why they hurt it', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann');
+  await join(bob.page, roomUrl, 'Bob');
+  await expect(redPanda(ann.page)).toHaveCount(0);
+
+  await pick(ann.page, '5');
+  await pick(bob.page, '5');
+
+  // It turns up at a random moment in the first six seconds and stays four.
+  await expect(redPanda(ann.page)).toBeVisible({ timeout: 9000 });
+  await expect(redPanda(ann.page)).toHaveAttribute('href', /google\.com\/search\?q=.*red\+pandas/);
+  await expect(redPanda(ann.page)).toHaveAttribute('target', '_blank');
+
+  await ann.page.getByRole('button', { name: 'Clear votes' }).click();
+  await expect(redPanda(ann.page)).toHaveCount(0);
+
+  await closeAll([ann, bob]);
+});
+
 test('a room with fireworks turned off shows none on consensus', async ({ browser }) => {
   const ann = await newPerson(browser);
   const bob = await newPerson(browser);
@@ -130,6 +152,7 @@ test('a room with fireworks turned off shows none on consensus', async ({ browse
 
   await expect(verdict(ann.page)).toHaveText('Unanimous');
   await expect(fireworks(ann.page)).toHaveCount(0);
+  await expect(redPanda(ann.page)).toHaveCount(0);
 
   await closeAll([ann, bob]);
 });

@@ -24,6 +24,10 @@ _Avoid_: Past votes, vote log, archive
 The moment the votes in a room are shown to everyone, either after the countdown or when forced. Any member can force it, and any member can clear the votes afterwards; the owner has no special say here.
 _Avoid_: Flip, show-down
 
+**Red panda**:
+A small red panda that appears once at a random spot on the screen during a fireworks show, stays a few seconds and then vanishes, so it is only seen when the room's fireworks run. Clicking it opens a Google search in a new tab about why fireworks harm red pandas. It is a surprise: nothing in the app mentions it, and it has no setting of its own.
+_Avoid_: Mascot, easter egg
+
 **Round timer**:
 The time elapsed since the room's last reveal, clear or creation. Casting or changing a vote does not reset it.
 _Avoid_: Vote timer, idle timer, activity timer
