@@ -24,7 +24,7 @@ public class RoomPersistenceWriterTests
 
     public RoomPersistenceWriterTests()
     {
-        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), _log, _time);
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(), _log);
         _writer = new RoomPersistenceWriter(_log, _rooms, _people, _store, new StoredRoomMapper(), Options.Create(new PersistenceOptions { HeartbeatInterval = Heartbeat }), _time, _logger, _status);
     }
 
@@ -40,8 +40,8 @@ public class RoomPersistenceWriterTests
     public void Flush_SavesTheLatestStateOfAChangedRoomOnce()
     {
         var owner = AddRoom();
-        _rooms.Update("r", room => room.Votes[owner] = "3", out _);
-        _rooms.Update("r", room => room.Votes[owner] = "8", out _);
+        _rooms.Edit("r", room => room.Votes[owner] = "3");
+        _rooms.Edit("r", room => room.Votes[owner] = "8");
 
         _writer.Flush();
 
@@ -118,7 +118,7 @@ public class RoomPersistenceWriterTests
     public async Task Heartbeat_WritesRoomsWithSomeoneConnectedAgain()
     {
         var owner = AddRoom();
-        _rooms.Update("r", room => room.MemberConnections[owner] = ["c1"], out _);
+        _rooms.Edit("r", room => room.MemberConnections[owner] = ["c1"]);
         _writer.Flush();
         var first = _store.Rooms["r"].SavedAt;
         await _writer.StartAsync(CancellationToken.None);
@@ -147,7 +147,7 @@ public class RoomPersistenceWriterTests
     public async Task Stop_StampsRoomsWithSomeoneConnectedWithTheTimeOfTheStop()
     {
         var owner = AddRoom();
-        _rooms.Update("r", room => room.MemberConnections[owner] = ["c1"], out _);
+        _rooms.Edit("r", room => room.MemberConnections[owner] = ["c1"]);
         _writer.Flush();
         await _writer.StartAsync(CancellationToken.None);
         _time.Advance(TimeSpan.FromSeconds(7));

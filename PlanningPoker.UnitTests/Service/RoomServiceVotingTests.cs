@@ -2,6 +2,7 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 using PlanningPoker.UnitTests.Fakes;
@@ -14,7 +15,7 @@ public class RoomServiceVotingTests
     private static readonly string[] ThreeDevs = [PersonTypes.Developer, PersonTypes.Developer, PersonTypes.Developer];
 
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(), new RoomChangeLog());
     private readonly RoomService _service;
 
     public RoomServiceVotingTests()
@@ -324,7 +325,7 @@ public class RoomServiceVotingTests
     {
         var (roomId, people) = RoomWith(5, TwoDevs);
         // The person index still points at the room, but the room has already dropped the connection.
-        _rooms.Update(roomId, room => room.MemberConnections[people[0]].Remove("c1"), out _);
+        _rooms.Edit(roomId, room => room.MemberConnections[people[0]].Remove("c1"));
 
         var response = _service.Vote(people[0], "c1", "5");
 

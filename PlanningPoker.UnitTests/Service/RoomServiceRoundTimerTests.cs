@@ -3,6 +3,7 @@ using PlanningPoker.Common.Constants;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
 
@@ -13,7 +14,7 @@ public class RoomServiceRoundTimerTests
 {
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(), new RoomChangeLog());
     private readonly RoomService _service;
     private readonly DateTimeOffset _created;
 

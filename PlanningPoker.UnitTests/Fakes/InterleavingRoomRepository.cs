@@ -29,7 +29,7 @@ public sealed class InterleavingRoomRepository(IRoomRepository inner) : IRoomRep
 
     public IReadOnlyCollection<string> Ids() => inner.Ids();
 
-    public bool Update<T>(string roomId, Func<RoomEntity, T> mutate, out T? result)
+    public bool Update<T>(string roomId, Func<RoomEntity, RoomUpdate<T>> mutate, out T? result)
     {
         var found = inner.Update(roomId, mutate, out result);
         var hook = AfterNextUpdate;

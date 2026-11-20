@@ -12,6 +12,6 @@ public static class PresenceServiceFactory
 {
     public static PresenceService Create(IRoomRepository rooms, IPersonRepository people, IRoomService roomService, TimeProvider time, PresenceOptions? options = null)
     {
-        return new PresenceService(rooms, people, new PersonMapper(), new ExitRoomResultMapper(), roomService, Rounds.Membership(), time, Options.Create(options ?? new PresenceOptions()));
+        return new PresenceService(rooms, new RoomUpdater(rooms, time), people, new PersonMapper(), new ExitRoomResultMapper(), roomService, Rounds.Membership(), time, Options.Create(options ?? new PresenceOptions()));
     }
 }

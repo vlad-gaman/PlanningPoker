@@ -14,7 +14,7 @@ public class RoomRepositoryChangeLogTests
 
     public RoomRepositoryChangeLogTests()
     {
-        _rooms = new RoomRepository(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()), _log, _time);
+        _rooms = new RoomRepository(new RoomEntityCopyMapper(), _log);
     }
 
     private List<string> Drain()
@@ -51,29 +51,45 @@ public class RoomRepositoryChangeLogTests
     }
 
     [Fact]
-    public void Update_ChangingTheRoom_ReportsItAndStampsTheActivity()
+    public void Update_ReportingAChange_ReportsTheRoom()
     {
         AddRoom();
         Drain();
-        _time.Advance(TimeSpan.FromMinutes(5));
 
-        _rooms.Update("r", room => room.VotingEnabled = true, out _);
+        _rooms.Update("r", room => RoomUpdate.Changed(room.VotingEnabled = true), out _);
 
         Assert.Equal(["r"], Drain());
-        Assert.Equal(_time.GetUtcNow(), _rooms.Get("r")!.LastActivityAt);
     }
 
     [Fact]
-    public void Update_ChangingNothing_ReportsNothingAndKeepsTheActivity()
+    public void Update_ReportingNoChange_ReportsNothing()
+    {
+        AddRoom();
+        Drain();
+
+        _rooms.Update("r", room => RoomUpdate.Unchanged(room.VotingEnabled), out _);
+
+        Assert.Empty(Drain());
+    }
+
+    [Fact]
+    public void Update_UnknownRoom_ReportsNothing()
+    {
+        Assert.False(_rooms.Update("nope", _ => RoomUpdate.Changed(0), out _));
+
+        Assert.Empty(Drain());
+    }
+
+    [Fact]
+    public void Update_NeverStampsTheActivity()
     {
         AddRoom();
         Drain();
         var activity = _rooms.Get("r")!.LastActivityAt;
         _time.Advance(TimeSpan.FromMinutes(5));
 
-        _rooms.Update("r", room => room.VotingEnabled, out _);
+        _rooms.Update("r", room => RoomUpdate.Changed(room.VotingEnabled = true), out _);
 
-        Assert.Empty(Drain());
         Assert.Equal(activity, _rooms.Get("r")!.LastActivityAt);
     }
 

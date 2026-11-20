@@ -9,7 +9,7 @@ public class RoomPersistenceMappersTests
     [Fact]
     public void RoomEntityCopyMapper_CopiesLastActivityAndAwaitingReturn()
     {
-        var mapper = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper());
+        var mapper = new RoomEntityCopyMapper();
         var activity = new DateTimeOffset(2026, 5, 6, 7, 8, 9, TimeSpan.Zero);
 
         var copy = mapper.Map(new RoomEntity { Id = "r", LastActivityAt = activity, AwaitingReturn = true });

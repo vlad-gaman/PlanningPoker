@@ -3,6 +3,7 @@ using PlanningPoker.Common.Models;
 using PlanningPoker.Repository.Mappers;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
+using PlanningPoker.Repository.Services;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Models;
 using PlanningPoker.Service.Services;
@@ -14,7 +15,7 @@ namespace PlanningPoker.UnitTests.Service;
 public class RoomServiceTests
 {
     private readonly PersonRepository _people = new();
-    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()));
+    private readonly RoomRepository _rooms = new(new RoomEntityCopyMapper(), new RoomChangeLog());
 
     private static RoomSettings Settings(bool fun = false)
     {
@@ -367,7 +368,7 @@ public class RoomServiceTests
     public void Join_ResetsCountdownOnlyWhenVotingIsOnAndPersonIsNotObserver(bool votingEnabled, string type, bool expected)
     {
         var room = CreateService().Create(AddPerson(), Settings()).Data!;
-        _rooms.Update(room.Id, entity => entity.VotingEnabled = votingEnabled, out _);
+        _rooms.Edit(room.Id, entity => entity.VotingEnabled = votingEnabled);
 
         var response = CreateService().Join(AddPerson("Guest", type), "c1", room.Id);
 
@@ -379,7 +380,7 @@ public class RoomServiceTests
     {
         var owner = AddPerson();
         var room = NewRoom(owner);
-        _rooms.Update(room, entity => entity.IsDisposed = true, out _);
+        _rooms.Edit(room, entity => entity.IsDisposed = true);
         var guest = AddPerson("Guest");
 
         var response = CreateService().Join(guest, "c-guest", room);

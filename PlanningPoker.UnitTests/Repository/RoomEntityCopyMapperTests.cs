@@ -30,7 +30,7 @@ public class RoomEntityCopyMapperTests
             Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7 }
         };
 
-        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(source);
+        var copy = new RoomEntityCopyMapper().Map(source);
 
         Assert.Equal("room", copy.Id);
         Assert.Equal(source.RoundStartedAt, copy.RoundStartedAt);
@@ -48,7 +48,10 @@ public class RoomEntityCopyMapperTests
         Assert.Equal("3", copy.DepartedVotes[owner]);
         Assert.Equal(source.DroppedAt[owner], copy.DroppedAt[owner]);
         Assert.Contains(owner, copy.OffgridGuids);
+        Assert.Equal("linear", copy.Configuration.CardSet);
         Assert.Equal(9, copy.Configuration.CountdownSeconds);
+        Assert.False(copy.Configuration.ShowFireworks);
+        Assert.Equal(7, copy.Configuration.MaxParticipants);
         Assert.NotSame(source.MemberGuids, copy.MemberGuids);
         Assert.NotSame(source.MemberConnections, copy.MemberConnections);
         Assert.NotSame(source.MemberConnections[owner], copy.MemberConnections[owner]);
@@ -73,7 +76,7 @@ public class RoomEntityCopyMapperTests
             }
         };
 
-        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(source);
+        var copy = new RoomEntityCopyMapper().Map(source);
 
         Assert.True(copy.Revealed!.EveryoneVoted);
         Assert.Equal("5", copy.Revealed.Votes[voter].Mark);
@@ -86,7 +89,7 @@ public class RoomEntityCopyMapperTests
     [Fact]
     public void Map_OfAnOpenRoom_HasNoRevealedVotes()
     {
-        var copy = new RoomEntityCopyMapper(new RoomConfigurationEntityCopyMapper(), new RevealedVotesEntityCopyMapper()).Map(new RoomEntity());
+        var copy = new RoomEntityCopyMapper().Map(new RoomEntity());
 
         Assert.Null(copy.Revealed);
     }
