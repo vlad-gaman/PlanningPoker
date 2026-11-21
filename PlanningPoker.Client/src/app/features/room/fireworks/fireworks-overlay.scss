@@ -4,3 +4,59 @@
   z-index: 1000;
   pointer-events: none;
 }
+
+// The panda is drawn upright in this square, which is cut off along the edge it peeks from.
+.panda-clip {
+  position: absolute;
+}
+
+.panda {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 12px;
+  transform: rotate(var(--angle, 0deg));
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--mat-sys-primary, currentColor);
+    outline-offset: 2px;
+  }
+}
+
+// It slides out from behind its edge along its own axis, and back in when it leaves.
+@media (prefers-reduced-motion: no-preference) {
+  .panda {
+    animation: panda-out 400ms ease-out both;
+
+    &.leaving {
+      animation: panda-in 400ms ease-in both;
+    }
+  }
+}
+
+@keyframes panda-out {
+  from {
+    transform: rotate(var(--angle)) translateY(var(--hide));
+  }
+  to {
+    transform: rotate(var(--angle));
+  }
+}
+
+@keyframes panda-in {
+  from {
+    transform: rotate(var(--angle));
+  }
+  to {
+    transform: rotate(var(--angle)) translateY(var(--hide));
+  }
+}
