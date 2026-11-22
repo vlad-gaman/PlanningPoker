@@ -133,6 +133,7 @@
 
 // Lolle's crown is the owner's shape in rose with a gem. Rose reads on both themes.
 .lolle-crown {
+  transform: translateX(-50%) rotate(10deg);
   fill: #f06fa4;
   stroke: #b02c68;
 
