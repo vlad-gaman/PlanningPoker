@@ -113,6 +113,21 @@ public class RateLimitingEndpointTests : IClassFixture<RateLimitedApiFactory>
     }
 
     [Fact]
+    public async Task PostClosing_AfterSixtyRequestsInAMinute_Returns429RateLimited()
+    {
+        var cookie = await Cookie();
+        var address = NewAddress();
+        Task<HttpResponseMessage> Closing() => _client.SendAsync(Request(HttpMethod.Post, "/api/presence/closing", address, new { connectionId = "nope" }, cookie));
+        for (var i = 0; i < RateLimitingConstants.PresenceClosingLimit; i++)
+        {
+            // The unknown connection is refused, but each call counts against the limit.
+            Assert.NotEqual(HttpStatusCode.TooManyRequests, (await Closing()).StatusCode);
+        }
+
+        await AssertRateLimited(await Closing());
+    }
+
+    [Fact]
     public async Task Limits_ArePerClientAddress_AfterTheForwardedHeadersAreApplied()
     {
         var exhausted = NewAddress();

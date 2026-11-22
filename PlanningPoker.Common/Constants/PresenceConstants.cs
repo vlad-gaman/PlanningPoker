@@ -8,6 +8,12 @@ public static class PresenceConstants
     /// <summary>How long a person who lost their connection still counts as online, so a refresh goes unnoticed.</summary>
     public static readonly TimeSpan GracePeriod = TimeSpan.FromSeconds(10);
 
+    /// <summary>
+    /// How long a person whose page said it was closing keeps their place before they are removed, unless they join again first.
+    /// Short, but longer than a reload takes, because a reload says the same thing a closed tab does.
+    /// </summary>
+    public static readonly TimeSpan ClosingWindow = TimeSpan.FromSeconds(5);
+
     /// <summary>How long after the drop an offgrid person keeps their place and vote before they are removed.</summary>
     public static readonly TimeSpan RemovalWindow = TimeSpan.FromMinutes(10);
 

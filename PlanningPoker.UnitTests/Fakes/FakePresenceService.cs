@@ -17,6 +17,16 @@ public sealed class FakePresenceService : IPresenceService
         return DisconnectResult;
     }
 
+    public ServiceResponse ClosingResult { get; set; } = ServiceResponse.Success();
+
+    public List<(Guid PersonGuid, string ConnectionId)> ClosingCalls { get; } = [];
+
+    public ServiceResponse Closing(Guid personGuid, string connectionId)
+    {
+        ClosingCalls.Add((personGuid, connectionId));
+        return ClosingResult;
+    }
+
     public PresenceSweepResult PresenceSweepResult { get; set; } = PresenceSweepResult.None;
 
     public int PresenceSweeps { get; private set; }

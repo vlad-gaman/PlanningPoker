@@ -16,6 +16,13 @@ public interface IPresenceService
     ServiceResponse Disconnect(Guid personGuid, string connectionId);
 
     /// <summary>
+    /// The page of this connection says it is closing (it may as well be reloading). When the connection is the member's only
+    /// one in the room, the next sweep turns them offgrid at once, and removes them with their vote kept aside once the
+    /// closing window has passed, unless they <see cref="IRoomService.Join"/> again first. <c>not_in_room</c> means the connection is unknown.
+    /// </summary>
+    ServiceResponse Closing(Guid personGuid, string connectionId);
+
+    /// <summary>
     /// Turns the people whose grace period lapsed offgrid, removes those offgrid for the whole removal window (with their
     /// vote), hands a room over when its owner goes offgrid or is removed, and deletes rooms nobody has been online in for the
     /// empty-room lifetime. Called by the background sweep.

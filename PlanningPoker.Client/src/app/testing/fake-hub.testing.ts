@@ -7,6 +7,7 @@ export function fakeHub(joinResponse: unknown = undefined) {
   let reconnecting: (() => void) | undefined;
   let closed: (() => void) | undefined;
   return {
+    connectionId: 'connection-1' as string | null,
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn().mockResolvedValue(undefined),
     on: vi.fn((method: string, handler: (event: unknown) => void) => handlers.set(method, handler)),

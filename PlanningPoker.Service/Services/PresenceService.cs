@@ -69,6 +69,46 @@ public class PresenceService(
         return member ? ServiceResponse.Success() : ServiceResponse.Failure(ServiceError.NotInRoom());
     }
 
+    public ServiceResponse Closing(Guid personGuid, string connectionId)
+    {
+        var now = time.GetUtcNow();
+
+        // Step 1 (person lock): find the room of this connection, which only its own person can name.
+        var indexed = people.Update(personGuid, entity => entity.Connections.TryGetValue(connectionId, out var roomId) ? roomId : null, out var index);
+        if (!indexed)
+        {
+            return ServiceResponse.Failure(ServiceError.NoSession());
+        }
+
+        if (index is null)
+        {
+            return ServiceResponse.Failure(ServiceError.NotInRoom());
+        }
+
+        // Step 2 (room lock): only a page that holds the member's last connection is closing them; another tab or device keeps them here.
+        var found = roomUpdater.Update(index, room =>
+        {
+            if (!room.MemberGuids.Contains(personGuid))
+            {
+                return RoomUpdate.Unchanged(false);
+            }
+
+            var connections = room.MemberConnections.GetValueOrDefault(personGuid);
+            if (connections is not null && connections.Any(other => other != connectionId))
+            {
+                return RoomUpdate.Unchanged(true);
+            }
+
+            return room.ClosingAt.TryAdd(personGuid, now) ? RoomUpdate.Changed(true) : RoomUpdate.Unchanged(true);
+        }, out var member);
+        if (!found)
+        {
+            return ServiceResponse.Failure(ServiceError.RoomNotFound(index));
+        }
+
+        return member ? ServiceResponse.Success() : ServiceResponse.Failure(ServiceError.NotInRoom());
+    }
+
     public PresenceSweepResult SweepPresence()
     {
         var offgrid = new List<PersonOffgridResult>();
@@ -135,17 +175,22 @@ public class PresenceService(
     private PresenceChange ApplyPresence(RoomEntity room, DateTimeOffset now)
     {
         var options = presence.Value;
-        var removed = room.DroppedAt.Where(dropped => now - dropped.Value >= options.RemovalWindow).Select(dropped => dropped.Key).ToList();
+        var closed = ClosedMembers(room, now, options);
+        var removed = room.DroppedAt.Where(dropped => now - dropped.Value >= options.RemovalWindow).Select(dropped => dropped.Key).Union(closed).ToList();
         var ownerAtStart = room.OwnerGuid;
         var roles = new Dictionary<Guid, string>();
         foreach (var guid in removed)
         {
-            roles[guid] = membership.Leave(room, guid, LeaveReason.Timeout).PersonType;
+            // A page that said it was closing left on purpose, so its vote is kept aside like any deliberate leave.
+            roles[guid] = membership.Leave(room, guid, closed.Contains(guid) ? LeaveReason.Deliberate : LeaveReason.Timeout).PersonType;
         }
 
+        // A closing member without a connection is offgrid at once, without waiting for the grace period.
         var lapsed = room.DroppedAt
-            .Where(dropped => now - dropped.Value >= options.GracePeriod && !room.OffgridGuids.Contains(dropped.Key))
+            .Where(dropped => now - dropped.Value >= options.GracePeriod)
             .Select(dropped => dropped.Key)
+            .Union(room.ClosingAt.Keys.Where(guid => !room.MemberConnections.ContainsKey(guid)))
+            .Where(guid => !room.OffgridGuids.Contains(guid))
             .ToList();
         foreach (var guid in lapsed)
         {
@@ -188,6 +233,35 @@ public class PresenceService(
         }
 
         return new PresenceChange(lapsed, removed, newOwner is null ? null : ownerAtStart, newOwner, roles, Disposed: false);
+    }
+
+    /// <summary>
+    /// The closing members whose closing window has passed and who have no connection. An entry whose window passed while the
+    /// member still has a connection (the page stayed open after all), or whose person is no longer a member, is dropped.
+    /// </summary>
+    private static List<Guid> ClosedMembers(RoomEntity room, DateTimeOffset now, PresenceOptions options)
+    {
+        var closed = new List<Guid>();
+        foreach (var (guid, closingAt) in room.ClosingAt.ToList())
+        {
+            if (!room.MemberGuids.Contains(guid))
+            {
+                room.ClosingAt.Remove(guid);
+            }
+            else if (now - closingAt >= options.ClosingWindow)
+            {
+                if (room.MemberConnections.ContainsKey(guid))
+                {
+                    room.ClosingAt.Remove(guid);
+                }
+                else
+                {
+                    closed.Add(guid);
+                }
+            }
+        }
+
+        return closed;
     }
 
     private static bool NobodyOnlineLongEnough(RoomEntity room, DateTimeOffset now, PresenceOptions options)

@@ -13,6 +13,7 @@ public class RoomEntityCopyMapper : IRoomEntityCopyMapper
             MemberGuids = [.. source.MemberGuids],
             MemberConnections = source.MemberConnections.ToDictionary(pair => pair.Key, pair => new HashSet<string>(pair.Value)),
             DroppedAt = new Dictionary<Guid, DateTimeOffset>(source.DroppedAt),
+            ClosingAt = new Dictionary<Guid, DateTimeOffset>(source.ClosingAt),
             OffgridGuids = [.. source.OffgridGuids],
             Roles = new Dictionary<Guid, string>(source.Roles),
             Votes = new Dictionary<Guid, string>(source.Votes),

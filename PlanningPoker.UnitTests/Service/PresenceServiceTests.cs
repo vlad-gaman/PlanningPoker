@@ -781,4 +781,148 @@ public class PresenceServiceTests
 
         Assert.Null(_rooms.Get(roomId));
     }
+
+    // --- closing page ---
+
+    private static readonly TimeSpan Closing = PresenceConstants.ClosingWindow;
+
+    [Fact]
+    public void SweepPresence_ClosingMemberWhoseConnectionDropped_IsOffgridAtOnceWithoutWaitingForTheGracePeriod()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _service.Vote(people[1], "c2", "8");
+        Assert.True(_presence.Closing(people[1], "c2").IsSuccess);
+        _presence.Disconnect(people[1], "c2");
+
+        var sweep = SweepAfter(TimeSpan.FromSeconds(1));
+
+        var offgrid = Assert.Single(sweep.Offgrid);
+        Assert.Equal(people[1], offgrid.Person.Guid);
+        Assert.True(offgrid.Person.IsOffgrid);
+        Assert.Empty(sweep.Removed);
+        Assert.Equal("8", _rooms.Get(roomId)!.Votes[people[1]]);
+    }
+
+    [Fact]
+    public void SweepPresence_ClosingMemberAfterTheClosingWindow_IsRemovedAndTheirVoteKeptAside()
+    {
+        var (roomId, people) = RoomWith(ThreeDevs);
+        _service.Vote(people[2], "c3", "8");
+        _presence.Closing(people[2], "c3");
+        _presence.Disconnect(people[2], "c3");
+        SweepAfter(TimeSpan.FromSeconds(1));
+
+        var sweep = SweepAfter(Closing);
+
+        var removed = Assert.Single(sweep.Removed);
+        Assert.Equal(people[2], removed.Person.Guid);
+        Assert.True(removed.PersonLeft);
+        var room = _rooms.Get(roomId)!;
+        Assert.DoesNotContain(people[2], room.MemberGuids);
+        Assert.Empty(room.ClosingAt);
+        Assert.Equal("8", room.DepartedVotes[people[2]]);
+    }
+
+    [Fact]
+    public void SweepPresence_ClosingMemberBeforeTheClosingWindow_IsNotRemoved()
+    {
+        var (_, people) = RoomWith(TwoDevs);
+        _presence.Closing(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
+
+        var sweep = SweepAfter(Closing - TimeSpan.FromMilliseconds(1));
+
+        Assert.Empty(sweep.Removed);
+    }
+
+    [Fact]
+    public void Join_ReloadAfterClosingWentOffgrid_CancelsTheRemovalAndReportsTheyWereOffgrid()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _presence.Closing(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
+        SweepAfter(TimeSpan.FromSeconds(1));
+
+        var joined = _service.Join(people[1], "c2-new", roomId).Data!;
+
+        Assert.True(joined.WasOffgrid);
+        Assert.Contains(joined.People, person => person.Guid == people[1] && !person.IsOffgrid);
+        Assert.Empty(_rooms.Get(roomId)!.ClosingAt);
+        Assert.Empty(SweepAfter(Window).Removed);
+        Assert.Contains(people[1], _rooms.Get(roomId)!.MemberGuids);
+    }
+
+    [Fact]
+    public void Join_ReloadBeforeTheSweepSawTheClosing_IsNeverAnnouncedOffgrid()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _presence.Closing(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
+
+        var joined = _service.Join(people[1], "c2-new", roomId).Data!;
+
+        Assert.False(joined.WasOffgrid);
+        Assert.Empty(_rooms.Get(roomId)!.ClosingAt);
+        Assert.Empty(SweepAfter(Window).Offgrid);
+    }
+
+    [Fact]
+    public void Closing_WhenTheMemberHasAnotherConnection_DoesNotMarkThem()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _service.Join(people[1], "c2-second", roomId);
+
+        var closing = _presence.Closing(people[1], "c2");
+        _presence.Disconnect(people[1], "c2");
+        var sweep = SweepAfter(Closing * 2);
+
+        Assert.True(closing.IsSuccess);
+        Assert.Empty(_rooms.Get(roomId)!.ClosingAt);
+        Assert.Empty(sweep.Offgrid);
+        Assert.Empty(sweep.Removed);
+    }
+
+    [Fact]
+    public void SweepPresence_ClosingMemberWhoStayedConnected_KeepsTheirPlaceAndClearsTheMark()
+    {
+        var (roomId, people) = RoomWith(TwoDevs);
+        _presence.Closing(people[1], "c2");
+
+        var sweep = SweepAfter(Closing * 2);
+
+        Assert.Empty(sweep.Offgrid);
+        Assert.Empty(sweep.Removed);
+        Assert.Contains(people[1], _rooms.Get(roomId)!.MemberGuids);
+        Assert.Empty(_rooms.Get(roomId)!.ClosingAt);
+    }
+
+    [Fact]
+    public void SweepPresence_ClosingOwner_HandsTheRoomOverWhenTheyGoOffgrid()
+    {
+        var (_, people) = RoomWith(TwoDevs);
+        _presence.Closing(people[0], "c1");
+        _presence.Disconnect(people[0], "c1");
+
+        var sweep = SweepAfter(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(people[1], Assert.Single(sweep.Offgrid).NewOwner!.Guid);
+    }
+
+    [Fact]
+    public void Closing_UnknownConnection_ReturnsNotInRoom()
+    {
+        var (_, people) = RoomWith(TwoDevs);
+
+        var closing = _presence.Closing(people[0], "nope");
+
+        Assert.Equal(ErrorCodes.NotInRoom, Assert.Single(closing.Errors).Code);
+    }
+
+    [Fact]
+    public void Closing_UnknownPerson_ReturnsNoSession()
+    {
+        var closing = _presence.Closing(Guid.NewGuid(), "c1");
+
+        Assert.Equal(ErrorCodes.NoSession, Assert.Single(closing.Errors).Code);
+    }
 }

@@ -27,6 +27,7 @@ public static class RateLimitingExtensions
             limiter.AddPolicy(RateLimitingConstants.MeUpdatePolicy, context => Partition(context, options => options.MeUpdate));
             limiter.AddPolicy(RateLimitingConstants.RoomCreatePolicy, context => Partition(context, options => options.RoomCreate));
             limiter.AddPolicy(RateLimitingConstants.RoomLookupPolicy, context => Partition(context, options => options.RoomLookup));
+            limiter.AddPolicy(RateLimitingConstants.PresenceClosingPolicy, context => Partition(context, options => options.PresenceClosing));
             limiter.OnRejected = WriteRejection;
         });
         return services;

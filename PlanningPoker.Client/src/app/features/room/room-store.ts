@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
+import { ClosingBeacon } from '../../core/closing-beacon';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { PersonDefaultsService } from '../../core/person-defaults.service';
@@ -72,7 +73,10 @@ export class RoomStore {
   private readonly meService = inject(MeService);
   private readonly rooms = inject(RoomsService);
   private readonly personDefaults = inject(PersonDefaultsService);
+  private readonly closingBeacon = inject(ClosingBeacon);
   private stopWatchingTabs: (() => void) | null = null;
+  /** Stops the page-hide watch that tells the server this page is closing; only a shown room has one. */
+  private stopWatchingPage: (() => void) | null = null;
 
   private readonly peopleState = signal<Person[]>([]);
   private readonly ownerState = signal<string | null>(null);
@@ -228,6 +232,8 @@ export class RoomStore {
     this.stopWatchingTabs?.();
     this.stopWatchingTabs = this.tabLock.onTaken(roomId, () => void this.giveUpToAnotherTab(gen));
     this.tabLock.claim(roomId);
+    this.stopWatchingPage?.();
+    this.stopWatchingPage = this.closingBeacon.watch(() => this.hub.connectionId);
     this.phaseState.set('joined');
   }
 
@@ -287,6 +293,8 @@ export class RoomStore {
   private async teardown(): Promise<void> {
     this.stopWatchingTabs?.();
     this.stopWatchingTabs = null;
+    this.stopWatchingPage?.();
+    this.stopWatchingPage = null;
     this.open = false;
     this.connectedState.set(true);
     this.bound = false;
