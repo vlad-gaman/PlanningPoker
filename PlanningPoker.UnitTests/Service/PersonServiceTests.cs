@@ -4,6 +4,7 @@ using PlanningPoker.Repository.Models;
 using PlanningPoker.Repository.Repositories;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Services;
+using PlanningPoker.UnitTests.Fakes;
 
 namespace PlanningPoker.UnitTests.Service;
 
@@ -79,6 +80,21 @@ public class PersonServiceTests
         Assert.Equal("Ann", response.Data.Person.Name);
         Assert.Equal(SessionTokenConstants.EncodedLength, response.Data.SessionToken.Length);
         Assert.Same(_repository.Get(response.Data.Person.Guid), _repository.GetBySessionToken(response.Data.SessionToken));
+    }
+
+    [Fact]
+    public void Upsert_AddFails_ReturnsPersonNotStoredAndStoresNothing()
+    {
+        var repository = new InterleavingPersonRepository(_repository) { RejectAdds = true };
+        var personMapper = new PersonMapper();
+        var service = new PersonService(repository, personMapper, new PersonSessionMapper(personMapper), new PersonEntityMapper(_time, new SessionTokenGenerator()), _time);
+
+        var response = service.Upsert(null, "Ann", "dev");
+
+        Assert.False(response.IsSuccess);
+        Assert.Null(response.Data);
+        Assert.Equal(ErrorCodes.PersonNotStored, Assert.Single(response.Errors).Code);
+        Assert.Empty(_repository.Guids());
     }
 
     [Fact]

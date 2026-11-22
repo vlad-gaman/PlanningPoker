@@ -38,6 +38,12 @@ public class ServiceError
         return Create(ErrorCodes.PersonNotFound, "The person is not in the room.", ("room_id", roomId), ("person_id", personId.ToString()));
     }
 
+    /// <summary>The single definition of the error returned when a new person could not be stored.</summary>
+    public static ServiceError PersonNotStored()
+    {
+        return Create(ErrorCodes.PersonNotStored, "The person could not be stored. Try again.");
+    }
+
     /// <summary>The single definition of the error returned when a connection is not a member of any room.</summary>
     public static ServiceError NotInRoom()
     {

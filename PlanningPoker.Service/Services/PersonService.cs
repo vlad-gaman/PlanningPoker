@@ -40,7 +40,11 @@ public class PersonService(
         }
 
         var created = entityMapper.Map(Guid.NewGuid(), trimmedName, personType);
-        repository.TryAdd(created);
+        if (!repository.TryAdd(created))
+        {
+            return ServiceResponse<PersonSession>.Failure(ServiceError.PersonNotStored());
+        }
+
         return ServiceResponse<PersonSession>.Success(sessionMapper.Map(created));
     }
 }

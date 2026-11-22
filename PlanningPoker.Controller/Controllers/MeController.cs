@@ -36,6 +36,7 @@ public class MeController(
     [EnableRateLimiting(RateLimitingConstants.MeUpdatePolicy)]
     [ProducesResponseType<ApiResponse<PersonResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status415UnsupportedMediaType)]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status429TooManyRequests)]
     public IActionResult Put([FromBody] UpdateMeRequest request)
