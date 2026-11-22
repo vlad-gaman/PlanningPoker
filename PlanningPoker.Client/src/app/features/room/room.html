@@ -1,7 +1,7 @@
 <section class="page room">
   <div class="title">
     <h1>
-      @if (nameWords(); as words) {
+      @if (store.nameWords(); as words) {
         Room {{ namePrefix() }}@for (word of words; track $index) {_@if (word.linkable) {<a class="word-link" [href]="searchUrl(word)" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Search Google for ' + word.text">{{ word.text }}</a>} @else {{{ word.text }}}}
       } @else {
         Room {{ id() }}
@@ -23,11 +23,11 @@
     </button>
   </div>
 
-  @if (error(); as message) {
+  @if (store.error(); as message) {
     <p class="form-error" role="alert">{{ message }}</p>
   }
 
-  @switch (phase()) {
+  @switch (store.phase()) {
     @case ('name') {
       <form class="name-entry panel" [formGroup]="form" (ngSubmit)="submitName()">
         <h2>Join this room</h2>
@@ -41,7 +41,7 @@
     @case ('joined') {
       <div class="compact-bar">
         <p class="compact-progress" role="status">
-          <b>{{ voterCount() }}</b> of {{ voterTotal() }} voted
+          <b>{{ store.voterCount() }}</b> of {{ store.voterTotal() }} voted
           @if (store.roundStartedAt(); as startedAt) {
             · <app-round-timer [startedAt]="startedAt" />
           }
@@ -61,7 +61,7 @@
                     type="radio"
                     name="role"
                     [value]="option.value"
-                    [checked]="myPersonType() === option.value"
+                    [checked]="store.myPersonType() === option.value"
                     (change)="changeRole(option.value)"
                   />
                   {{ option.label }}
@@ -81,7 +81,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
               <span>Clear votes</span>
             </button>
-            @if (isOwner()) {
+            @if (store.isOwner()) {
               <button type="button" class="act" (click)="openSettings()">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
                 <span>Settings</span>
@@ -100,7 +100,7 @@
               <app-card-picker
                 [cards]="store.cards()"
                 [selected]="store.myMark()"
-                [disabled]="store.votingFinished() || isObserver() || !store.connected()"
+                [disabled]="store.votingFinished() || store.isObserver() || !store.connected()"
                 (markSelected)="store.vote($event)"
               />
             </div>

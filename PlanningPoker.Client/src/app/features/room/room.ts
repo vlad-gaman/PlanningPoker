@@ -14,17 +14,10 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { ErrorPopupService } from '../../core/error-popup.service';
-import { FlashMessageService } from '../../core/flash-message.service';
-import { MeService } from '../../core/me.service';
 import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
-import { RoomsService } from '../../core/rooms.service';
-import { ERROR_CODES } from '../../models/api';
 import { PERSON_TYPES, Person, PersonType } from '../../models/person';
 import { RoomNameWord } from '../../models/room';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
@@ -33,13 +26,12 @@ import { createPersonForm } from '../shared/person-form';
 import { CardPicker, cardArt, cardImage, cardText } from './card-picker/card-picker';
 import { EsendexCardArt } from './card-picker/esendex-card-art';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
+import { shouldStartFireworks } from './fireworks/should-start-fireworks';
 import { Results } from './results/results';
 import { RoundHistory } from './round-history/round-history';
 import { RoundTimer } from './round-timer/round-timer';
 import { isLolle } from './lolle';
-import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
-
-type Phase = 'loading' | 'name' | 'joined';
+import { HIDDEN_MARK, RoomStore } from './room-store';
 
 const DISCONNECTED_MESSAGE = 'You are disconnected from the server. Trying to reconnect…';
 
@@ -64,13 +56,9 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   readonly id = input.required<string>();
 
   protected readonly store = inject(RoomStore);
-  private readonly meService = inject(MeService);
-  private readonly router = inject(Router);
-  private readonly flash = inject(FlashMessageService);
   private readonly dialog = inject(MatDialog);
   private readonly roomDefaults = inject(RoomDefaultsService);
   private readonly personDefaults = inject(PersonDefaultsService);
-  private readonly rooms = inject(RoomsService);
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly cardImage = cardImage;
@@ -79,47 +67,17 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   protected roleShort(type: string): string {
     return { dev: 'DEV', test: 'QA', sre: 'SRE', obs: 'OBS' }[type] ?? type;
   }
-  protected readonly phase = signal<Phase>('loading');
-  protected readonly error = signal<string | null>(null);
   protected readonly copied = signal<'name' | 'link' | null>(null);
-  /** The words of a fun room name, once the existence check has returned them; null for any other name. */
-  protected readonly nameWords = signal<RoomNameWord[] | null>(null);
   /** The number a fun room name starts with, shown before its linked words. */
   protected readonly namePrefix = computed(() => this.id().split('_')[0]);
 
   protected readonly form = createPersonForm(inject(FormBuilder));
 
-  /**
-   * Advances whenever an enter, a join, a switch or a leave starts. Each async step checks it after its await and
-   * stops if a newer step has started, so a stale step never joins a room or changes the phase.
-   */
-  private generation = 0;
-
   private readonly fireworks = viewChild(FireworksOverlay);
   private seenReveals = 0;
 
-  private readonly myGuid = signal<string | null>(null);
-  protected readonly isObserver = computed(
-    () => this.store.people().find((person) => person.guid === this.myGuid())?.personType === 'obs',
-  );
-
-  protected readonly myPersonType = computed(
-    () => this.store.people().find((person) => person.guid === this.myGuid())?.personType ?? null,
-  );
-  /** People who have cast a vote this round; observers never vote. */
-  protected readonly voterCount = computed(
-    () =>
-      this.store
-        .people()
-        .filter((person) => person.personType !== 'obs' && this.store.votes()[person.guid] !== undefined).length,
-  );
-  /** People who can vote this round, for the "3 of 5 voted" summary of the compact layouts. */
-  protected readonly voterTotal = computed(
-    () => this.store.people().filter((person) => person.personType !== 'obs').length,
-  );
   /** PROTOTYPE (compact layout C): which of its two views shows. Follows the round: vote while open, table once revealed. */
   protected readonly compactView = signal<'vote' | 'table'>('vote');
-  protected readonly isOwner = computed(() => this.myGuid() !== null && this.myGuid() === this.store.ownerGuid());
 
   constructor() {
     const remembered = this.personDefaults.load();
@@ -128,14 +86,14 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     }
     const popup = inject(ErrorPopupService);
     effect(() => {
-      const message = this.error();
+      const message = this.store.error();
       if (message) {
         popup.show(message);
       }
     });
     // Losing the server shows a popup that stays until the connection is back.
     effect(() => {
-      if (this.phase() !== 'joined') {
+      if (this.store.phase() !== 'joined') {
         return;
       }
       if (this.store.connected()) {
@@ -156,25 +114,24 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       this.seenReveals = reveals;
       if (!statistics) {
         overlay?.stop();
-      } else if (isNewReveal && statistics.consensus && showFireworks) {
+      } else if (shouldStartFireworks({ isNewReveal, consensus: statistics.consensus, showFireworks })) {
         overlay?.start();
       }
     });
   }
 
   async ngOnInit(): Promise<void> {
-    await this.enter();
+    await this.store.enter(this.id());
   }
 
-  /** The router reuses this component when only the room id changes, so leave the old room and enter the new one. */
+  /** The router reuses this component when only the room id changes, so the store leaves the old room and enters the new one. */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['id'] && !changes['id'].firstChange) {
-      void this.switchRoom();
+      void this.store.enter(this.id());
     }
   }
 
   ngOnDestroy(): void {
-    this.generation++;
     void this.store.close();
   }
 
@@ -183,21 +140,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       this.form.markAllAsTouched();
       return;
     }
-    const gen = this.generation;
-    this.error.set(null);
-    try {
-      const request = this.form.getRawValue();
-      this.myGuid.set((await firstValueFrom(this.meService.update(request))).guid);
-      this.personDefaults.save(request);
-    } catch (error) {
-      if (gen === this.generation) {
-        this.error.set(errorMessage(error));
-      }
-      return;
-    }
-    if (gen === this.generation) {
-      await this.join(gen);
-    }
+    await this.store.submitName(this.form.getRawValue());
   }
 
   protected clearVotes(): void {
@@ -226,7 +169,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
 
   /** Offgrid people look disabled; so does your own tile while your connection to the server is down. */
   protected isOffgrid(person: Person): boolean {
-    return person.isOffgrid === true || (!this.store.connected() && person.guid === this.myGuid());
+    return person.isOffgrid === true || (!this.store.connected() && person.guid === this.store.me());
   }
 
   protected changeRole(personType: PersonType): void {
@@ -240,7 +183,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     }
     const data: RoomSettingsDialogData = {
       configuration,
-      candidates: this.store.people().filter((person) => person.guid !== this.myGuid()),
+      candidates: this.store.people().filter((person) => person.guid !== this.store.me()),
       save: async (updated) => {
         await this.store.updateConfiguration(updated);
         this.roomDefaults.saveConfiguration(updated);
@@ -251,7 +194,6 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   }
 
   protected leave(): void {
-    this.generation++;
     void this.store.leaveRoom();
   }
 
@@ -299,98 +241,9 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     return this.personTypes.find((option) => option.value === type)?.label ?? type;
   }
 
-  private async switchRoom(): Promise<void> {
-    // Supersede the enter or join of the old room before waiting on the store, so they stop when they resume.
-    const gen = ++this.generation;
-    await this.store.close();
-    if (gen !== this.generation) {
-      return;
-    }
-    this.error.set(null);
-    this.phase.set('loading');
-    await this.enter();
-  }
-
   /** The Google search a word of a fun room name links to. */
   protected searchUrl(word: RoomNameWord): string {
     return `https://www.google.com/search?q=${encodeURIComponent(word.text.toLowerCase())}+meaning`;
-  }
-
-  /** Joins straight away when the visitor has a name, otherwise asks for one. */
-  private async enter(): Promise<void> {
-    const gen = ++this.generation;
-    if (!(await this.checkRoomExists(gen))) {
-      return;
-    }
-    try {
-      const me = await firstValueFrom(this.meService.get());
-      if (gen !== this.generation) {
-        return;
-      }
-      if (me.name) {
-        this.myGuid.set(me.guid);
-        await this.join(gen);
-        return;
-      }
-    } catch (error) {
-      if (gen !== this.generation) {
-        return;
-      }
-      if (!(error instanceof ApiRequestError && error.hasCode(ERROR_CODES.noSession))) {
-        this.error.set(errorMessage(error));
-      }
-    }
-    this.phase.set('name');
-  }
-
-  /**
-   * Checks the room exists before asking for a name or joining. A missing room sends the visitor home with a message;
-   * any other failure of the check is ignored, as joining reports it. Returns false when entering should stop.
-   */
-  private async checkRoomExists(gen: number): Promise<boolean> {
-    let gone: boolean;
-    try {
-      const result = await firstValueFrom(this.rooms.exists(this.id()));
-      gone = !result.exists;
-      if (gen === this.generation) {
-        this.nameWords.set(result.nameWords ?? null);
-      }
-    } catch (error) {
-      gone = isRoomGone(error);
-    }
-    if (gen !== this.generation) {
-      return false;
-    }
-    if (gone) {
-      this.flash.show(ROOM_NOT_FOUND_MESSAGE);
-      await this.router.navigateByUrl('/');
-      return false;
-    }
-    return true;
-  }
-
-  private async join(gen: number): Promise<void> {
-    try {
-      await this.store.join(this.id(), this.myGuid());
-      if (gen === this.generation) {
-        this.phase.set('joined');
-      }
-    } catch (error) {
-      if (gen !== this.generation) {
-        return;
-      }
-      await this.store.close();
-      if (gen !== this.generation) {
-        return;
-      }
-      if (isRoomGone(error)) {
-        this.flash.show(ROOM_NOT_FOUND_MESSAGE);
-        await this.router.navigateByUrl('/');
-        return;
-      }
-      this.error.set(errorMessage(error));
-      this.phase.set('name');
-    }
   }
 }
 

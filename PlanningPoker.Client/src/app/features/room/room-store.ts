@@ -1,13 +1,17 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
 import { FlashMessageService } from '../../core/flash-message.service';
+import { MeService } from '../../core/me.service';
+import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { ResultsViewService } from '../../core/results-view.service';
 import { RoomTabLock } from '../../core/room-tab-lock';
+import { RoomsService } from '../../core/rooms.service';
 import { ERROR_CODES, ROOM_ID_FIELD } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
-import { Person, PersonType } from '../../models/person';
+import { Person, PersonType, UpdateMeRequest } from '../../models/person';
 import { orderPeople } from './order-people';
 import {
   CardOption,
@@ -22,6 +26,7 @@ import {
   RoomConfigurationUpdatedEvent,
   RoomConfiguration,
   RoomDisposedEvent,
+  RoomNameWord,
   RoundResult,
   VoteCastEvent,
   VoteStatistics,
@@ -53,6 +58,9 @@ export function isRoomGone(error: unknown): boolean {
   );
 }
 
+/** Where entering a room has got to: checking it, asking for a name, or in. */
+export type RoomPhase = 'loading' | 'name' | 'joined';
+
 /** Live state of the room the user is in, fed by the join response and the hub events. */
 @Injectable()
 export class RoomStore {
@@ -61,6 +69,9 @@ export class RoomStore {
   private readonly flash = inject(FlashMessageService);
   private readonly tabLock = inject(RoomTabLock);
   private readonly resultsView = inject(ResultsViewService);
+  private readonly meService = inject(MeService);
+  private readonly rooms = inject(RoomsService);
+  private readonly personDefaults = inject(PersonDefaultsService);
   private stopWatchingTabs: (() => void) | null = null;
 
   private readonly peopleState = signal<Person[]>([]);
@@ -77,16 +88,18 @@ export class RoomStore {
   private readonly roundStartedAtState = signal<number | null>(null);
   private readonly roundHistoryState = signal<RoundResult[]>([]);
   private readonly connectedState = signal(true);
+  private readonly meState = signal<string | null>(null);
+  private readonly phaseState = signal<RoomPhase>('loading');
+  private readonly errorState = signal<string | null>(null);
+  private readonly nameWordsState = signal<RoomNameWord[] | null>(null);
 
   private roomId = '';
-  /** The guid of the person using this client, when the caller knows it; only an Operator removal of that person sends them home. */
-  private myGuid: string | null = null;
   private bound = false;
   /** False after close(); a reconnect only rejoins while the store is open. */
   private open = false;
   /**
-   * Advances on every join() and close(). A join or rejoin that resumes after an await and finds a different value was
-   * superseded by a newer join or by close(), so it stops quietly instead of touching the state.
+   * Advances whenever an enter, a submitted name, a join, a leave or a close starts. Each async step checks it after
+   * its await and stops quietly if a newer one has started, so a stale step never joins a room or changes the state.
    */
   private generation = 0;
   /** While a JoinRoom call is in flight, hub events are queued here and replayed after its snapshot is applied. */
@@ -94,6 +107,14 @@ export class RoomStore {
 
   /** False while the connection to the server is down (trying to get back) or closed. */
   readonly connected = this.connectedState.asReadonly();
+  /** The guid of the person using this client; null until enter() or submitName() learns it. */
+  readonly me = this.meState.asReadonly();
+  /** Entering the room: `loading` while checking, `name` while asking for a name, `joined` once in. */
+  readonly phase = this.phaseState.asReadonly();
+  /** Why entering stopped short of joining, for the name form; null when there is nothing to report. */
+  readonly error = this.errorState.asReadonly();
+  /** The words of a fun room name, once the existence check has returned them; null for any other name. */
+  readonly nameWords = this.nameWordsState.asReadonly();
   readonly people = this.peopleState.asReadonly();
   /** `people` with observers after voters, for the participants table only. */
   readonly orderedPeople = computed(() => orderPeople(this.peopleState()));
@@ -121,10 +142,84 @@ export class RoomStore {
    */
   readonly revealCount = this.revealCountState.asReadonly();
 
-  async join(roomId: string, myGuid: string | null = null): Promise<void> {
+  private readonly myPerson = computed(() => this.peopleState().find((person) => person.guid === this.meState()));
+  readonly isOwner = computed(() => this.meState() !== null && this.meState() === this.ownerState());
+  readonly isObserver = computed(() => this.myPerson()?.personType === 'obs');
+  readonly myPersonType = computed(() => this.myPerson()?.personType ?? null);
+  /** People who have cast a vote this round; observers never vote. */
+  readonly voterCount = computed(
+    () =>
+      this.peopleState().filter((person) => person.personType !== 'obs' && this.votesState()[person.guid] !== undefined)
+        .length,
+  );
+  /** People who can vote this round, for the "3 of 5 voted" summary of the compact layouts. */
+  readonly voterTotal = computed(() => this.peopleState().filter((person) => person.personType !== 'obs').length);
+
+  /**
+   * Gets into a room: leaves the one shown before, checks this one exists, then joins straight away when the visitor
+   * has a name, or asks for one (phase `name`). A missing room sends the visitor home with a message.
+   */
+  async enter(roomId: string): Promise<void> {
     const gen = ++this.generation;
+    this.errorState.set(null);
+    this.phaseState.set('loading');
+    this.nameWordsState.set(null);
+    if (this.open) {
+      await this.teardown();
+      if (gen !== this.generation) {
+        return;
+      }
+    }
     this.roomId = roomId;
-    this.myGuid = myGuid;
+    if (!(await this.checkRoomExists(roomId, gen))) {
+      return;
+    }
+    let me: Person | null = null;
+    try {
+      me = await firstValueFrom(this.meService.get());
+    } catch (error) {
+      if (!(error instanceof ApiRequestError && error.hasCode(ERROR_CODES.noSession))) {
+        await this.fail(error, gen, 'form');
+        return;
+      }
+    }
+    if (gen !== this.generation) {
+      return;
+    }
+    if (me?.name) {
+      this.meState.set(me.guid);
+      await this.joinOrFail(roomId, gen);
+      return;
+    }
+    this.phaseState.set('name');
+  }
+
+  /** Saves the name and role the visitor gave, remembers them for next time, and joins the room. */
+  async submitName(request: UpdateMeRequest): Promise<void> {
+    const gen = ++this.generation;
+    this.errorState.set(null);
+    try {
+      const me = await firstValueFrom(this.meService.update(request));
+      if (gen === this.generation) {
+        this.meState.set(me.guid);
+      }
+      this.personDefaults.save(request);
+    } catch (error) {
+      await this.fail(error, gen, 'form');
+      return;
+    }
+    if (gen === this.generation) {
+      await this.joinOrFail(this.roomId, gen);
+    }
+  }
+
+  /** Connects and joins the room as the person `me` stands for; throws when the server refuses. */
+  async join(roomId: string): Promise<void> {
+    await this.connect(roomId, ++this.generation);
+  }
+
+  private async connect(roomId: string, gen: number): Promise<void> {
+    this.roomId = roomId;
     this.open = true;
     await this.hub.connect();
     if (gen !== this.generation) {
@@ -138,6 +233,7 @@ export class RoomStore {
     this.stopWatchingTabs?.();
     this.stopWatchingTabs = this.tabLock.onTaken(roomId, () => void this.giveUpToAnotherTab(gen));
     this.tabLock.claim(roomId);
+    this.phaseState.set('joined');
   }
 
   async leave(): Promise<void> {
@@ -150,7 +246,7 @@ export class RoomStore {
    * network) keeps them in the room as offgrid, so leaving on purpose has to say so.
    */
   async leaveRoom(): Promise<void> {
-    await this.send(this.generation, 'LeaveRoom');
+    await this.send(++this.generation, 'LeaveRoom');
     await this.leave();
   }
 
@@ -190,6 +286,10 @@ export class RoomStore {
   /** Drops the hub connection and clears the room state; leaving the page triggers this too. */
   async close(): Promise<void> {
     this.generation++;
+    await this.teardown();
+  }
+
+  private async teardown(): Promise<void> {
     this.stopWatchingTabs?.();
     this.stopWatchingTabs = null;
     this.open = false;
@@ -303,7 +403,7 @@ export class RoomStore {
     try {
       await this.joinRoom(gen);
     } catch (error) {
-      await this.abandon(error, gen);
+      await this.fail(error, gen, 'rejoin');
     }
   }
 
@@ -316,13 +416,65 @@ export class RoomStore {
     await this.leave();
   }
 
-  /** Explains why the room cannot be used any more and leaves it. */
-  private async abandon(error: unknown, gen: number): Promise<void> {
+  /** Checks the room exists before asking for a name or joining. Returns false when entering should stop. */
+  private async checkRoomExists(roomId: string, gen: number): Promise<boolean> {
+    let gone: boolean;
+    try {
+      const result = await firstValueFrom(this.rooms.exists(roomId));
+      gone = !result.exists;
+      if (gen === this.generation) {
+        this.nameWordsState.set(result.nameWords ?? null);
+      }
+    } catch (error) {
+      // Any other failure of the check is ignored, as joining reports it.
+      gone = isRoomGone(error);
+    }
+    if (gen !== this.generation) {
+      return false;
+    }
+    if (gone) {
+      await this.roomGone();
+      return false;
+    }
+    return true;
+  }
+
+  private async joinOrFail(roomId: string, gen: number): Promise<void> {
+    try {
+      await this.connect(roomId, gen);
+    } catch (error) {
+      await this.fail(error, gen, 'form');
+    }
+  }
+
+  /**
+   * The one place a failed step ends up. A room that is gone flashes a message and goes home. Otherwise a rejoin
+   * after a reconnect flashes the reason and goes home, while the name form shows it and stays for another try.
+   */
+  private async fail(error: unknown, gen: number, where: 'rejoin' | 'form'): Promise<void> {
     if (gen !== this.generation) {
       return;
     }
-    this.flash.show(isRoomGone(error) ? ROOM_NOT_FOUND_MESSAGE : errorMessage(error));
-    await this.leave();
+    if (this.open) {
+      await this.teardown();
+      if (gen !== this.generation) {
+        return;
+      }
+    }
+    if (isRoomGone(error)) {
+      await this.roomGone();
+    } else if (where === 'rejoin') {
+      this.flash.show(errorMessage(error));
+      await this.router.navigateByUrl('/');
+    } else {
+      this.errorState.set(errorMessage(error));
+      this.phaseState.set('name');
+    }
+  }
+
+  private async roomGone(): Promise<void> {
+    this.flash.show(ROOM_NOT_FOUND_MESSAGE);
+    await this.router.navigateByUrl('/');
   }
 
   /** Runs a hub command; returns false after showing why it failed. A result that arrives after close() is dropped. */
@@ -412,7 +564,7 @@ export class RoomStore {
   private personExited(event: PersonExitedEvent): void {
     const guid = event.person.guid;
     // Only the removed person is told it was an operator; everyone else sees an ordinary exit.
-    if (event.reason === EVENT_REASONS.removedByOperator && guid === this.myGuid) {
+    if (event.reason === EVENT_REASONS.removedByOperator && guid === this.meState()) {
       this.flash.show(REMOVED_BY_OPERATOR_MESSAGE);
       void this.leave();
       return;
