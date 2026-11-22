@@ -36,6 +36,7 @@ import { FireworksOverlay } from './fireworks/fireworks-overlay';
 import { Results } from './results/results';
 import { RoundHistory } from './round-history/round-history';
 import { RoundTimer } from './round-timer/round-timer';
+import { isLolle } from './lolle';
 import { HIDDEN_MARK, ROOM_NOT_FOUND_MESSAGE, RoomStore, isRoomGone } from './room-store';
 
 type Phase = 'loading' | 'name' | 'joined';
@@ -282,6 +283,11 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       hidden: false,
       revealed: true,
     };
+  }
+
+  /** Whether a person gets Lolle's rose crown and wand. */
+  protected isLolle(person: Person): boolean {
+    return isLolle(person.name);
   }
 
   /** The letter an avatar shows. */

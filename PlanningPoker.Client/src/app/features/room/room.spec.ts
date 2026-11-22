@@ -94,6 +94,33 @@ describe('Room', () => {
     expect(element.textContent).not.toContain('(owner)');
   });
 
+  it("gives Lolle a rose crown and a wand, but only a wand beside the owner's crown", async () => {
+    const lolle = { guid: 'g-lolle', name: 'Lolle', personType: 'obs' } as const;
+    me.get.mockReturnValue(of(ANN));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, lolle] });
+
+    const { element } = await render();
+
+    const rows = Array.from(element.querySelectorAll('.person'));
+    const [ann, lolleRow] = rows;
+    expect(ann.querySelector('.crown:not(.lolle-crown)')).not.toBeNull();
+    expect(ann.querySelector('.lolle-crown, .wand')).toBeNull();
+    expect(lolleRow.querySelector('.lolle-crown')).not.toBeNull();
+    expect(lolleRow.querySelector('.wand')).not.toBeNull();
+  });
+
+  it('keeps only the owner crown on Lolle when Lolle owns the room, still with the wand', async () => {
+    const lolle = { guid: 'g-lolle', name: 'lolle', personType: 'dev' } as const;
+    me.get.mockReturnValue(of(lolle));
+    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [lolle], ownerGuid: lolle.guid });
+
+    const { element } = await render();
+
+    expect(element.querySelectorAll('.person .crown')).toHaveLength(1);
+    expect(element.querySelector('.person .lolle-crown')).toBeNull();
+    expect(element.querySelector('.person .wand')).not.toBeNull();
+  });
+
   it('links each word of a fun room name to a Google search, except words that are not linkable', async () => {
     me.get.mockReturnValue(of(ANN));
     rooms.exists.mockReturnValue(

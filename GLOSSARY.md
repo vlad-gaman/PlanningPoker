@@ -28,6 +28,10 @@ _Avoid_: Flip, show-down
 A small red panda that peeks out once, at a tilt with its head always above its body, from behind an edge during a fireworks show: the top of a card or panel in the room, or the bottom or a side of the window. It stays a few seconds and then slides back, so it is only seen when the room's fireworks run. Clicking it opens a Google search in a new tab about why fireworks harm red pandas. It is a surprise: nothing in the app mentions it, and it has no setting of its own.
 _Avoid_: Mascot, easter egg
 
+**Lolle's regalia**:
+A rose crown with a gem and a wand that a person named `Lolle` (ignoring case and surrounding spaces) wears on their avatar, in any role and whether online or offgrid. If they are also the owner they keep the owner's gold crown instead of the rose one, and still get the wand. It is shown to everyone and decided from the name alone. It is a surprise: nothing in the app mentions it, and it has no setting of its own.
+_Avoid_: Easter egg, badge
+
 **Round timer**:
 The time elapsed since the room's last reveal, clear or creation. Casting or changing a vote does not reset it.
 _Avoid_: Vote timer, idle timer, activity timer
