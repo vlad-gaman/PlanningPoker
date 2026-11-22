@@ -15,7 +15,10 @@ public sealed class InterleavingPersonRepository(IPersonRepository inner) : IPer
 
     public PersonEntity? GetBySessionToken(string? sessionToken) => inner.GetBySessionToken(sessionToken);
 
-    public bool TryAdd(PersonEntity person) => inner.TryAdd(person);
+    /// <summary>When set, TryAdd fails without storing, as it does when the GUID or token is already taken.</summary>
+    public bool RejectAdds { get; set; }
+
+    public bool TryAdd(PersonEntity person) => !RejectAdds && inner.TryAdd(person);
 
     public bool Remove(Guid guid) => inner.Remove(guid);
 

@@ -16,6 +16,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.RoomNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.PersonNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.RoomIdGenerationFailed] = StatusCodes.Status409Conflict,
+        [ErrorCodes.PersonNotStored] = StatusCodes.Status409Conflict,
         [ErrorCodes.NotRoomOwner] = StatusCodes.Status403Forbidden,
         [ErrorCodes.Forbidden] = StatusCodes.Status403Forbidden,
         [ErrorCodes.AdminInvalidCredentials] = StatusCodes.Status401Unauthorized,

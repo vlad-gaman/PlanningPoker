@@ -16,6 +16,7 @@ public class ApiResponseMapperTests
     [InlineData(ErrorCodes.NoSession, 401)]
     [InlineData(ErrorCodes.Unauthorized, 401)]
     [InlineData(ErrorCodes.NotFound, 404)]
+    [InlineData(ErrorCodes.PersonNotStored, 409)]
     public void GetStatusCode_UsesStatusTable(string code, int expected)
     {
         var response = ServiceResponse.Failure(ServiceError.Create(code, "m"));
