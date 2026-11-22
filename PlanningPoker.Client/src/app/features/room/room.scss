@@ -131,6 +131,39 @@
   filter: drop-shadow(0 1px 2px var(--shadow-color));
 }
 
+// Lolle's crown is the owner's shape in rose with a gem. Rose reads on both themes.
+.lolle-crown {
+  transform: translateX(-50%) rotate(10deg);
+  fill: #f06fa4;
+  stroke: #b02c68;
+
+  .gem {
+    fill: #fff;
+    stroke: #b02c68;
+    stroke-width: 0.8;
+  }
+}
+
+// Lolle's wand leans out from the avatar's lower right, clear of the crown and the vote mark.
+.wand {
+  position: absolute;
+  right: -14px;
+  bottom: -6px;
+  width: 24px;
+  height: 24px;
+  stroke: #8a5a2b;
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 1px 2px var(--shadow-color));
+
+  .star {
+    fill: #f5b82e;
+    stroke: #b8860b;
+    stroke-width: 0.8;
+    stroke-linejoin: round;
+  }
+}
+
 .name {
   max-width: 100%;
   overflow: hidden;
