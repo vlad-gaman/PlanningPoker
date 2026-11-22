@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Time.Testing;
@@ -87,6 +88,32 @@ public class RoomHubPresenceIntegrationTests(FakeClockApiFactory factory) : ICla
         Assert.Equal("5", data.GetProperty("myMark").GetString());
         Assert.False(data.GetProperty("people").EnumerateArray().Single(person => person.GetProperty("name").GetString() == "Bob").GetProperty("isOffgrid").GetBoolean());
         Assert.False((await back).GetProperty("person").GetProperty("isOffgrid").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ClosingBeacon_ShowsTheMemberOffgridAtOnceAndRemovesThemAfterTheClosingWindow()
+    {
+        var ownerCookie = await factory.MintCookie("Ann");
+        var bobCookie = await factory.MintCookie("Bob");
+        var roomId = await factory.CreateRoom(ownerCookie);
+        await using var owner = factory.Connect(ownerCookie);
+        await owner.StartAsync();
+        await owner.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        await using var bob = factory.Connect(bobCookie);
+        await bob.StartAsync();
+        await bob.InvokeAsync<JsonElement>("JoinRoom", roomId);
+        var offgrid = owner.NextEvent("PersonOffgrid", payload => PersonName(payload) == "Bob");
+        var exited = owner.NextEvent("PersonExited", payload => PersonName(payload) == "Bob");
+        var beacon = new HttpRequestMessage(HttpMethod.Post, "/api/presence/closing") { Content = JsonContent.Create(new { connectionId = bob.ConnectionId }) };
+        beacon.Headers.Add("Cookie", bobCookie);
+
+        var response = await factory.CreateClient().SendAsync(beacon);
+        await bob.StopAsync();
+        await AdvanceUntil(offgrid, TimeSpan.FromSeconds(1));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.False(exited.IsCompleted);
+        Assert.Equal("Bob", PersonName(await AdvanceUntil(exited, TimeSpan.FromSeconds(6))));
     }
 
     [Fact]

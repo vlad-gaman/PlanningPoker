@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
+import { ClosingBeacon } from '../../core/closing-beacon';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { PersonDefaultsService } from '../../core/person-defaults.service';
@@ -55,11 +56,20 @@ describe('RoomStore', () => {
   let store: RoomStore;
   let navigate: ReturnType<typeof vi.spyOn>;
   let taken: (() => void) | null;
+  let connectionIdOfClosingPage: (() => string | null) | null;
   const tabLock = { claim: vi.fn(), onTaken: vi.fn() };
+  const stopWatchingPage = vi.fn();
+  const closingBeacon = { watch: vi.fn() };
   const services = enterServices();
 
   beforeEach(async () => {
     hub = fakeHub(JOIN_RESPONSE);
+    connectionIdOfClosingPage = null;
+    stopWatchingPage.mockClear();
+    closingBeacon.watch.mockReset().mockImplementation((connectionId: () => string | null) => {
+      connectionIdOfClosingPage = connectionId;
+      return stopWatchingPage;
+    });
     services.me.get.mockReset().mockReturnValue(of(ANN));
     services.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
     taken = null;
@@ -77,6 +87,7 @@ describe('RoomStore', () => {
         ...services.providers,
         { provide: RoomHubClient, useValue: hub },
         { provide: RoomTabLock, useValue: tabLock },
+        { provide: ClosingBeacon, useValue: closingBeacon },
       ],
     });
     store = TestBed.inject(RoomStore);
@@ -132,6 +143,21 @@ describe('RoomStore', () => {
   it('claims the room for this tab once joined', () => {
     expect(tabLock.claim).toHaveBeenCalledWith('room-1');
     expect(tabLock.onTaken).toHaveBeenCalledWith('room-1', expect.any(Function));
+  });
+
+  it('tells the server with the hub connection id when the page closes, once joined', () => {
+    expect(closingBeacon.watch).toHaveBeenCalledOnce();
+    expect(connectionIdOfClosingPage!()).toBe('connection-1');
+
+    hub.connectionId = 'connection-2';
+
+    expect(connectionIdOfClosingPage!()).toBe('connection-2');
+  });
+
+  it('stops watching the page once the room is closed', async () => {
+    await store.close();
+
+    expect(stopWatchingPage).toHaveBeenCalledOnce();
   });
 
   it('leaves for the home page when another tab takes the room', async () => {

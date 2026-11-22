@@ -23,6 +23,11 @@ export class RoomHubClient {
   private connection?: signalR.HubConnection;
   factory: HubConnectionFactory = defaultHubConnectionFactory;
 
+  /** The server's id for the current connection; null before it started. It changes with every reconnect. */
+  get connectionId(): string | null {
+    return this.connection?.connectionId ?? null;
+  }
+
   async connect(): Promise<void> {
     this.connection ??= this.factory();
     if (this.connection.state === signalR.HubConnectionState.Disconnected) {

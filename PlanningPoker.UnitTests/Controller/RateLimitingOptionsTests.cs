@@ -15,6 +15,7 @@ public class RateLimitingOptionsTests
         Assert.Equal((10, TimeSpan.FromMinutes(1)), (options.MeUpdate.PermitLimit, options.MeUpdate.Window));
         Assert.Equal((10, TimeSpan.FromMinutes(1)), (options.RoomCreate.PermitLimit, options.RoomCreate.Window));
         Assert.Equal((30, TimeSpan.FromMinutes(1)), (options.RoomLookup.PermitLimit, options.RoomLookup.Window));
+        Assert.Equal((60, TimeSpan.FromMinutes(1)), (options.PresenceClosing.PermitLimit, options.PresenceClosing.Window));
         Assert.Equal((10, TimeSpan.FromMinutes(1)), (options.FailedJoin.PermitLimit, options.FailedJoin.Window));
     }
 

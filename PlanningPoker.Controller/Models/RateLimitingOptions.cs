@@ -21,6 +21,9 @@ public class RateLimitingOptions
     /// <summary><c>GET /api/rooms/{id}</c>, which tells whether a room exists.</summary>
     public RateLimitRule RoomLookup { get; set; } = new() { PermitLimit = RateLimitingConstants.RoomLookupLimit };
 
+    /// <summary><c>POST /api/presence/closing</c>, the beacon of a closing page.</summary>
+    public RateLimitRule PresenceClosing { get; set; } = new() { PermitLimit = RateLimitingConstants.PresenceClosingLimit };
+
     /// <summary>Failed <c>JoinRoom</c> calls on the hub; only failures count, so joining rooms that exist is never limited.</summary>
     public RateLimitRule FailedJoin { get; set; } = new() { PermitLimit = RateLimitingConstants.FailedJoinLimit };
 }

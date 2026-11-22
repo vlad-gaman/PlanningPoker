@@ -58,6 +58,7 @@ public class RoomMembership(IRoomRound round) : IRoomMembership
     public bool Return(RoomEntity room, Guid personGuid)
     {
         room.DroppedAt.Remove(personGuid);
+        room.ClosingAt.Remove(personGuid);
         return room.OffgridGuids.Remove(personGuid);
     }
 
@@ -76,6 +77,7 @@ public class RoomMembership(IRoomRound round) : IRoomMembership
     {
         room.MemberConnections.Remove(personGuid);
         room.DroppedAt.Remove(personGuid);
+        room.ClosingAt.Remove(personGuid);
         room.OffgridGuids.Remove(personGuid);
         var personType = room.RoleOf(personGuid);
         if (!room.MemberGuids.Remove(personGuid))

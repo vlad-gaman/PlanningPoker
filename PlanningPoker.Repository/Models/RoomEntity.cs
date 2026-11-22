@@ -25,6 +25,13 @@ public class RoomEntity
     public Dictionary<Guid, DateTimeOffset> DroppedAt { get; set; } = [];
 
     /// <summary>
+    /// When each member's page said it was closing, in UTC. Such a member goes offgrid at the next sweep and is removed once
+    /// the closing window has passed; a join, which a reload makes at once, clears it. Never stored: a restart forgets it.
+    /// </summary>
+    [JsonIgnore]
+    public Dictionary<Guid, DateTimeOffset> ClosingAt { get; set; } = [];
+
+    /// <summary>
     /// Members whose grace period lapsed and who were announced as offgrid. They keep their vote, but the room no longer
     /// waits for them: "everyone voted" is decided over the members not listed here.
     /// </summary>

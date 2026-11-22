@@ -12,6 +12,7 @@ function fakeConnection(invokeResult?: unknown) {
     onreconnecting: vi.fn(),
     onclose: vi.fn(),
     invoke: vi.fn().mockResolvedValue(invokeResult),
+    connectionId: 'abc' as string | null,
   };
 }
 
@@ -27,6 +28,15 @@ describe('RoomHubClient', () => {
     await clientWith(connection).connect();
 
     expect(connection.start).toHaveBeenCalledOnce();
+  });
+
+  it('exposes the id of the current connection, and none before it exists', async () => {
+    const client = clientWith(fakeConnection());
+    expect(client.connectionId).toBeNull();
+
+    await client.connect();
+
+    expect(client.connectionId).toBe('abc');
   });
 
   it('does not restart an already started connection', async () => {
