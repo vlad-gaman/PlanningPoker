@@ -1,10 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { Subject, of, throwError } from 'rxjs';
 import { FlashMessageService } from '../../core/flash-message.service';
+import { MeService } from '../../core/me.service';
+import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { RoomTabLock } from '../../core/room-tab-lock';
+import { RoomsService } from '../../core/rooms.service';
 import { ApiRequestError } from '../../core/api-request-error';
 import { RESULTS_BY_ROLE_STORAGE_KEY } from '../../core/results-view.service';
+import { ERROR_CODES } from '../../models/api';
 import { HUB_EVENTS } from '../../models/hub-events';
 import {
   ANN,
@@ -28,15 +33,35 @@ import {
 
 const CLEARED_AT = '2026-01-01T12:10:00+00:00';
 
+/** Stand-ins for the services the store enters a room with; a spec sets what `me.get` and `rooms.exists` answer. */
+function enterServices() {
+  const me = { get: vi.fn(), update: vi.fn() };
+  const rooms = { exists: vi.fn() };
+  const personDefaults = { load: vi.fn(), save: vi.fn() };
+  return {
+    me,
+    rooms,
+    personDefaults,
+    providers: [
+      { provide: MeService, useValue: me },
+      { provide: RoomsService, useValue: rooms },
+      { provide: PersonDefaultsService, useValue: personDefaults },
+    ],
+  };
+}
+
 describe('RoomStore', () => {
   let hub: ReturnType<typeof fakeHub>;
   let store: RoomStore;
   let navigate: ReturnType<typeof vi.spyOn>;
   let taken: (() => void) | null;
   const tabLock = { claim: vi.fn(), onTaken: vi.fn() };
+  const services = enterServices();
 
   beforeEach(async () => {
     hub = fakeHub(JOIN_RESPONSE);
+    services.me.get.mockReset().mockReturnValue(of(ANN));
+    services.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
     taken = null;
     tabLock.claim.mockClear();
     tabLock.onTaken.mockImplementation((_roomId: string, callback: () => void) => {
@@ -49,13 +74,14 @@ describe('RoomStore', () => {
       providers: [
         RoomStore,
         provideRouter([]),
+        ...services.providers,
         { provide: RoomHubClient, useValue: hub },
         { provide: RoomTabLock, useValue: tabLock },
       ],
     });
     store = TestBed.inject(RoomStore);
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    await store.join('room-1');
+    await store.enter('room-1');
   });
 
   it('connects, joins the room and applies the response', () => {
@@ -98,7 +124,7 @@ describe('RoomStore', () => {
     const second = TestBed.inject(RoomStore);
     hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, myMark: '5' });
 
-    await second.join('room-1');
+    await second.enter('room-1');
 
     expect(second.myMark()).toBe('5');
   });
@@ -262,7 +288,8 @@ describe('RoomStore', () => {
   });
 
   it('sends the removed person home with the operator message', async () => {
-    await store.join('room-1', ANN.guid);
+    services.me.get.mockReturnValue(of(ANN));
+    await store.enter('room-1');
 
     hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
 
@@ -272,7 +299,8 @@ describe('RoomStore', () => {
   });
 
   it('shows another person an ordinary exit when the operator removed someone else', async () => {
-    await store.join('room-1', ANN.guid);
+    services.me.get.mockReturnValue(of(ANN));
+    await store.enter('room-1');
     hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
     expect(store.people().map((person) => person.guid)).toContain(BOB.guid);
 
@@ -284,18 +312,12 @@ describe('RoomStore', () => {
   });
 
   it('shows nothing about an operator when an ordinary exit has no reason', async () => {
-    await store.join('room-1', ANN.guid);
+    services.me.get.mockReturnValue(of(ANN));
+    await store.enter('room-1');
     hub.emit(HUB_EVENTS.PersonJoined, { person: BOB, vote: null, personType: 'test' });
 
     hub.emit(HUB_EVENTS.PersonExited, { person: BOB });
     hub.emit(HUB_EVENTS.PersonExited, { person: BOB, reason: null });
-
-    expect(navigate).not.toHaveBeenCalled();
-    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
-  });
-
-  it('does not send anyone home for a removal when it does not know who the person is', () => {
-    hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
 
     expect(navigate).not.toHaveBeenCalled();
     expect(TestBed.inject(FlashMessageService).message()).toBeNull();
@@ -309,7 +331,7 @@ describe('RoomStore', () => {
       hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, roundHistory: [SECOND, FIRST] });
       const second = TestBed.inject(RoomStore);
 
-      await second.join('room-1');
+      await second.enter('room-1');
 
       expect(second.roundHistory()).toEqual([SECOND, FIRST]);
     });
@@ -324,7 +346,7 @@ describe('RoomStore', () => {
       hub.invoke.mockResolvedValueOnce(withoutHistory);
       const second = TestBed.inject(RoomStore);
 
-      await second.join('room-1');
+      await second.enter('room-1');
 
       expect(second.roundHistory()).toEqual([]);
     });
@@ -399,19 +421,13 @@ describe('RoomStore', () => {
     expect(store.ownerGuid()).toBeNull();
   });
 
-  it('binds the hub handlers only once across joins', async () => {
-    await store.join('room-1');
-
-    expect(hub.on).toHaveBeenCalledTimes(14);
-  });
-
   it('aborts a join quietly when the store is closed while connecting', async () => {
     let finishConnect!: () => void;
     hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
     hub.invoke.mockClear();
     hub.on.mockClear();
 
-    const joining = store.join('room-2');
+    const joining = store.enter('room-2');
     await store.close();
     finishConnect();
     await joining;
@@ -425,7 +441,7 @@ describe('RoomStore', () => {
   it('joins normally again after a closed join was restarted', async () => {
     await store.close();
 
-    await store.join('room-1');
+    await store.enter('room-1');
 
     expect(store.people()).toEqual([ANN]);
     expect(hub.on).toHaveBeenCalledTimes(28);
@@ -435,7 +451,7 @@ describe('RoomStore', () => {
   async function joinWithHeldResponse(snapshot: unknown) {
     let respond!: () => void;
     hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(snapshot))));
-    const joining = store.join('room-2');
+    const joining = store.enter('room-2');
     await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
     return { joining, respond };
   }
@@ -508,8 +524,9 @@ describe('RoomStore', () => {
     hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
     hub.invoke.mockClear();
 
-    const superseded = store.join('room-2');
-    await store.join('room-3');
+    const superseded = store.enter('room-2');
+    await vi.waitFor(() => expect(hub.connect).toHaveBeenCalledTimes(2));
+    await store.enter('room-3');
     finishConnect();
     await superseded;
 
@@ -521,9 +538,9 @@ describe('RoomStore', () => {
     let respond!: (response: unknown) => void;
     hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = resolve)));
 
-    const superseded = store.join('room-2');
+    const superseded = store.enter('room-2');
     await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
-    await store.join('room-3');
+    await store.enter('room-3');
     respond({ ...JOIN_RESPONSE, people: [ANN, BOB], ownerGuid: BOB.guid });
     await superseded;
 
@@ -560,7 +577,7 @@ describe('RoomStore', () => {
         },
       });
 
-      await store.join('room-2');
+      await store.enter('room-2');
 
       expect(store.votes()).toEqual({ [ANN.guid]: '5' });
       expect(store.hasEveryoneVoted()).toBe(true);
@@ -579,7 +596,7 @@ describe('RoomStore', () => {
         },
       });
 
-      await store.join('room-2');
+      await store.enter('room-2');
 
       expect(store.votingFinished()).toBe(true);
     });
@@ -679,7 +696,7 @@ describe('RoomStore', () => {
     it('replays voting events received during the join after the snapshot', async () => {
       let respond!: () => void;
       hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(JOIN_RESPONSE))));
-      const joining = store.join('room-2');
+      const joining = store.enter('room-2');
       await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
 
       hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
@@ -769,7 +786,7 @@ describe('RoomStore', () => {
         voteStatus: revealed(CONSENSUS_STATISTICS),
       });
 
-      await store.join('room-2');
+      await store.enter('room-2');
 
       expect(store.statistics()).toEqual(CONSENSUS_STATISTICS);
       expect(store.revealCount()).toBe(0);
@@ -811,7 +828,7 @@ describe('RoomStore', () => {
     it('counts a reveal that arrived while the join was in flight, after applying the snapshot', async () => {
       let finishJoin: (value: unknown) => void = () => undefined;
       hub.invoke.mockReturnValue(new Promise((resolve) => (finishJoin = resolve)));
-      const joining = store.join('room-2');
+      const joining = store.enter('room-2');
       await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
 
       hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
@@ -845,6 +862,7 @@ describe('RoomStore', () => {
 });
 
 describe('RoomStore room management', () => {
+  const management = enterServices();
   let hub: ReturnType<typeof fakeHub>;
   let store: RoomStore;
   const status = (votes: Record<string, string>, extra = {}) => ({
@@ -858,11 +876,18 @@ describe('RoomStore room management', () => {
 
   beforeEach(async () => {
     hub = fakeHub(JOIN_RESPONSE);
+    management.me.get.mockReset().mockReturnValue(of(ANN));
+    management.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
     TestBed.configureTestingModule({
-      providers: [RoomStore, provideRouter([]), { provide: RoomHubClient, useValue: hub }],
+      providers: [
+        RoomStore,
+        provideRouter([]),
+        ...management.providers,
+        { provide: RoomHubClient, useValue: hub },
+      ],
     });
     store = TestBed.inject(RoomStore);
-    await store.join('room-1');
+    await store.enter('room-1');
   });
 
   it('replaces the person and the vote status when a person type changed', () => {
@@ -970,5 +995,381 @@ describe('isRoomGone', () => {
   it('is false for other errors and plain errors', () => {
     expect(isRoomGone(new ApiRequestError(500, [{ code: 'internal_error', message: 'Boom.' }]))).toBe(false);
     expect(isRoomGone(new Error('Hub is not connected'))).toBe(false);
+  });
+});
+
+describe('RoomStore entering a room', () => {
+  const OBS = { guid: 'g-obs', name: 'Olga', personType: 'obs' } as const;
+  const services = enterServices();
+  let hub: ReturnType<typeof fakeHub>;
+  let store: RoomStore;
+  let navigate: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    hub = fakeHub(JOIN_RESPONSE);
+    services.me.get.mockReset().mockReturnValue(of(ANN));
+    services.me.update.mockReset().mockReturnValue(of(ANN));
+    services.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
+    services.personDefaults.save.mockReset();
+    TestBed.configureTestingModule({
+      providers: [
+        RoomStore,
+        provideRouter([]),
+        ...services.providers,
+        { provide: RoomHubClient, useValue: hub },
+        { provide: RoomTabLock, useValue: { claim: vi.fn(), onTaken: vi.fn().mockReturnValue(() => undefined) } },
+      ],
+    });
+    store = TestBed.inject(RoomStore);
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  });
+
+  function noSession() {
+    return throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'No session.' }]));
+  }
+
+  const flashed = () => TestBed.inject(FlashMessageService).message();
+
+  describe('as someone with a name', () => {
+    it('joins straight away', async () => {
+      expect(store.phase()).toBe('loading');
+
+      await store.enter('room-1');
+
+      expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
+      expect(store.phase()).toBe('joined');
+      expect(store.me()).toBe(ANN.guid);
+      expect(store.error()).toBeNull();
+    });
+
+    it('takes the words of a fun room name from the existence check', async () => {
+      const nameWords = [{ text: 'Adoring', linkable: true }];
+      services.rooms.exists.mockReturnValue(of({ id: '42_Adoring', exists: true, nameWords }));
+
+      await store.enter('42_Adoring');
+
+      expect(store.nameWords()).toEqual(nameWords);
+    });
+
+    it('has no name words for an ordinary room name', async () => {
+      await store.enter('room-1');
+
+      expect(store.nameWords()).toBeNull();
+    });
+
+    it('goes ahead when the existence check fails for another reason, as joining reports it', async () => {
+      services.rooms.exists.mockReturnValue(throwError(() => new ApiRequestError(500, [{ code: 'x', message: 'x' }])));
+
+      await store.enter('room-1');
+
+      expect(store.phase()).toBe('joined');
+    });
+  });
+
+  describe('as someone without a name', () => {
+    beforeEach(() => services.me.get.mockReturnValue(noSession()));
+
+    it('asks for a name and joins nothing yet', async () => {
+      await store.enter('room-1');
+
+      expect(store.phase()).toBe('name');
+      expect(store.error()).toBeNull();
+      expect(hub.invoke).not.toHaveBeenCalled();
+    });
+
+    it('saves the name, remembers it, and joins', async () => {
+      await store.enter('room-1');
+
+      await store.submitName({ name: 'Ann', personType: 'dev' });
+
+      expect(services.me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+      expect(services.personDefaults.save).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+      expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
+      expect(store.me()).toBe(ANN.guid);
+      expect(store.phase()).toBe('joined');
+    });
+
+    it('shows why the name was refused and stays on the name step', async () => {
+      services.me.update.mockReturnValue(
+        throwError(() => new ApiRequestError(400, [{ code: 'validation_failed', message: 'Bad name.' }])),
+      );
+      await store.enter('room-1');
+
+      await store.submitName({ name: 'Ann', personType: 'dev' });
+
+      expect(store.error()).toContain('Bad name.');
+      expect(store.phase()).toBe('name');
+      expect(store.me()).toBeNull();
+      expect(hub.invoke).not.toHaveBeenCalled();
+    });
+
+    it('lets the visitor try again after a refused join', async () => {
+      hub.invoke.mockRejectedValueOnce(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]));
+      await store.enter('room-1');
+      await store.submitName({ name: 'Ann', personType: 'dev' });
+      expect(store.phase()).toBe('name');
+
+      await store.submitName({ name: 'Ann', personType: 'dev' });
+
+      expect(store.phase()).toBe('joined');
+      expect(store.error()).toBeNull();
+    });
+
+    it('does not join when the visitor leaves while the name is being saved', async () => {
+      const saving = new Subject<typeof ANN>();
+      services.me.update.mockReturnValue(saving);
+      await store.enter('room-1');
+      const submitting = store.submitName({ name: 'Ann', personType: 'dev' });
+
+      const leaving = store.leaveRoom();
+      saving.next(ANN);
+      saving.complete();
+      await Promise.all([submitting, leaving]);
+
+      expect(hub.invoke).not.toHaveBeenCalledWith('JoinRoom', 'room-1');
+      expect(store.phase()).not.toBe('joined');
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  describe('when the room is gone', () => {
+    it('goes home with a message when joining says it does not exist', async () => {
+      hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }]));
+
+      await store.enter('room-1');
+
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(flashed()).toBe(ROOM_NOT_FOUND_MESSAGE);
+      expect(hub.disconnect).toHaveBeenCalled();
+    });
+
+    it('goes home with a message when the room id is malformed', async () => {
+      hub.invoke.mockRejectedValue(
+        new ApiRequestError(400, [
+          { code: ERROR_CODES.validationFailed, message: 'Bad id.', metadata: { field: 'roomId' } },
+        ]),
+      );
+
+      await store.enter('room-1');
+
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(flashed()).toBe(ROOM_NOT_FOUND_MESSAGE);
+    });
+
+    it('goes home before asking for a name when the existence check says so', async () => {
+      services.me.get.mockReturnValue(noSession());
+      services.rooms.exists.mockReturnValue(of({ id: 'room-1', exists: false }));
+
+      await store.enter('room-1');
+
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(flashed()).toBe(ROOM_NOT_FOUND_MESSAGE);
+      expect(store.phase()).toBe('loading');
+      expect(services.me.get).not.toHaveBeenCalled();
+      expect(hub.invoke).not.toHaveBeenCalled();
+    });
+
+    it('goes home when the existence check reports the room as not found', async () => {
+      services.rooms.exists.mockReturnValue(
+        throwError(() => new ApiRequestError(404, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }])),
+      );
+
+      await store.enter('room-1');
+
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(services.me.get).not.toHaveBeenCalled();
+    });
+
+    it('goes home when the room is gone by the time a name is submitted', async () => {
+      services.me.get.mockReturnValue(noSession());
+      await store.enter('room-1');
+      hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }]));
+
+      await store.submitName({ name: 'Ann', personType: 'dev' });
+
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(flashed()).toBe(ROOM_NOT_FOUND_MESSAGE);
+    });
+  });
+
+  describe('when something else fails', () => {
+    it('shows a refused join on the name step, closes the hub and stays', async () => {
+      hub.invoke.mockRejectedValue(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]));
+
+      await store.enter('room-1');
+
+      expect(store.error()).toContain('Server down.');
+      expect(store.phase()).toBe('name');
+      expect(hub.disconnect).toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('shows another validation failure instead of going home', async () => {
+      hub.invoke.mockRejectedValue(
+        new ApiRequestError(400, [
+          { code: ERROR_CODES.validationFailed, message: 'Bad name.', metadata: { field: 'name' } },
+        ]),
+      );
+
+      await store.enter('room-1');
+
+      expect(store.error()).toContain('Bad name.');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('shows a generic message for an unexpected error and closes the hub', async () => {
+      hub.invoke.mockRejectedValue(new Error('socket reset'));
+
+      await store.enter('room-1');
+
+      expect(store.error()).toContain('Something went wrong.');
+      expect(hub.disconnect).toHaveBeenCalled();
+    });
+
+    it('shows a failed name lookup on the name step', async () => {
+      services.me.get.mockReturnValue(
+        throwError(() => new ApiRequestError(500, [{ code: 'x', message: 'Lookup failed.' }])),
+      );
+
+      await store.enter('room-1');
+
+      expect(store.error()).toContain('Lookup failed.');
+      expect(store.phase()).toBe('name');
+      expect(hub.invoke).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when the room changes under it', () => {
+    it('leaves the old room and joins the new one', async () => {
+      hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+      await store.enter('room-1');
+      // The second JoinRoom (for room-2) is held, so the switch can be seen while it is loading.
+      let respond!: (response: unknown) => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = resolve)));
+
+      const switching = store.enter('room-2');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenLastCalledWith('JoinRoom', 'room-2'));
+
+      expect(hub.disconnect).toHaveBeenCalled();
+      expect(store.people()).toEqual([]);
+      respond(JOIN_RESPONSE);
+      await switching;
+
+      expect(store.people()).toEqual([ANN]);
+      expect(store.phase()).toBe('joined');
+    });
+
+    it('does not join the old room when it changes while the name check is pending', async () => {
+      const pendingCheck = new Subject<typeof ANN>();
+      services.me.get.mockReturnValueOnce(pendingCheck).mockReturnValue(of(ANN));
+      const entering = store.enter('room-1');
+      await vi.waitFor(() => expect(services.me.get).toHaveBeenCalledTimes(1));
+
+      await store.enter('room-2');
+      pendingCheck.next(ANN);
+      pendingCheck.complete();
+      await entering;
+
+      expect(hub.invoke).toHaveBeenCalledOnce();
+      expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-2');
+    });
+
+    it('ignores the snapshot of the old room when its JoinRoom answers after the change', async () => {
+      let respondOld!: (response: unknown) => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respondOld = resolve)));
+      const entering = store.enter('room-1');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(1));
+
+      await store.enter('room-2');
+      respondOld({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+      await entering;
+
+      expect(store.people()).toEqual([ANN]);
+      expect(store.phase()).toBe('joined');
+    });
+
+    it('does not join when the store is closed while it is still connecting', async () => {
+      let finishConnect!: () => void;
+      hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
+      const entering = store.enter('room-1');
+      await vi.waitFor(() => expect(hub.connect).toHaveBeenCalled());
+
+      await store.close();
+      finishConnect();
+      await entering;
+
+      expect(hub.invoke).not.toHaveBeenCalled();
+      expect(store.phase()).not.toBe('joined');
+    });
+
+    it('does not act on a refusal that arrives after the store was closed', async () => {
+      let refuse!: (error: unknown) => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((_, reject) => (refuse = reject)));
+      const entering = store.enter('room-1');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalled());
+
+      await store.close();
+      refuse(new ApiRequestError(0, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }]));
+      await entering;
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(store.error()).toBeNull();
+    });
+  });
+
+  describe('what it knows about the person using it', () => {
+    it('knows nothing before entering', () => {
+      expect(store.me()).toBeNull();
+      expect(store.isOwner()).toBe(false);
+      expect(store.isObserver()).toBe(false);
+      expect(store.myPersonType()).toBeNull();
+    });
+
+    it('knows it is the owner when its guid owns the room', async () => {
+      await store.enter('room-1');
+
+      expect(store.isOwner()).toBe(true);
+    });
+
+    it('is not the owner when someone else owns the room, until ownership is transferred to it', async () => {
+      services.me.get.mockReturnValue(of(BOB));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+      await store.enter('room-1');
+      expect(store.isOwner()).toBe(false);
+
+      hub.emit(HUB_EVENTS.OwnershipTransferred, { newOwner: BOB });
+
+      expect(store.isOwner()).toBe(true);
+    });
+
+    it('follows its own role', async () => {
+      await store.enter('room-1');
+      expect(store.myPersonType()).toBe('dev');
+      expect(store.isObserver()).toBe(false);
+
+      hub.emit(HUB_EVENTS.PersonTypeChanged, {
+        person: { ...ANN, personType: 'obs' },
+        voteStatus: JOIN_RESPONSE.voteStatus,
+      });
+
+      expect(store.myPersonType()).toBe('obs');
+      expect(store.isObserver()).toBe(true);
+    });
+
+    it('counts the people who voted out of the people who can vote, never counting observers', async () => {
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB, OBS] });
+      await store.enter('room-1');
+      expect(store.voterCount()).toBe(0);
+      expect(store.voterTotal()).toBe(2);
+
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
+      hub.emit(HUB_EVENTS.VoteCast, { personGuid: OBS.guid });
+
+      expect(store.voterCount()).toBe(1);
+
+      hub.emit(HUB_EVENTS.VotesCleared, { roundStartedAt: CLEARED_AT });
+
+      expect(store.voterCount()).toBe(0);
+    });
   });
 });

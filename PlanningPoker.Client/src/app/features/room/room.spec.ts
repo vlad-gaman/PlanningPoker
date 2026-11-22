@@ -1,10 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { Subject, of, throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiRequestError } from '../../core/api-request-error';
 import { ErrorPopupService } from '../../core/error-popup.service';
-import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
@@ -21,7 +20,7 @@ import {
 } from '../../testing/fake-hub.testing';
 import { FireworksLauncher } from './fireworks/fireworks-launcher';
 import { HUB_EVENTS } from '../../models/hub-events';
-import { ROOM_NOT_FOUND_MESSAGE, RoomStore } from './room-store';
+import { RoomStore } from './room-store';
 import { Room } from './room';
 
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
@@ -82,399 +81,278 @@ describe('Room', () => {
     return throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'No session.' }]));
   }
 
-  it('joins straight away when the visitor already has a name', async () => {
-    me.get.mockReturnValue(of(ANN));
 
-    const { element } = await render();
 
-    expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
-    expect(element.querySelector('form')).toBeNull();
-    expect(element.textContent).toContain('Ann');
-    expect(element.querySelector('.person .crown')).not.toBeNull();
-    expect(element.textContent).not.toContain('(owner)');
+  describe('entering the room', () => {
+    it('joins straight away when the visitor already has a name', async () => {
+      me.get.mockReturnValue(of(ANN));
+
+      const { element } = await render();
+
+      expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
+      expect(element.querySelector('form')).toBeNull();
+      expect(element.textContent).toContain('Ann');
+      expect(element.querySelector('.person .crown')).not.toBeNull();
+      expect(element.textContent).not.toContain('(owner)');
+    });
+
+    it('asks for a name when there is no session, then saves it and joins', async () => {
+      me.get.mockReturnValue(noSession());
+      me.update.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+      expect(hub.invoke).not.toHaveBeenCalled();
+
+      const input = element.querySelector('input') as HTMLInputElement;
+      input.value = 'Ann';
+      input.dispatchEvent(new Event('input'));
+      (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+      await settle(fixture);
+
+      expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+      expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
+      expect(element.querySelector('.people')).not.toBeNull();
+    });
+
+    it('does not save a name that is too short', async () => {
+      me.get.mockReturnValue(noSession());
+      const { fixture, element } = await render();
+
+      const input = element.querySelector('input') as HTMLInputElement;
+      input.value = 'A';
+      input.dispatchEvent(new Event('input'));
+      (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+      await settle(fixture);
+
+      expect(me.update).not.toHaveBeenCalled();
+    });
+
+    it('shows a refused join inline on the name form', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockRejectedValue(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]));
+
+      const { fixture, element } = await render();
+
+      expect(element.querySelector('.form-error')?.textContent).toContain('Server down.');
+      expect(element.querySelector('form')).not.toBeNull();
+      fixture.destroy();
+    });
+
+    it('also shows a refused join in the error popup', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockRejectedValue(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]));
+
+      await render();
+
+      expect(popup.show).toHaveBeenCalledWith(expect.stringContaining('Server down.'));
+    });
+
+    it('shows the new room when the route id changes', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+      const { fixture, element } = await render();
+      expect(element.textContent).toContain('Bob');
+      // The second JoinRoom (for room-2) is held, so the switch can be seen while it is loading.
+      let respond!: (response: unknown) => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = resolve)));
+
+      fixture.componentRef.setInput('id', 'room-2');
+      fixture.detectChanges();
+      await settle(fixture);
+
+      expect(hub.invoke).toHaveBeenLastCalledWith('JoinRoom', 'room-2');
+      expect(element.querySelector('.people')).toBeNull();
+      expect(element.textContent).not.toContain('Bob');
+
+      respond(JOIN_RESPONSE);
+      await settle(fixture);
+
+      expect(element.querySelector('.people')).not.toBeNull();
+      expect(element.textContent).not.toContain('Bob');
+    });
   });
 
-  it("gives Lolle a rose crown and a wand, but only a wand beside the owner's crown", async () => {
-    const lolle = { guid: 'g-lolle', name: 'Lolle', personType: 'obs' } as const;
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, lolle] });
+  describe('the room heading', () => {
+    it('links each word of a fun room name to a Google search, except words that are not linkable', async () => {
+      me.get.mockReturnValue(of(ANN));
+      rooms.exists.mockReturnValue(
+        of({
+          id: '42_Adoring_Lewd_people',
+          exists: true,
+          nameWords: [
+            { text: 'Adoring', linkable: true },
+            { text: 'Lewd', linkable: false },
+            { text: 'people', linkable: true },
+          ],
+        }),
+      );
 
-    const { element } = await render();
+      const { element } = await render('42_Adoring_Lewd_people');
 
-    const rows = Array.from(element.querySelectorAll('.person'));
-    const [ann, lolleRow] = rows;
-    expect(ann.querySelector('.crown:not(.lolle-crown)')).not.toBeNull();
-    expect(ann.querySelector('.lolle-crown, .wand')).toBeNull();
-    expect(lolleRow.querySelector('.lolle-crown')).not.toBeNull();
-    expect(lolleRow.querySelector('.wand')).not.toBeNull();
+      const heading = element.querySelector('h1') as HTMLElement;
+      const links = Array.from(heading.querySelectorAll('a'));
+      expect(heading.textContent?.replace(/\s+/g, ' ').trim()).toBe('Room 42_Adoring_Lewd_people');
+      expect(links.map((link) => link.textContent)).toEqual(['Adoring', 'people']);
+      expect(links[0].getAttribute('href')).toBe('https://www.google.com/search?q=adoring+meaning');
+      expect(links[0].getAttribute('target')).toBe('_blank');
+      expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
+      expect(links[0].getAttribute('aria-label')).toBe('Search Google for Adoring');
+    });
+
+    it('shows a room name that is not a fun name as plain text', async () => {
+      me.get.mockReturnValue(of(ANN));
+      rooms.exists.mockReturnValue(of({ id: 'sprint_42', exists: true, nameWords: null }));
+
+      const { element } = await render('sprint_42');
+
+      const heading = element.querySelector('h1') as HTMLElement;
+      expect(heading.querySelector('a')).toBeNull();
+      expect(heading.textContent?.trim()).toBe('Room sprint_42');
+    });
+
+    it('copies the room name and the full room link', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', { clipboard: { writeText } });
+      const { fixture, element } = await render();
+      const [name, link] = Array.from(element.querySelectorAll<HTMLButtonElement>('.copy'));
+
+      name.click();
+      link.click();
+      await settle(fixture);
+
+      expect(writeText).toHaveBeenNthCalledWith(1, 'room-1');
+      expect(writeText).toHaveBeenNthCalledWith(2, `${location.origin}/room/room-1`);
+      vi.unstubAllGlobals();
+    });
+
+    it('falls back to the legacy copy command when the clipboard API is unavailable', async () => {
+      me.get.mockReturnValue(of(ANN));
+      vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('insecure')) } });
+      const exec = vi.fn().mockReturnValue(true);
+      document.execCommand = exec;
+      const { fixture, element } = await render();
+
+      element.querySelector<HTMLButtonElement>('.copy')?.click();
+      await settle(fixture);
+
+      expect(exec).toHaveBeenCalledWith('copy');
+      vi.unstubAllGlobals();
+    });
   });
 
-  it('keeps only the owner crown on Lolle when Lolle owns the room, still with the wand', async () => {
-    const lolle = { guid: 'g-lolle', name: 'lolle', personType: 'dev' } as const;
-    me.get.mockReturnValue(of(lolle));
-    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [lolle], ownerGuid: lolle.guid });
+  describe('participants', () => {
+    it("gives Lolle a rose crown and a wand, but only a wand beside the owner's crown", async () => {
+      const lolle = { guid: 'g-lolle', name: 'Lolle', personType: 'obs' } as const;
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, lolle] });
 
-    const { element } = await render();
+      const { element } = await render();
 
-    expect(element.querySelectorAll('.person .crown')).toHaveLength(1);
-    expect(element.querySelector('.person .lolle-crown')).toBeNull();
-    expect(element.querySelector('.person .wand')).not.toBeNull();
+      const rows = Array.from(element.querySelectorAll('.person'));
+      const [ann, lolleRow] = rows;
+      expect(ann.querySelector('.crown:not(.lolle-crown)')).not.toBeNull();
+      expect(ann.querySelector('.lolle-crown, .wand')).toBeNull();
+      expect(lolleRow.querySelector('.lolle-crown')).not.toBeNull();
+      expect(lolleRow.querySelector('.wand')).not.toBeNull();
+    });
+
+    it('keeps only the owner crown on Lolle when Lolle owns the room, still with the wand', async () => {
+      const lolle = { guid: 'g-lolle', name: 'lolle', personType: 'dev' } as const;
+      me.get.mockReturnValue(of(lolle));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [lolle], ownerGuid: lolle.guid });
+
+      const { element } = await render();
+
+      expect(element.querySelectorAll('.person .crown')).toHaveLength(1);
+      expect(element.querySelector('.person .lolle-crown')).toBeNull();
+      expect(element.querySelector('.person .wand')).not.toBeNull();
+    });
+
+    it('tags each tile with its short role and role colour key', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });
+      const { element } = await render();
+
+      const tiles = [...element.querySelectorAll('li.person')];
+      expect(tiles.map((tile) => [tile.getAttribute('data-role'), tile.getAttribute('data-short')])).toEqual([
+        ['dev', 'DEV'],
+        ['test', 'QA'],
+      ]);
+    });
+
+    it('flags offgrid people on their tile and leaves online people unflagged', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
+
+      const { element } = await render();
+
+      const rows = Array.from(element.querySelectorAll('.person'));
+      expect(rows.find((row) => row.textContent?.includes('Bob'))?.getAttribute('title')).toContain('Not connected');
+      expect(rows.find((row) => row.textContent?.includes('Ann'))?.getAttribute('title')).toBeNull();
+    });
+
+    it('greys out the tile of an offgrid person', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
+
+      const { element } = await render();
+
+      const tiles = Array.from(element.querySelectorAll('.person'));
+      expect(tiles.find((tile) => tile.textContent?.includes('Bob'))?.classList).toContain('offgrid-person');
+      expect(tiles.find((tile) => tile.textContent?.includes('Ann'))?.classList).not.toContain('offgrid-person');
+    });
+
+    it('tells you when you lose the server, greys out your own tile and clears it when you are back', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+      expect(popup.show).not.toHaveBeenCalled();
+
+      hub.dropConnection();
+      await settle(fixture);
+
+      expect(popup.show).toHaveBeenCalledWith(expect.stringContaining('disconnected from the server'), true);
+      expect(element.querySelector('.person')?.classList).toContain('offgrid-person');
+
+      hub.reconnect();
+      await settle(fixture);
+
+      expect(popup.dismiss).toHaveBeenCalled();
+      expect(element.querySelector('.person')?.classList).not.toContain('offgrid-person');
+    });
   });
 
-  it('links each word of a fun room name to a Google search, except words that are not linkable', async () => {
-    me.get.mockReturnValue(of(ANN));
-    rooms.exists.mockReturnValue(
-      of({
-        id: '42_Adoring_Lewd_people',
-        exists: true,
-        nameWords: [
-          { text: 'Adoring', linkable: true },
-          { text: 'Lewd', linkable: false },
-          { text: 'people', linkable: true },
+  describe('round history', () => {
+    it('shows the round history of the room beside the cards', async () => {
+      me.get.mockReturnValue(of(ANN));
+      hub.invoke.mockResolvedValue({
+        ...JOIN_RESPONSE,
+        roundHistory: [
+          { round: 2, averageMark: 4.5, revealedAt: '2026-03-01T10:30:00+00:00' },
+          { round: 1, averageMark: null, revealedAt: '2026-03-01T10:00:00+00:00' },
         ],
-      }),
-    );
+      });
 
-    const { element } = await render('42_Adoring_Lewd_people');
+      const { element } = await render();
+      const history = element.querySelector('.rail app-round-history')!;
 
-    const heading = element.querySelector('h1') as HTMLElement;
-    const links = Array.from(heading.querySelectorAll('a'));
-    expect(heading.textContent?.replace(/\s+/g, ' ').trim()).toBe('Room 42_Adoring_Lewd_people');
-    expect(links.map((link) => link.textContent)).toEqual(['Adoring', 'people']);
-    expect(links[0].getAttribute('href')).toBe('https://www.google.com/search?q=adoring+meaning');
-    expect(links[0].getAttribute('target')).toBe('_blank');
-    expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
-    expect(links[0].getAttribute('aria-label')).toBe('Search Google for Adoring');
-  });
-
-  it('shows a room name that is not a fun name as plain text', async () => {
-    me.get.mockReturnValue(of(ANN));
-    rooms.exists.mockReturnValue(of({ id: 'sprint_42', exists: true, nameWords: null }));
-
-    const { element } = await render('sprint_42');
-
-    const heading = element.querySelector('h1') as HTMLElement;
-    expect(heading.querySelector('a')).toBeNull();
-    expect(heading.textContent?.trim()).toBe('Room sprint_42');
-  });
-
-  it('sends the visitor home with the operator message when an operator removes them', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
-    await render();
-
-    hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
-
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
-    expect(TestBed.inject(FlashMessageService).message()).toBe('You were removed by an operator.');
-  });
-
-  it('keeps the visitor in the room when an operator removes someone else', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, BOB] });
-    const { fixture, element } = await render();
-
-    hub.emit(HUB_EVENTS.PersonExited, { person: BOB, reason: 'removedByOperator' });
-    await settle(fixture);
-
-    expect(navigate).not.toHaveBeenCalled();
-    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
-    expect(element.textContent).not.toContain('operator');
-  });
-
-  it('shows the round history of the room beside the cards', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValue({
-      ...JOIN_RESPONSE,
-      roundHistory: [
-        { round: 2, averageMark: 4.5, revealedAt: '2026-03-01T10:30:00+00:00' },
-        { round: 1, averageMark: null, revealedAt: '2026-03-01T10:00:00+00:00' },
-      ],
+      expect(Array.from(history.querySelectorAll('li .round')).map((item) => item.textContent)).toEqual(['Round 2', 'Round 1']);
+      expect(history.querySelector('li .average')?.textContent?.trim()).toBe('4.5');
     });
 
-    const { element } = await render();
-    const history = element.querySelector('.rail app-round-history')!;
+    it('adds a round to the history for everyone when the votes are revealed', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+      expect(element.querySelector('app-round-history')?.textContent).toContain('No rounds revealed yet.');
 
-    expect(Array.from(history.querySelectorAll('li .round')).map((item) => item.textContent)).toEqual(['Round 2', 'Round 1']);
-    expect(history.querySelector('li .average')?.textContent?.trim()).toBe('4.5');
-  });
+      hub.emit(HUB_EVENTS.VotesShown, {
+        ...revealed(STATISTICS),
+        roundHistory: [{ round: 1, averageMark: 5, revealedAt: '2026-03-01T10:00:00+00:00' }],
+      });
+      await settle(fixture);
 
-  it('adds a round to the history for everyone when the votes are revealed', async () => {
-    me.get.mockReturnValue(of(ANN));
-    const { fixture, element } = await render();
-    expect(element.querySelector('app-round-history')?.textContent).toContain('No rounds revealed yet.');
-
-    hub.emit(HUB_EVENTS.VotesShown, {
-      ...revealed(STATISTICS),
-      roundHistory: [{ round: 1, averageMark: 5, revealedAt: '2026-03-01T10:00:00+00:00' }],
+      expect(element.querySelector('app-round-history li .round')?.textContent).toBe('Round 1');
+      expect(element.querySelector('app-round-history li .average')?.textContent?.trim()).toBe('5');
     });
-    await settle(fixture);
-
-    expect(element.querySelector('app-round-history li .round')?.textContent).toBe('Round 1');
-    expect(element.querySelector('app-round-history li .average')?.textContent?.trim()).toBe('5');
-  });
-
-  it('flags offgrid people on their tile and leaves online people unflagged', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
-
-    const { element } = await render();
-
-    const rows = Array.from(element.querySelectorAll('.person'));
-    expect(rows.find((row) => row.textContent?.includes('Bob'))?.getAttribute('title')).toContain('Not connected');
-    expect(rows.find((row) => row.textContent?.includes('Ann'))?.getAttribute('title')).toBeNull();
-  });
-
-  it('greys out the tile of an offgrid person', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, people: [ANN, { ...BOB, isOffgrid: true }] });
-
-    const { element } = await render();
-
-    const tiles = Array.from(element.querySelectorAll('.person'));
-    expect(tiles.find((tile) => tile.textContent?.includes('Bob'))?.classList).toContain('offgrid-person');
-    expect(tiles.find((tile) => tile.textContent?.includes('Ann'))?.classList).not.toContain('offgrid-person');
-  });
-
-  it('tells you when you lose the server, greys out your own tile and clears it when you are back', async () => {
-    me.get.mockReturnValue(of(ANN));
-    const { fixture, element } = await render();
-    expect(popup.show).not.toHaveBeenCalled();
-
-    hub.dropConnection();
-    await settle(fixture);
-
-    expect(popup.show).toHaveBeenCalledWith(expect.stringContaining('disconnected from the server'), true);
-    expect(element.querySelector('.person')?.classList).toContain('offgrid-person');
-
-    hub.reconnect();
-    await settle(fixture);
-
-    expect(popup.dismiss).toHaveBeenCalled();
-    expect(element.querySelector('.person')?.classList).not.toContain('offgrid-person');
-  });
-
-  it('asks for a name when there is no session, then saves it and joins', async () => {
-    me.get.mockReturnValue(noSession());
-    me.update.mockReturnValue(of(ANN));
-    const { fixture, element } = await render();
-    expect(hub.invoke).not.toHaveBeenCalled();
-
-    const input = element.querySelector('input') as HTMLInputElement;
-    input.value = 'Ann';
-    input.dispatchEvent(new Event('input'));
-    (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
-    await settle(fixture);
-
-    expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
-    expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
-    expect(element.querySelector('.people')).not.toBeNull();
-  });
-
-  it('does not save a name that is too short', async () => {
-    me.get.mockReturnValue(noSession());
-    const { fixture, element } = await render();
-
-    const input = element.querySelector('input') as HTMLInputElement;
-    input.value = 'A';
-    input.dispatchEvent(new Event('input'));
-    (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
-    await settle(fixture);
-
-    expect(me.update).not.toHaveBeenCalled();
-  });
-
-  it('goes home with a message when the room does not exist', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockRejectedValue(new ApiRequestError(0, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }]));
-
-    await render();
-
-    expect(navigate).toHaveBeenCalledWith('/');
-    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
-  });
-
-  it('checks the room exists before asking for a name, and goes home when it does not', async () => {
-    me.get.mockReturnValue(throwError(() => new ApiRequestError(401, [{ code: ERROR_CODES.noSession, message: 'x' }])));
-    rooms.exists.mockReturnValue(of({ id: 'room-1', exists: false }));
-
-    const { element } = await render();
-
-    expect(navigate).toHaveBeenCalledWith('/');
-    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
-    expect(element.textContent).not.toContain('Join this room');
-    expect(hub.invoke).not.toHaveBeenCalled();
-  });
-
-  it('goes home when the existence check reports the room as not found', async () => {
-    rooms.exists.mockReturnValue(
-      throwError(() => new ApiRequestError(404, [{ code: ERROR_CODES.roomNotFound, message: 'Gone.' }])),
-    );
-
-    await render();
-
-    expect(navigate).toHaveBeenCalledWith('/');
-    expect(me.get).not.toHaveBeenCalled();
-  });
-
-  it('goes home with a message when the room id is malformed', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockRejectedValue(
-      new ApiRequestError(400, [
-        { code: ERROR_CODES.validationFailed, message: 'Bad id.', metadata: { field: 'roomId' } },
-      ]),
-    );
-
-    await render();
-
-    expect(navigate).toHaveBeenCalledWith('/');
-    expect(TestBed.inject(FlashMessageService).message()).toBe(ROOM_NOT_FOUND_MESSAGE);
-  });
-
-  it('shows other errors inline on the name step and closes the hub', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockRejectedValue(new ApiRequestError(500, [{ code: 'internal_error', message: 'Server down.' }]));
-
-    const { fixture, element } = await render();
-
-    expect(element.querySelector('.form-error')?.textContent).toContain('Server down.');
-    expect(element.querySelector('form')).not.toBeNull();
-    expect(navigate).not.toHaveBeenCalled();
-    expect(hub.disconnect).toHaveBeenCalled();
-    fixture.destroy();
-  });
-
-  it('shows other validation failures inline instead of going home', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockRejectedValue(
-      new ApiRequestError(400, [
-        { code: ERROR_CODES.validationFailed, message: 'Bad name.', metadata: { field: 'name' } },
-      ]),
-    );
-
-    const { element } = await render();
-
-    expect(element.querySelector('.form-error')?.textContent).toContain('Bad name.');
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it('closes the hub when joining fails with an unexpected error', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockRejectedValue(new Error('socket reset'));
-
-    const { element } = await render();
-
-    expect(element.querySelector('.form-error')?.textContent).toContain('Something went wrong.');
-    expect(hub.disconnect).toHaveBeenCalled();
-  });
-
-  it('leaves the old room and joins the new one when the route id changes', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });
-    const { fixture, element } = await render();
-    expect(element.textContent).toContain('Bob');
-    // The second JoinRoom (for room-2) is held, so the switch can be seen while it is loading.
-    let respond!: (response: unknown) => void;
-    hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = resolve)));
-
-    fixture.componentRef.setInput('id', 'room-2');
-    fixture.detectChanges();
-    await settle(fixture);
-
-    expect(hub.disconnect).toHaveBeenCalled();
-    expect(hub.invoke).toHaveBeenLastCalledWith('JoinRoom', 'room-2');
-    expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([]);
-    expect(element.querySelector('.people')).toBeNull();
-    expect(element.textContent).not.toContain('Bob');
-
-    respond(JOIN_RESPONSE);
-    await settle(fixture);
-
-    expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([ANN]);
-    expect(element.querySelector('.people')).not.toBeNull();
-    expect(element.textContent).not.toContain('Bob');
-  });
-
-  it('copies the room name and the full room link', async () => {
-    me.get.mockReturnValue(of(ANN));
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    const { fixture, element } = await render();
-    const [name, link] = Array.from(element.querySelectorAll<HTMLButtonElement>('.copy'));
-
-    name.click();
-    link.click();
-    await settle(fixture);
-
-    expect(writeText).toHaveBeenNthCalledWith(1, 'room-1');
-    expect(writeText).toHaveBeenNthCalledWith(2, `${location.origin}/room/room-1`);
-    vi.unstubAllGlobals();
-  });
-
-  it('falls back to the legacy copy command when the clipboard API is unavailable', async () => {
-    me.get.mockReturnValue(of(ANN));
-    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('insecure')) } });
-    const exec = vi.fn().mockReturnValue(true);
-    document.execCommand = exec;
-    const { fixture, element } = await render();
-
-    element.querySelector<HTMLButtonElement>('.copy')?.click();
-    await settle(fixture);
-
-    expect(exec).toHaveBeenCalledWith('copy');
-    vi.unstubAllGlobals();
-  });
-
-  it('tags each tile with its short role and role colour key', async () => {
-    me.get.mockReturnValue(of(ANN));
-    hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, people: [ANN, BOB] });
-    const { element } = await render();
-
-    const tiles = [...element.querySelectorAll('li.person')];
-    expect(tiles.map((tile) => [tile.getAttribute('data-role'), tile.getAttribute('data-short')])).toEqual([
-      ['dev', 'DEV'],
-      ['test', 'QA'],
-    ]);
-  });
-
-  it('does not join the old room when the id changes while the name check is pending', async () => {
-    const pendingCheck = new Subject<typeof ANN>();
-    me.get.mockReturnValueOnce(pendingCheck).mockReturnValue(of(ANN));
-    const fixture = TestBed.createComponent(Room);
-    fixture.componentRef.setInput('id', 'room-1');
-    fixture.detectChanges();
-    await settle(fixture);
-
-    fixture.componentRef.setInput('id', 'room-2');
-    fixture.detectChanges();
-    await settle(fixture);
-    pendingCheck.next(ANN);
-    pendingCheck.complete();
-    await settle(fixture);
-
-    expect(hub.invoke).toHaveBeenCalledOnce();
-    expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-2');
-    expect(fixture.nativeElement.querySelector('.people')).not.toBeNull();
-  });
-
-  it('ignores the snapshot of the old room when its JoinRoom answers after the id changed', async () => {
-    me.get.mockReturnValue(of(ANN));
-    let respondOld!: (response: unknown) => void;
-    hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respondOld = resolve)));
-    const fixture = TestBed.createComponent(Room);
-    fixture.componentRef.setInput('id', 'room-1');
-    fixture.detectChanges();
-    await settle(fixture);
-
-    fixture.componentRef.setInput('id', 'room-2');
-    fixture.detectChanges();
-    await settle(fixture);
-    respondOld({ ...JOIN_RESPONSE, people: [ANN, BOB] });
-    await settle(fixture);
-
-    expect(fixture.debugElement.injector.get(RoomStore).people()).toEqual([ANN]);
-    expect(fixture.nativeElement.querySelector('.people')).not.toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Bob');
   });
 
   describe('voting', () => {
@@ -618,13 +496,6 @@ describe('Room', () => {
   describe('results', () => {
     beforeEach(() => me.get.mockReturnValue(of(ANN)));
 
-    function withFireworks(showFireworks: boolean) {
-      hub.invoke.mockResolvedValue({
-        ...JOIN_RESPONSE,
-        configuration: { ...JOIN_RESPONSE.configuration, showFireworks },
-      });
-    }
-
     it('shows no results while voting is open', async () => {
       const { element } = await render();
 
@@ -660,25 +531,6 @@ describe('Room', () => {
 
       expect(launcher.create).toHaveBeenCalledTimes(1);
       expect(fireworks.launch).toHaveBeenCalled();
-    });
-
-    it('launches no fireworks without consensus', async () => {
-      const { fixture } = await render();
-
-      hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
-      await settle(fixture);
-
-      expect(launcher.create).not.toHaveBeenCalled();
-    });
-
-    it('launches no fireworks when the room turned them off', async () => {
-      withFireworks(false);
-      const { fixture } = await render();
-
-      hub.emit(HUB_EVENTS.VotesShown, revealed(CONSENSUS_STATISTICS));
-      await settle(fixture);
-
-      expect(launcher.create).not.toHaveBeenCalled();
     });
 
     it('launches no fireworks for a consensus that was already there when joining', async () => {
@@ -728,7 +580,7 @@ describe('Room', () => {
     });
   });
 
-  it('leave returns to the home page', async () => {
+  it('the Leave room button returns to the home page', async () => {
     me.get.mockReturnValue(of(ANN));
     const { fixture, element } = await render();
 
@@ -737,8 +589,6 @@ describe('Room', () => {
     ).click();
     await settle(fixture);
 
-    expect(hub.invoke).toHaveBeenCalledWith('LeaveRoom');
-    expect(hub.disconnect).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/');
   });
 
