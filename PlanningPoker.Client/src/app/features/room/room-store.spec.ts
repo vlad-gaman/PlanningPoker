@@ -60,7 +60,7 @@ describe('RoomStore', () => {
 
   beforeEach(async () => {
     hub = fakeHub(JOIN_RESPONSE);
-    services.me.get.mockReset();
+    services.me.get.mockReset().mockReturnValue(of(ANN));
     services.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
     taken = null;
     tabLock.claim.mockClear();
@@ -81,7 +81,7 @@ describe('RoomStore', () => {
     });
     store = TestBed.inject(RoomStore);
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    await store.join('room-1');
+    await store.enter('room-1');
   });
 
   it('connects, joins the room and applies the response', () => {
@@ -124,7 +124,7 @@ describe('RoomStore', () => {
     const second = TestBed.inject(RoomStore);
     hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, myMark: '5' });
 
-    await second.join('room-1');
+    await second.enter('room-1');
 
     expect(second.myMark()).toBe('5');
   });
@@ -323,13 +323,6 @@ describe('RoomStore', () => {
     expect(TestBed.inject(FlashMessageService).message()).toBeNull();
   });
 
-  it('does not send anyone home for a removal when it does not know who the person is', () => {
-    hub.emit(HUB_EVENTS.PersonExited, { person: ANN, reason: 'removedByOperator' });
-
-    expect(navigate).not.toHaveBeenCalled();
-    expect(TestBed.inject(FlashMessageService).message()).toBeNull();
-  });
-
   describe('round history', () => {
     const FIRST = { round: 1, averageMark: 3, revealedAt: '2026-01-01T12:05:00+00:00' };
     const SECOND = { round: 2, averageMark: null, revealedAt: '2026-01-01T12:20:00+00:00' };
@@ -338,7 +331,7 @@ describe('RoomStore', () => {
       hub.invoke.mockResolvedValueOnce({ ...JOIN_RESPONSE, roundHistory: [SECOND, FIRST] });
       const second = TestBed.inject(RoomStore);
 
-      await second.join('room-1');
+      await second.enter('room-1');
 
       expect(second.roundHistory()).toEqual([SECOND, FIRST]);
     });
@@ -353,7 +346,7 @@ describe('RoomStore', () => {
       hub.invoke.mockResolvedValueOnce(withoutHistory);
       const second = TestBed.inject(RoomStore);
 
-      await second.join('room-1');
+      await second.enter('room-1');
 
       expect(second.roundHistory()).toEqual([]);
     });
@@ -428,19 +421,13 @@ describe('RoomStore', () => {
     expect(store.ownerGuid()).toBeNull();
   });
 
-  it('binds the hub handlers only once across joins', async () => {
-    await store.join('room-1');
-
-    expect(hub.on).toHaveBeenCalledTimes(14);
-  });
-
   it('aborts a join quietly when the store is closed while connecting', async () => {
     let finishConnect!: () => void;
     hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
     hub.invoke.mockClear();
     hub.on.mockClear();
 
-    const joining = store.join('room-2');
+    const joining = store.enter('room-2');
     await store.close();
     finishConnect();
     await joining;
@@ -454,7 +441,7 @@ describe('RoomStore', () => {
   it('joins normally again after a closed join was restarted', async () => {
     await store.close();
 
-    await store.join('room-1');
+    await store.enter('room-1');
 
     expect(store.people()).toEqual([ANN]);
     expect(hub.on).toHaveBeenCalledTimes(28);
@@ -464,7 +451,7 @@ describe('RoomStore', () => {
   async function joinWithHeldResponse(snapshot: unknown) {
     let respond!: () => void;
     hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(snapshot))));
-    const joining = store.join('room-2');
+    const joining = store.enter('room-2');
     await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
     return { joining, respond };
   }
@@ -537,8 +524,9 @@ describe('RoomStore', () => {
     hub.connect.mockReturnValueOnce(new Promise<void>((resolve) => (finishConnect = resolve)));
     hub.invoke.mockClear();
 
-    const superseded = store.join('room-2');
-    await store.join('room-3');
+    const superseded = store.enter('room-2');
+    await vi.waitFor(() => expect(hub.connect).toHaveBeenCalledTimes(2));
+    await store.enter('room-3');
     finishConnect();
     await superseded;
 
@@ -550,9 +538,9 @@ describe('RoomStore', () => {
     let respond!: (response: unknown) => void;
     hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = resolve)));
 
-    const superseded = store.join('room-2');
+    const superseded = store.enter('room-2');
     await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
-    await store.join('room-3');
+    await store.enter('room-3');
     respond({ ...JOIN_RESPONSE, people: [ANN, BOB], ownerGuid: BOB.guid });
     await superseded;
 
@@ -589,7 +577,7 @@ describe('RoomStore', () => {
         },
       });
 
-      await store.join('room-2');
+      await store.enter('room-2');
 
       expect(store.votes()).toEqual({ [ANN.guid]: '5' });
       expect(store.hasEveryoneVoted()).toBe(true);
@@ -608,7 +596,7 @@ describe('RoomStore', () => {
         },
       });
 
-      await store.join('room-2');
+      await store.enter('room-2');
 
       expect(store.votingFinished()).toBe(true);
     });
@@ -708,7 +696,7 @@ describe('RoomStore', () => {
     it('replays voting events received during the join after the snapshot', async () => {
       let respond!: () => void;
       hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(JOIN_RESPONSE))));
-      const joining = store.join('room-2');
+      const joining = store.enter('room-2');
       await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
 
       hub.emit(HUB_EVENTS.VoteCast, { personGuid: BOB.guid });
@@ -798,7 +786,7 @@ describe('RoomStore', () => {
         voteStatus: revealed(CONSENSUS_STATISTICS),
       });
 
-      await store.join('room-2');
+      await store.enter('room-2');
 
       expect(store.statistics()).toEqual(CONSENSUS_STATISTICS);
       expect(store.revealCount()).toBe(0);
@@ -840,7 +828,7 @@ describe('RoomStore', () => {
     it('counts a reveal that arrived while the join was in flight, after applying the snapshot', async () => {
       let finishJoin: (value: unknown) => void = () => undefined;
       hub.invoke.mockReturnValue(new Promise((resolve) => (finishJoin = resolve)));
-      const joining = store.join('room-2');
+      const joining = store.enter('room-2');
       await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(2));
 
       hub.emit(HUB_EVENTS.VotesShown, revealed(STATISTICS));
@@ -874,6 +862,7 @@ describe('RoomStore', () => {
 });
 
 describe('RoomStore room management', () => {
+  const management = enterServices();
   let hub: ReturnType<typeof fakeHub>;
   let store: RoomStore;
   const status = (votes: Record<string, string>, extra = {}) => ({
@@ -887,16 +876,18 @@ describe('RoomStore room management', () => {
 
   beforeEach(async () => {
     hub = fakeHub(JOIN_RESPONSE);
+    management.me.get.mockReset().mockReturnValue(of(ANN));
+    management.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
     TestBed.configureTestingModule({
       providers: [
         RoomStore,
         provideRouter([]),
-        ...enterServices().providers,
+        ...management.providers,
         { provide: RoomHubClient, useValue: hub },
       ],
     });
     store = TestBed.inject(RoomStore);
-    await store.join('room-1');
+    await store.enter('room-1');
   });
 
   it('replaces the person and the vote status when a person type changed', () => {

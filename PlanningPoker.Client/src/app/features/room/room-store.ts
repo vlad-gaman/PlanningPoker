@@ -202,8 +202,8 @@ export class RoomStore {
       const me = await firstValueFrom(this.meService.update(request));
       if (gen === this.generation) {
         this.meState.set(me.guid);
+        this.personDefaults.save(request);
       }
-      this.personDefaults.save(request);
     } catch (error) {
       await this.fail(error, gen, 'form');
       return;
@@ -211,11 +211,6 @@ export class RoomStore {
     if (gen === this.generation) {
       await this.joinOrFail(this.roomId, gen);
     }
-  }
-
-  /** Connects and joins the room as the person `me` stands for; throws when the server refuses. */
-  async join(roomId: string): Promise<void> {
-    await this.connect(roomId, ++this.generation);
   }
 
   private async connect(roomId: string, gen: number): Promise<void> {
