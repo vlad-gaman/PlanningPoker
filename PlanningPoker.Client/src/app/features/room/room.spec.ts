@@ -18,6 +18,8 @@ import {
   fakeHub,
   revealed,
 } from '../../testing/fake-hub.testing';
+import { ALARM_SOUND_STORAGE_KEY } from '../../core/alarm-sound.service';
+import { AlarmPlayer } from './alarm/alarm-player';
 import { FireworksLauncher } from './fireworks/fireworks-launcher';
 import { HUB_EVENTS } from '../../models/hub-events';
 import { RoomStore } from './room-store';
@@ -35,6 +37,7 @@ describe('Room', () => {
   const launcher = { create: vi.fn() };
   const dialog = { open: vi.fn() };
   const popup = { show: vi.fn(), dismiss: vi.fn() };
+  const alarmPlayer = { play: vi.fn() };
   const rooms = { exists: vi.fn() };
   let hub: ReturnType<typeof fakeHub>;
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -49,6 +52,8 @@ describe('Room', () => {
     dialog.open.mockReset();
     popup.show.mockReset();
     popup.dismiss.mockReset();
+    alarmPlayer.play.mockReset().mockResolvedValue(undefined);
+    localStorage.removeItem(ALARM_SOUND_STORAGE_KEY);
     rooms.exists.mockReset();
     rooms.exists.mockReturnValue(of({ id: 'room-1', exists: true }));
     launcher.create.mockReturnValue(fireworks);
@@ -59,6 +64,7 @@ describe('Room', () => {
         { provide: FireworksLauncher, useValue: launcher },
         { provide: MatDialog, useValue: dialog },
         { provide: ErrorPopupService, useValue: popup },
+        { provide: AlarmPlayer, useValue: alarmPlayer },
         { provide: RoomsService, useValue: rooms },
       ],
     });
@@ -748,6 +754,95 @@ describe('Room', () => {
       await settle(fixture);
 
       expect(strip(element).classList).toContain('revealed');
+    });
+  });
+
+  describe('the Alarm', () => {
+    const ENDS_AT = '2026-01-01T12:15:00+00:00';
+
+    function alarmButton(element: HTMLElement): HTMLButtonElement | null {
+      return element.querySelector('app-alarm-button button');
+    }
+
+    it('shows the Alarm button, with the icon of the chosen sound', async () => {
+      localStorage.setItem(ALARM_SOUND_STORAGE_KEY, 'duck');
+      me.get.mockReturnValue(of(ANN));
+      const { element } = await render();
+
+      expect(alarmButton(element)).not.toBeNull();
+      expect(alarmButton(element)!.textContent).toContain('🦆');
+    });
+
+    it('shows no Alarm button when the room turned the Alarm off', async () => {
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, configuration: { ...JOIN_RESPONSE.configuration, alarmEnabled: false } });
+      me.get.mockReturnValue(of(ANN));
+      const { element } = await render();
+
+      expect(alarmButton(element)).toBeNull();
+    });
+
+    it('starts, then cancels, then resets through the hub', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+
+      alarmButton(element)!.click();
+      expect(hub.invoke).toHaveBeenCalledWith('StartAlarm');
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ENDS_AT });
+      fixture.detectChanges();
+      alarmButton(element)!.click();
+      expect(hub.invoke).toHaveBeenCalledWith('CancelAlarm');
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ENDS_AT });
+      fixture.detectChanges();
+      alarmButton(element)!.click();
+      expect(hub.invoke).toHaveBeenCalledWith('ResetAlarm');
+    });
+
+    it('plays this person\'s own sound once when the Alarm elapses', async () => {
+      localStorage.setItem(ALARM_SOUND_STORAGE_KEY, 'gong');
+      me.get.mockReturnValue(of(ANN));
+      const { fixture } = await render();
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ENDS_AT });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(alarmPlayer.play).toHaveBeenCalledOnce();
+      expect(alarmPlayer.play).toHaveBeenCalledWith('gong');
+    });
+
+    it('plays nothing for an Alarm that was already elapsed when joining', async () => {
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, alarm: { status: 'elapsed', endsAt: ENDS_AT } });
+      me.get.mockReturnValue(of(ANN));
+      const { element } = await render();
+
+      expect(alarmPlayer.play).not.toHaveBeenCalled();
+      expect(alarmButton(element)!.classList.contains('jingle')).toBe(true);
+    });
+
+    it('plays nothing when it starts or is cancelled', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture } = await render();
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ENDS_AT });
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'idle', endsAt: null });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(alarmPlayer.play).not.toHaveBeenCalled();
+    });
+
+    it('lets Silent keep the jingle but make no sound', async () => {
+      localStorage.setItem(ALARM_SOUND_STORAGE_KEY, 'silent');
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ENDS_AT });
+      fixture.detectChanges();
+
+      expect(alarmPlayer.play).toHaveBeenCalledWith('silent');
+      expect(alarmButton(element)!.classList.contains('jingle')).toBe(true);
     });
   });
 });

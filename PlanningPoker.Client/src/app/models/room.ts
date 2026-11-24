@@ -10,6 +10,20 @@ export interface RoomConfiguration {
   countdownSeconds: number;
   showFireworks: boolean;
   maxParticipants: number;
+  /** Whether the room's Alarm can be started. */
+  alarmEnabled: boolean;
+  /** How many minutes the Alarm runs once started. */
+  alarmMinutes: number;
+}
+
+/** Where a room's Alarm is: not started, counting down, or run out and waiting for a reset. */
+export type AlarmStatus = 'idle' | 'running' | 'elapsed';
+
+/** The Alarm as the server sends it (PlanningPoker.Controller/Models/AlarmResponse.cs). */
+export interface AlarmResponse {
+  status: AlarmStatus;
+  /** When the Alarm elapses or elapsed (ISO 8601); null while idle. */
+  endsAt: string | null;
 }
 
 export interface CreateRoomRequest {
@@ -103,6 +117,7 @@ export interface JoinRoomResponse {
   myMark: string | null;
   ownerGuid: string;
   configuration: RoomConfiguration;
+  alarm: AlarmResponse;
   /** The room's revealed rounds, newest first. */
   roundHistory: RoundResult[];
 }
@@ -157,6 +172,7 @@ export interface RoomConfigurationUpdatedEvent {
   cards: CardOption[];
   updatedBy: string;
   voteStatus: VoteStatus;
+  alarm: AlarmResponse;
 }
 
 export interface RoomDisposedEvent {
@@ -170,7 +186,12 @@ export const DEFAULT_ROOM_CONFIGURATION: RoomConfiguration = {
   countdownSeconds: 5,
   showFireworks: true,
   maxParticipants: 50,
+  alarmEnabled: true,
+  alarmMinutes: 5,
 };
+
+export const ALARM_MINUTES_MIN = 1;
+export const ALARM_MINUTES_MAX = 60;
 
 export const COUNTDOWN_MIN_SECONDS = 0;
 export const COUNTDOWN_MAX_SECONDS = 30;

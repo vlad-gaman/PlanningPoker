@@ -50,7 +50,10 @@ export const JOIN_RESPONSE = {
     countdownSeconds: 5,
     showFireworks: true,
     maxParticipants: 50,
+    alarmEnabled: true,
+    alarmMinutes: 5,
   },
+  alarm: { status: 'idle', endsAt: null },
   roundHistory: [],
 };
 

@@ -69,6 +69,18 @@
   margin-bottom: 1rem;
 }
 
+// The round timer and the Alarm sit side by side; the timer's own bottom margin is the one the row keeps.
+.clocks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+
+  app-alarm-button {
+    margin-bottom: 0.75rem;
+  }
+}
+
 .countdown {
   margin: 0 0 1rem;
   padding: 0.6rem 1rem;

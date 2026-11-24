@@ -1,8 +1,17 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 440px;
   max-width: 100%;
+  // The settings grew past a short window: the groups scroll between the fixed header and footer, so Save stays in reach.
+  max-height: calc(100vh - 3rem);
   color: var(--text-color);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .settings-header {
@@ -28,6 +37,7 @@
 
 .settings-content {
   padding: 15px;
+  overflow-y: auto;
 }
 
 .group h3 {

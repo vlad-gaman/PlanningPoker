@@ -27,7 +27,7 @@ describe('RoomsService', () => {
   it('posts the room request and returns the new id', () => {
     const body = {
       useFunRoomName: false,
-      configuration: { cardSet: 'linear', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
+      configuration: { cardSet: 'linear', countdownSeconds: 5, showFireworks: true, maxParticipants: 50, alarmEnabled: true, alarmMinutes: 5 },
     };
     let result: unknown;
     service.create(body).subscribe((value) => (result = value));

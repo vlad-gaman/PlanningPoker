@@ -6,6 +6,8 @@ import { errorMessage } from '../../core/api-request-error';
 import { Person } from '../../models/person';
 import { RoomsService } from '../../core/rooms.service';
 import {
+  ALARM_MINUTES_MAX,
+  ALARM_MINUTES_MIN,
   COUNTDOWN_MAX_SECONDS,
   COUNTDOWN_MIN_SECONDS,
   MAX_PARTICIPANTS_MIN,
@@ -37,6 +39,7 @@ export class RoomSettingsDialog {
 
   protected readonly cardSets = toSignal(inject(RoomsService).cardSets(), { initialValue: [] });
   protected readonly countdownRange = { min: COUNTDOWN_MIN_SECONDS, max: COUNTDOWN_MAX_SECONDS };
+  protected readonly alarmRange = { min: ALARM_MINUTES_MIN, max: ALARM_MINUTES_MAX };
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     cardSet: this.data.configuration.cardSet,
@@ -48,6 +51,11 @@ export class RoomSettingsDialog {
     maxParticipants: [
       this.data.configuration.maxParticipants,
       [Validators.required, Validators.min(MAX_PARTICIPANTS_MIN)],
+    ],
+    alarmEnabled: this.data.configuration.alarmEnabled,
+    alarmMinutes: [
+      this.data.configuration.alarmMinutes,
+      [Validators.required, Validators.min(ALARM_MINUTES_MIN), Validators.max(ALARM_MINUTES_MAX)],
     ],
   });
 

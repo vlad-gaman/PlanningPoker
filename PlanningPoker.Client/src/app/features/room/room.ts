@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { AlarmSoundService } from '../../core/alarm-sound.service';
 import { ErrorPopupService } from '../../core/error-popup.service';
 import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -23,6 +24,8 @@ import { RoomNameWord } from '../../models/room';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
 import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
+import { AlarmButton } from './alarm/alarm-button';
+import { AlarmPlayer } from './alarm/alarm-player';
 import { CardPicker, cardArt, cardImage, cardText } from './card-picker/card-picker';
 import { EsendexCardArt } from './card-picker/esendex-card-art';
 import { FireworksOverlay } from './fireworks/fireworks-overlay';
@@ -46,6 +49,7 @@ const DISCONNECTED_MESSAGE = 'You are disconnected from the server. Trying to re
     PersonFields,
     RoundHistory,
     RoundTimer,
+    AlarmButton,
   ],
   providers: [RoomStore, RoomHubClient],
   templateUrl: './room.html',
@@ -59,6 +63,9 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly roomDefaults = inject(RoomDefaultsService);
   private readonly personDefaults = inject(PersonDefaultsService);
+  private readonly alarmPlayer = inject(AlarmPlayer);
+  protected readonly alarmSound = inject(AlarmSoundService);
+  private seenAlarmElapses = 0;
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly cardImage = cardImage;
@@ -101,6 +108,15 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       } else {
         popup.show(DISCONNECTED_MESSAGE, true);
       }
+    });
+    // The Alarm sounds, in this person's own sound, only for an elapse they were in the room to see happen: not for an
+    // Alarm that had already elapsed when they joined, and not when it starts or is cancelled.
+    effect(() => {
+      const elapses = this.store.alarmElapsedCount();
+      if (elapses > this.seenAlarmElapses) {
+        void this.alarmPlayer.play(this.alarmSound.sound());
+      }
+      this.seenAlarmElapses = elapses;
     });
     // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
     // in consensus, if the room has them on; they stop as soon as the votes are gone.
@@ -191,6 +207,18 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       transfer: (guid) => this.store.transferOwnership(guid),
     };
     this.dialog.open(RoomSettingsDialog, { data });
+  }
+
+  protected startAlarm(): void {
+    void this.store.startAlarm();
+  }
+
+  protected cancelAlarm(): void {
+    void this.store.cancelAlarm();
+  }
+
+  protected resetAlarm(): void {
+    void this.store.resetAlarm();
   }
 
   protected leave(): void {

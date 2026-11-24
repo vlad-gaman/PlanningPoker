@@ -1,0 +1,86 @@
+import { Browser, BrowserContext, Page, expect, test } from '@playwright/test';
+import { seedRoomDefaults } from './room-defaults';
+
+const GUID_ROOM_PATH = /\/room\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+interface Person {
+  context: BrowserContext;
+  page: Page;
+}
+
+async function newPerson(browser: Browser): Promise<Person> {
+  const context = await browser.newContext();
+  return { context, page: await context.newPage() };
+}
+
+async function createRoom(page: Page, name: string, alarmMinutes: number): Promise<string> {
+  await seedRoomDefaults(page, { alarmMinutes });
+  await page.goto('/');
+  await page.getByLabel('Your name').fill(name);
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page).toHaveURL(GUID_ROOM_PATH);
+  return page.url();
+}
+
+async function join(page: Page, roomUrl: string, name: string): Promise<void> {
+  await page.goto(roomUrl);
+  await page.getByLabel('Your name').fill(name);
+  await page.getByRole('button', { name: 'Join room' }).click();
+  await expect(page.locator('li.person').filter({ hasText: name })).toBeVisible();
+}
+
+const alarm = (page: Page) => page.locator('.head app-alarm-button button');
+
+test('anyone starts the Alarm for the whole room and anyone cancels it', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann', 7);
+  await join(bob.page, roomUrl, 'Bob');
+  await expect(alarm(ann.page)).toContainText('7:00');
+
+  await alarm(bob.page).click();
+
+  await expect(alarm(ann.page)).toHaveAttribute('aria-label', /^Cancel the alarm/);
+  await expect(alarm(bob.page)).toHaveAttribute('aria-label', /^Cancel the alarm/);
+  await expect(alarm(ann.page)).toContainText(/6:5\d|7:00/);
+
+  await alarm(ann.page).click();
+
+  await expect(alarm(bob.page)).toHaveAttribute('aria-label', 'Start the 7 minute alarm');
+  await Promise.all([ann.context.close(), bob.context.close()]);
+});
+
+test('only the owner can change the Alarm, and turning it off removes the button for everyone', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann', 5);
+  await join(bob.page, roomUrl, 'Bob');
+  await expect(bob.page.getByRole('button', { name: 'Settings' })).toHaveCount(0);
+
+  await ann.page.getByRole('button', { name: 'Settings' }).click();
+  const dialog = ann.page.getByRole('dialog');
+  await dialog.getByLabel('Alarm length (minutes)').fill('9');
+  await dialog.getByRole('button', { name: 'Save Settings' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(alarm(bob.page)).toContainText('9:00');
+
+  await ann.page.getByRole('button', { name: 'Settings' }).click();
+  await dialog.locator('label.switch', { has: ann.page.locator('#alarm-enabled') }).click();
+  await dialog.getByRole('button', { name: 'Save Settings' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await expect(alarm(bob.page)).toHaveCount(0);
+  await expect(alarm(ann.page)).toHaveCount(0);
+  await Promise.all([ann.context.close(), bob.context.close()]);
+});
+
+test('a person picks their own sound in the header, kept for the next visit', async ({ page }) => {
+  await page.goto('/');
+  const picker = page.getByLabel('Alarm sound');
+
+  await expect(picker).toHaveValue('bell');
+  await picker.selectOption('duck');
+  await page.reload();
+
+  await expect(picker).toHaveValue('duck');
+});
