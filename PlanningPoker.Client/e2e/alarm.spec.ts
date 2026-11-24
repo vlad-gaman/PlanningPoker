@@ -74,6 +74,37 @@ test('only the owner can change the Alarm, and turning it off removes the button
   await Promise.all([ann.context.close(), bob.context.close()]);
 });
 
+test('the countdown starts at the full length and only ever goes down', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  const bob = await newPerson(browser);
+  const roomUrl = await createRoom(ann.page, 'Ann', 7);
+  await join(bob.page, roomUrl, 'Bob');
+  for (const { page } of [ann, bob]) {
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { alarmTexts: string[] }).alarmTexts = seen;
+      new MutationObserver(() => {
+        const text = document.querySelector('.head app-alarm-button .text')?.textContent?.trim();
+        if (text && seen.at(-1) !== text) {
+          seen.push(text);
+        }
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+  }
+
+  await alarm(bob.page).click();
+  await expect(alarm(ann.page)).toHaveAttribute('aria-label', /^Cancel the alarm/);
+  await ann.page.waitForTimeout(2500);
+
+  for (const { page } of [ann, bob]) {
+    const texts = await page.evaluate(() => (window as unknown as { alarmTexts: string[] }).alarmTexts);
+    const seconds = texts.map((text) => text.split(':').reduce((total, part) => total * 60 + Number(part), 0));
+    expect(Math.max(...seconds)).toBeLessThanOrEqual(7 * 60);
+    expect(seconds).toEqual([...seconds].sort((x, y) => y - x));
+  }
+  await Promise.all([ann.context.close(), bob.context.close()]);
+});
+
 test('a small window shows one Alarm button, also once the votes are shown', async ({ browser }) => {
   const ann = await newPerson(browser);
   await ann.page.setViewportSize({ width: 400, height: 800 });

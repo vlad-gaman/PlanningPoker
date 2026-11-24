@@ -30,6 +30,8 @@ export interface AlarmResponse {
   status: AlarmStatus;
   /** When the Alarm elapses or elapsed (ISO 8601); null while idle. */
   endsAt: string | null;
+  /** How long a running Alarm still has as of this message; the client counts down from it, so the two clocks need not agree. */
+  remainingMilliseconds?: number | null;
 }
 
 export interface CreateRoomRequest {

@@ -1,4 +1,5 @@
 using PlanningPoker.Common.Models;
+using Microsoft.Extensions.Time.Testing;
 using PlanningPoker.Controller.Constants;
 using PlanningPoker.Controller.Mappers;
 using PlanningPoker.Controller.Models;
@@ -21,6 +22,28 @@ public class AlarmResponseMapperTests
 
         Assert.Equal(name, response.Status);
         Assert.Equal(status == AlarmStatus.Idle ? null : EndsAt, response.EndsAt);
+    }
+
+    [Fact]
+    public void Map_SaysHowLongARunningAlarmHasLeft_SoNoClientNeedsToShareTheServersClock()
+    {
+        var time = new FakeTimeProvider(EndsAt.AddSeconds(-90));
+        var mapper = new AlarmResponseMapper(time);
+
+        Assert.Equal(90_000, mapper.Map(new AlarmState { Status = AlarmStatus.Running, EndsAt = EndsAt }).RemainingMilliseconds);
+
+        time.Advance(TimeSpan.FromSeconds(100));
+        Assert.Equal(0, mapper.Map(new AlarmState { Status = AlarmStatus.Running, EndsAt = EndsAt }).RemainingMilliseconds);
+    }
+
+    [Theory]
+    [InlineData(AlarmStatus.Idle)]
+    [InlineData(AlarmStatus.Elapsed)]
+    public void Map_HasNoTimeLeftToReportOutsideARun(AlarmStatus status)
+    {
+        var response = new AlarmResponseMapper().Map(new AlarmState { Status = status, EndsAt = status == AlarmStatus.Idle ? null : EndsAt });
+
+        Assert.Null(response.RemainingMilliseconds);
     }
 
     [Fact]

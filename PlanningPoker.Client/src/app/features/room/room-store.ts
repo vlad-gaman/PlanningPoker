@@ -64,7 +64,16 @@ export function isRoomGone(error: unknown): boolean {
 const IDLE_ALARM: AlarmState = { status: 'idle', endsAt: null };
 
 function toAlarmState(alarm: AlarmResponse | undefined): AlarmState {
-  return alarm ? { status: alarm.status, endsAt: parseStamp(alarm.endsAt ?? undefined) } : IDLE_ALARM;
+  if (!alarm) {
+    return IDLE_ALARM;
+  }
+  // A running Alarm counts from the time the server says is left, against this client's own clock; the server's end
+  // stamp is only a fallback, since the two clocks need not agree.
+  const endsAt =
+    alarm.status === 'running' && typeof alarm.remainingMilliseconds === 'number'
+      ? Date.now() + alarm.remainingMilliseconds
+      : parseStamp(alarm.endsAt ?? undefined);
+  return { status: alarm.status, endsAt };
 }
 
 /** Where entering a room has got to: checking it, asking for a name, or in. */

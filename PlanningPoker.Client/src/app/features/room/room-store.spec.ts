@@ -979,16 +979,29 @@ describe('RoomStore room management', () => {
       expect(store.alarmElapsedCount()).toBe(0);
     });
 
-    it('takes a running Alarm and its end time from the join snapshot', async () => {
-      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, alarm: { status: 'running', endsAt: ALARM_ENDS_AT } });
+    it('takes a running Alarm from the join snapshot, counting from the time left it reports', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.UTC(2030, 5, 1));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, alarm: { status: 'running', endsAt: ALARM_ENDS_AT, remainingMilliseconds: 90_000 } });
 
       await store.enter('room-1');
 
-      expect(store.alarm()).toEqual({ status: 'running', endsAt: Date.parse(ALARM_ENDS_AT) });
+      expect(store.alarm()).toEqual({ status: 'running', endsAt: Date.UTC(2030, 5, 1) + 90_000 });
+      vi.useRealTimers();
+    });
+
+    it('ignores the server clock: a skewed end time cannot make the count start a second high', () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.parse(ALARM_ENDS_AT) - 301_000);
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT, remainingMilliseconds: 300_000 });
+
+      expect(store.alarm().endsAt).toBe(Date.now() + 300_000);
+      vi.useRealTimers();
     });
 
     it('follows the room: running, then elapsed, then idle again', () => {
-      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT });
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT, remainingMilliseconds: 300_000 });
       expect(store.alarm().status).toBe('running');
 
       hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ALARM_ENDS_AT });
