@@ -32,7 +32,7 @@ public static class RoomServiceFactory
             metrics ?? new FakePlanningPokerMetrics(),
             Rounds.Membership(time),
             Rounds.Create(time),
-            new RoomAlarm(new AlarmStateMapper(), time ?? TimeProvider.System),
+            new RoomAlarm(new AlarmValidation(), new AlarmStateMapper(), time ?? TimeProvider.System),
             new AlarmStateMapper(),
             new AlarmChangeResultMapper(),
             time ?? TimeProvider.System);

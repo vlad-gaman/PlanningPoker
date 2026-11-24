@@ -13,7 +13,7 @@ public class RoomResponseMappersTests
     private static readonly Person Ann = new() { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "dev" };
     private static readonly Person Bob = new() { Guid = Guid.NewGuid(), Name = "Bob", PersonType = "obs" };
     private static readonly RoomConfiguration Configuration = new() { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 4, AlarmEnabled = false, AlarmMinutes = 12 };
-    private static readonly Room Room = new() { Id = "room", OwnerGuid = Ann.Guid, Configuration = Configuration };
+    private static readonly Room Room = new() { Id = "room", OwnerGuid = Ann.Guid, Configuration = Configuration, Alarm = new AlarmState { Status = AlarmStatus.Idle } };
 
     private static JoinRoomResult JoinResult(Dictionary<Guid, string>? votes = null)
     {

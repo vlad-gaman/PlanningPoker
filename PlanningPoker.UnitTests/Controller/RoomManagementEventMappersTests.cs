@@ -32,6 +32,7 @@ public class RoomManagementEventMappersTests
     {
         var result = new RoomConfigurationChangeResult
         {
+            Alarm = new AlarmState { Status = AlarmStatus.Idle },
             RoomId = "room",
             Configuration = new RoomConfiguration { CardSet = "t-shirt-sizes", CountdownSeconds = 8, ShowFireworks = true, MaxParticipants = 3 },
             Cards = [new CardOption { Value = "XS" }, new CardOption { Value = "coffee", Display = "coffee-display" }],

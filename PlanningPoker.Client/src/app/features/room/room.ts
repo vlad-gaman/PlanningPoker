@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,11 +21,11 @@ import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
 import { RoomHubClient } from '../../core/room-hub.client';
 import { PERSON_TYPES, Person, PersonType } from '../../models/person';
-import { RoomNameWord } from '../../models/room';
+import { DEFAULT_ROOM_CONFIGURATION, RoomNameWord } from '../../models/room';
 import { RoomSettingsDialog, RoomSettingsDialogData } from '../home/room-settings-dialog';
 import { PersonFields } from '../shared/person-fields';
 import { createPersonForm } from '../shared/person-form';
-import { AlarmButton } from './alarm/alarm-button';
+import { AlarmButton, MILLISECONDS_PER_SECOND } from './alarm/alarm-button';
 import { AlarmPlayer } from './alarm/alarm-player';
 import { CardPicker, cardArt, cardImage, cardText } from './card-picker/card-picker';
 import { EsendexCardArt } from './card-picker/esendex-card-art';
@@ -36,11 +37,14 @@ import { RoundTimer } from './round-timer/round-timer';
 import { isLolle } from './lolle';
 import { HIDDEN_MARK, RoomStore } from './room-store';
 
+/** How long the Alarm icon shakes after it elapsed; the stylesheet's animation lasts the same. */
+const ALARM_JINGLE_SECONDS = 3.5;
 const DISCONNECTED_MESSAGE = 'You are disconnected from the server. Trying to reconnect…';
 
 @Component({
   selector: 'app-room',
   imports: [
+    NgTemplateOutlet,
     CardPicker,
     EsendexCardArt,
     FireworksOverlay,
@@ -66,6 +70,10 @@ export class Room implements OnInit, OnChanges, OnDestroy {
   private readonly alarmPlayer = inject(AlarmPlayer);
   protected readonly alarmSound = inject(AlarmSoundService);
   private seenAlarmElapses = 0;
+  /** True for a few seconds after this person watched the Alarm elapse: the Alarm button's icon shakes then. */
+  protected readonly alarmJingling = signal(false);
+  protected readonly alarmEnabled = computed(() => this.store.configuration()?.alarmEnabled ?? false);
+  protected readonly alarmMinutes = computed(() => this.store.configuration()?.alarmMinutes ?? DEFAULT_ROOM_CONFIGURATION.alarmMinutes);
 
   protected readonly personTypes = PERSON_TYPES;
   protected readonly cardImage = cardImage;
@@ -115,8 +123,16 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       const elapses = this.store.alarmElapsedCount();
       if (elapses > this.seenAlarmElapses) {
         void this.alarmPlayer.play(this.alarmSound.sound());
+        this.alarmJingling.set(true);
+        setTimeout(() => this.alarmJingling.set(false), ALARM_JINGLE_SECONDS * MILLISECONDS_PER_SECOND);
       }
       this.seenAlarmElapses = elapses;
+    });
+    // A reset or a cancel ends the jingle early.
+    effect(() => {
+      if (this.store.alarm().status !== 'elapsed') {
+        this.alarmJingling.set(false);
+      }
     });
     // Fireworks follow a reveal the user watched happen (not a room that was already revealed on joining) that ended
     // in consensus, if the room has them on; they stop as soon as the votes are gone.

@@ -33,6 +33,7 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<RoomIdentifierValidation>();
         services.AddSingleton<RoomExistsValidation>();
         services.AddSingleton<VoteMarkValidation>();
+        services.AddSingleton<AlarmValidation>();
         services.AddSingleton<IWordListLoader, WordListLoader>();
         services.AddSingleton(provider => provider.GetRequiredService<IWordListLoader>().Load());
         services.AddSingleton<IRoomNameGenerator, RoomNameGenerator>();

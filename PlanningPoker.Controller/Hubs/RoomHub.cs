@@ -232,15 +232,7 @@ public class RoomHub(
             return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
         }
 
-        var started = rooms.StartAlarm(person.Guid, Context.ConnectionId);
-        if (!started.IsSuccess)
-        {
-            return apiResponseMapper.Map(ServiceResponse.Failure(started.Errors.ToArray()));
-        }
-
-        await roomEvents.PublishAlarmChangedAsync(started.Data!);
-        alarmTimer.Schedule(started.Data!.RoomId, started.Data.Alarm.EndsAt!.Value);
-        return apiResponseMapper.Map(ServiceResponse.Success());
+        return await ApplyAlarmAsync(rooms.StartAlarm(person.Guid, Context.ConnectionId), changed => alarmTimer.Schedule(changed.RoomId, changed.Alarm.EndsAt!.Value));
     }
 
     /// <summary>Returns a running Alarm of the caller's room to idle; any member.</summary>
@@ -251,15 +243,7 @@ public class RoomHub(
             return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
         }
 
-        var cancelled = rooms.CancelAlarm(person.Guid, Context.ConnectionId);
-        if (!cancelled.IsSuccess)
-        {
-            return apiResponseMapper.Map(ServiceResponse.Failure(cancelled.Errors.ToArray()));
-        }
-
-        alarmTimer.Cancel(cancelled.Data!.RoomId);
-        await roomEvents.PublishAlarmChangedAsync(cancelled.Data);
-        return apiResponseMapper.Map(ServiceResponse.Success());
+        return await ApplyAlarmAsync(rooms.CancelAlarm(person.Guid, Context.ConnectionId), changed => alarmTimer.Cancel(changed.RoomId));
     }
 
     /// <summary>Returns an elapsed Alarm of the caller's room to idle without starting it again; any member.</summary>
@@ -270,14 +254,7 @@ public class RoomHub(
             return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
         }
 
-        var reset = rooms.ResetAlarm(person.Guid, Context.ConnectionId);
-        if (!reset.IsSuccess)
-        {
-            return apiResponseMapper.Map(ServiceResponse.Failure(reset.Errors.ToArray()));
-        }
-
-        await roomEvents.PublishAlarmChangedAsync(reset.Data!);
-        return apiResponseMapper.Map(ServiceResponse.Success());
+        return await ApplyAlarmAsync(rooms.ResetAlarm(person.Guid, Context.ConnectionId), _ => { });
     }
 
     /// <summary>Hands the caller's room to another member; owner only.</summary>
@@ -315,6 +292,19 @@ public class RoomHub(
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    /// <summary>Announces an Alarm change the service accepted, after the caller's own timer step, or returns why it was refused.</summary>
+    private async Task<ApiResponse<object>> ApplyAlarmAsync(ServiceResponse<AlarmChangeResult> change, Action<AlarmChangeResult> timerStep)
+    {
+        if (!change.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(change.Errors.ToArray()));
+        }
+
+        timerStep(change.Data!);
+        await roomEvents.PublishAlarmChangedAsync(change.Data!);
+        return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
     private async Task ExitAndPublishAsync(Guid personGuid)

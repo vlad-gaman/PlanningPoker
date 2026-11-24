@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AlarmState } from '../room-store';
+import { AlarmState } from '../../../models/room';
 import { AlarmButton } from './alarm-button';
 
 const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
@@ -13,6 +13,7 @@ const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
       [enabled]="enabled()"
       [minutes]="5"
       [icon]="'🔔'"
+      [jingle]="jingle()"
       (started)="events.push('start')"
       (cancelled)="events.push('cancel')"
       (dismissed)="events.push('reset')"
@@ -22,6 +23,7 @@ const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
 class Host {
   readonly alarm = signal<AlarmState>({ status: 'idle', endsAt: null });
   readonly enabled = signal(true);
+  readonly jingle = signal(false);
   readonly events: string[] = [];
 }
 
@@ -88,26 +90,26 @@ describe('AlarmButton', () => {
     expect(button()!.textContent).toContain('0:00');
   });
 
-  it("shows time's up and jingles once elapsed, and a click resets it", () => {
+  it("shows time's up once elapsed, and a click resets it", () => {
     const { fixture, host, button } = mount();
     host.alarm.set({ status: 'elapsed', endsAt: NOW });
     fixture.detectChanges();
 
     expect(button()!.textContent).toContain("Time's up");
-    expect(button()!.classList.contains('jingle')).toBe(true);
     expect(button()!.getAttribute('aria-label')).toBe('The alarm elapsed. Reset it');
 
     button()!.click();
     expect(host.events).toEqual(['reset']);
   });
 
-  it('does not jingle while idle or running', () => {
+  it('jingles only while it is told to, whatever state it is in', () => {
     const { fixture, host, button } = mount();
-    expect(button()!.classList.contains('jingle')).toBe(false);
-
-    host.alarm.set({ status: 'running', endsAt: NOW + 60_000 });
+    host.alarm.set({ status: 'elapsed', endsAt: NOW });
     fixture.detectChanges();
-
     expect(button()!.classList.contains('jingle')).toBe(false);
+
+    host.jingle.set(true);
+    fixture.detectChanges();
+    expect(button()!.classList.contains('jingle')).toBe(true);
   });
 });

@@ -16,7 +16,7 @@ import { Person, PersonType, UpdateMeRequest } from '../../models/person';
 import { orderPeople } from './order-people';
 import {
   AlarmResponse,
-  AlarmStatus,
+  AlarmState,
   CardOption,
   CountdownEvent,
   JoinRoomResponse,
@@ -59,12 +59,6 @@ export function isRoomGone(error: unknown): boolean {
     error instanceof ApiRequestError &&
     (error.hasCode(ERROR_CODES.roomNotFound) || error.hasError(ERROR_CODES.validationFailed, { field: ROOM_ID_FIELD }))
   );
-}
-
-/** The room's Alarm as the client holds it: the end time is milliseconds since the epoch. */
-export interface AlarmState {
-  status: AlarmStatus;
-  endsAt: number | null;
 }
 
 const IDLE_ALARM: AlarmState = { status: 'idle', endsAt: null };
@@ -124,6 +118,8 @@ export class RoomStore {
   private generation = 0;
   /** While a JoinRoom call is in flight, hub events are queued here and replayed after its snapshot is applied. */
   private buffered: (() => void)[] | null = null;
+  /** True while the events queued during a join are replayed: what they announce happened before this join finished. */
+  private replaying = false;
 
   /** False while the connection to the server is down (trying to get back) or closed. */
   readonly connected = this.connectedState.asReadonly();
@@ -431,11 +427,16 @@ export class RoomStore {
     this.configurationState.set(response.configuration);
     this.roundHistoryState.set(response.roundHistory ?? []);
     this.alarmState.set(toAlarmState(response.alarm));
-    for (const change of queued) {
-      if (gen !== this.generation) {
-        return;
+    this.replaying = true;
+    try {
+      for (const change of queued) {
+        if (gen !== this.generation) {
+          return;
+        }
+        change();
       }
-      change();
+    } finally {
+      this.replaying = false;
     }
   }
 
@@ -546,7 +547,7 @@ export class RoomStore {
 
   private alarmChanged(event: AlarmResponse): void {
     this.alarmState.set(toAlarmState(event));
-    if (event.status === 'elapsed') {
+    if (event.status === 'elapsed' && !this.replaying) {
       this.alarmElapsedCountState.update((count) => count + 1);
     }
   }

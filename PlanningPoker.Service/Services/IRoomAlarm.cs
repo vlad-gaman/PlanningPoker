@@ -22,6 +22,6 @@ public interface IRoomAlarm
     /// <summary>Elapses the run that ends at <paramref name="endsAt"/>. Fails (stale) when that run was cancelled, replaced or already elapsed.</summary>
     ServiceResponse<AlarmState> Elapse(RoomEntity room, DateTimeOffset endsAt);
 
-    /// <summary>Returns a running or elapsed Alarm to idle when the room has turned the Alarm off; reports whether it changed anything.</summary>
-    bool IdleWhenDisabled(RoomEntity room);
+    /// <summary>Returns a running or elapsed Alarm to idle when the room has turned the Alarm off.</summary>
+    void IdleWhenDisabled(RoomEntity room);
 }

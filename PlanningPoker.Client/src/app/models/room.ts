@@ -19,6 +19,12 @@ export interface RoomConfiguration {
 /** Where a room's Alarm is: not started, counting down, or run out and waiting for a reset. */
 export type AlarmStatus = 'idle' | 'running' | 'elapsed';
 
+/** The room's Alarm as the client holds it: the end time is milliseconds since the epoch. */
+export interface AlarmState {
+  status: AlarmStatus;
+  endsAt: number | null;
+}
+
 /** The Alarm as the server sends it (PlanningPoker.Controller/Models/AlarmResponse.cs). */
 export interface AlarmResponse {
   status: AlarmStatus;

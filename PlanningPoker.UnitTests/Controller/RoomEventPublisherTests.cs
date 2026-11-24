@@ -88,6 +88,7 @@ public class RoomEventPublisherTests
     {
         return new RoomConfigurationChangeResult
         {
+            Alarm = new AlarmState { Status = AlarmStatus.Idle },
             RoomId = "room",
             Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = 5, ShowFireworks = false, MaxParticipants = 9 },
             Cards = [new CardOption { Value = "1" }],

@@ -37,7 +37,7 @@ The time elapsed since the room's last reveal, clear or creation. Casting or cha
 _Avoid_: Vote timer, idle timer, activity timer
 
 **Alarm**:
-A room's own countdown, shown next to the round timer, that sounds for everyone online when its time has elapsed. Only the owner sets its length in minutes, or turns it off, as a room setting; changing the length does not affect a running Alarm. Any member can start it, cancel it while it runs, and reset it once it has elapsed; a reset returns it to idle and does not start it again. It is independent of rounds: reveal, clear and role changes do not touch it. When it elapses it plays each online member's own chosen sound once, observers included, and its icon jingles; someone who joins afterwards sees it elapsed but does not hear it. A server restart returns it to idle; the setting is kept.
+A room's own countdown, shown next to the round timer, that sounds for everyone online when its time has elapsed. Only the owner sets its length in minutes, or turns it off, as a room setting; changing the length does not affect a running Alarm. Any member can start it, cancel it while it runs, and reset it once it has elapsed; a reset returns it to idle and does not start it again. It is independent of rounds: reveal, clear and role changes do not touch it. When it elapses it plays each connected member's own chosen sound once, observers included, and its icon jingles for a few seconds; someone who joins afterwards, or whose connection was down at that moment, sees it elapsed but neither hears it nor sees the jingle. A server restart returns it to idle; the setting is kept.
 _Avoid_: Countdown (that is the pre-reveal countdown), timer, reminder
 
 **Abandoned**:

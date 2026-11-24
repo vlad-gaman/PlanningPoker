@@ -2,21 +2,18 @@ using PlanningPoker.Common.Models;
 using PlanningPoker.Repository.Models;
 using PlanningPoker.Service.Mappers;
 using PlanningPoker.Service.Models;
+using PlanningPoker.Service.Validations;
 
 namespace PlanningPoker.Service.Services;
 
-public class RoomAlarm(IAlarmStateMapper stateMapper, TimeProvider time) : IRoomAlarm
+public class RoomAlarm(AlarmValidation validation, IAlarmStateMapper stateMapper, TimeProvider time) : IRoomAlarm
 {
     public ServiceResponse<AlarmState> Start(RoomEntity room)
     {
-        if (!room.Configuration.AlarmEnabled)
+        var allowed = validation.CanStart(room);
+        if (!allowed.IsSuccess)
         {
-            return ServiceResponse<AlarmState>.Failure(ServiceError.AlarmDisabled());
-        }
-
-        if (room.AlarmElapsed || room.AlarmEndsAt is not null)
-        {
-            return ServiceResponse<AlarmState>.Failure(ServiceError.AlarmNotIdle());
+            return ServiceResponse<AlarmState>.Failure(allowed);
         }
 
         room.AlarmEndsAt = time.GetUtcNow().AddMinutes(room.Configuration.AlarmMinutes);
@@ -25,9 +22,10 @@ public class RoomAlarm(IAlarmStateMapper stateMapper, TimeProvider time) : IRoom
 
     public ServiceResponse<AlarmState> Cancel(RoomEntity room)
     {
-        if (room.AlarmElapsed || room.AlarmEndsAt is null)
+        var allowed = validation.CanCancel(room);
+        if (!allowed.IsSuccess)
         {
-            return ServiceResponse<AlarmState>.Failure(ServiceError.AlarmNotRunning());
+            return ServiceResponse<AlarmState>.Failure(allowed);
         }
 
         room.AlarmEndsAt = null;
@@ -36,9 +34,10 @@ public class RoomAlarm(IAlarmStateMapper stateMapper, TimeProvider time) : IRoom
 
     public ServiceResponse<AlarmState> Reset(RoomEntity room)
     {
-        if (!room.AlarmElapsed)
+        var allowed = validation.CanReset(room);
+        if (!allowed.IsSuccess)
         {
-            return ServiceResponse<AlarmState>.Failure(ServiceError.AlarmNotElapsed());
+            return ServiceResponse<AlarmState>.Failure(allowed);
         }
 
         room.AlarmElapsed = false;
@@ -48,24 +47,24 @@ public class RoomAlarm(IAlarmStateMapper stateMapper, TimeProvider time) : IRoom
 
     public ServiceResponse<AlarmState> Elapse(RoomEntity room, DateTimeOffset endsAt)
     {
-        if (room.AlarmElapsed || room.AlarmEndsAt != endsAt)
+        var allowed = validation.CanElapse(room, endsAt);
+        if (!allowed.IsSuccess)
         {
-            return ServiceResponse<AlarmState>.Failure(ServiceError.AlarmNotRunning());
+            return ServiceResponse<AlarmState>.Failure(allowed);
         }
 
         room.AlarmElapsed = true;
         return ServiceResponse<AlarmState>.Success(stateMapper.Map(room));
     }
 
-    public bool IdleWhenDisabled(RoomEntity room)
+    public void IdleWhenDisabled(RoomEntity room)
     {
-        if (room.Configuration.AlarmEnabled || (room.AlarmEndsAt is null && !room.AlarmElapsed))
+        if (room.Configuration.AlarmEnabled)
         {
-            return false;
+            return;
         }
 
         room.AlarmEndsAt = null;
         room.AlarmElapsed = false;
-        return true;
     }
 }

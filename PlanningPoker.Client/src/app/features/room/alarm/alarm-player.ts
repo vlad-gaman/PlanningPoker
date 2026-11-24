@@ -1,4 +1,5 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
+import { MILLISECONDS_PER_SECOND } from './alarm-button';
 import { AlarmSoundId } from './alarm-sounds';
 import { ALARM_SYNTHS } from './alarm-synths';
 
@@ -27,7 +28,7 @@ export class AlarmPlayer {
         await (context as AudioContext).resume();
       }
       const seconds = ALARM_SYNTHS[sound](context, context.destination, context.currentTime);
-      setTimeout(() => void (context as AudioContext).close().catch(() => undefined), seconds * 1000 + RELEASE_MARGIN_MILLISECONDS);
+      setTimeout(() => void (context as AudioContext).close().catch(() => undefined), seconds * MILLISECONDS_PER_SECOND + RELEASE_MARGIN_MILLISECONDS);
     } catch {
       // Blocked until the page is interacted with, or no audio at all: stay quiet.
     }

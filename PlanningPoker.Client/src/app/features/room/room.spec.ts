@@ -760,6 +760,8 @@ describe('Room', () => {
   describe('the Alarm', () => {
     const ENDS_AT = '2026-01-01T12:15:00+00:00';
 
+    afterEach(() => vi.useRealTimers());
+
     function alarmButton(element: HTMLElement): HTMLButtonElement | null {
       return element.querySelector('app-alarm-button button');
     }
@@ -812,13 +814,32 @@ describe('Room', () => {
       expect(alarmPlayer.play).toHaveBeenCalledWith('gong');
     });
 
-    it('plays nothing for an Alarm that was already elapsed when joining', async () => {
+    it('plays nothing and does not jingle for an Alarm that was already elapsed when joining', async () => {
       hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, alarm: { status: 'elapsed', endsAt: ENDS_AT } });
       me.get.mockReturnValue(of(ANN));
       const { element } = await render();
 
       expect(alarmPlayer.play).not.toHaveBeenCalled();
+      expect(alarmButton(element)!.textContent).toContain("Time's up");
+      expect(alarmButton(element)!.classList.contains('jingle')).toBe(false);
+    });
+
+    it('jingles for a few seconds after a live elapse, and stops when it is reset', async () => {
+      me.get.mockReturnValue(of(ANN));
+      const { fixture, element } = await render();
+      vi.useFakeTimers({ toFake: ['setTimeout'] });
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ENDS_AT });
+      fixture.detectChanges();
       expect(alarmButton(element)!.classList.contains('jingle')).toBe(true);
+
+      vi.advanceTimersByTime(3500);
+      fixture.detectChanges();
+      expect(alarmButton(element)!.classList.contains('jingle')).toBe(false);
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'idle', endsAt: null });
+      fixture.detectChanges();
+      expect(alarmButton(element)!.classList.contains('jingle')).toBe(false);
     });
 
     it('plays nothing when it starts or is cancelled', async () => {

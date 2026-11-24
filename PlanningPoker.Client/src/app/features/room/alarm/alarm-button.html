@@ -4,7 +4,7 @@
     class="alarm"
     [class.running]="alarm().status === 'running'"
     [class.elapsed]="alarm().status === 'elapsed'"
-    [class.jingle]="alarm().status === 'elapsed'"
+    [class.jingle]="jingle()"
     [attr.aria-label]="label()"
     (click)="press()"
   >

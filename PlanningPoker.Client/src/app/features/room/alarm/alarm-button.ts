@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { formatRoundTime, spokenRoundTime } from '../round-timer/format-round-time';
-import { AlarmState } from '../room-store';
+import { AlarmState } from '../../../models/room';
 
-const TICK_MILLISECONDS = 1000;
+export const MILLISECONDS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 
 /**
@@ -23,6 +23,8 @@ export class AlarmButton {
   readonly minutes = input.required<number>();
   /** The icon of this person's chosen sound. */
   readonly icon = input.required<string>();
+  /** True for the few seconds after this person saw the Alarm elapse; the icon shakes then. */
+  readonly jingle = input.required<boolean>();
 
   readonly started = output<void>();
   readonly cancelled = output<void>();
@@ -31,46 +33,37 @@ export class AlarmButton {
   private readonly now = signal(Date.now());
   private readonly remainingSeconds = computed(() => {
     const endsAt = this.alarm().endsAt;
-    return endsAt === null ? 0 : Math.max(0, Math.ceil((endsAt - this.now()) / 1000));
+    return endsAt === null ? 0 : Math.max(0, Math.ceil((endsAt - this.now()) / MILLISECONDS_PER_SECOND));
   });
 
-  protected readonly text = computed(() => {
+  /** What the button shows, says to a screen reader, and does when pressed, for the state the Alarm is in. */
+  private readonly view = computed(() => {
     switch (this.alarm().status) {
       case 'running':
-        return formatRoundTime(this.remainingSeconds());
+        return {
+          text: formatRoundTime(this.remainingSeconds()),
+          label: `Cancel the alarm, ${spokenRoundTime(this.remainingSeconds())} left`,
+          press: () => this.cancelled.emit(),
+        };
       case 'elapsed':
-        return "Time's up";
+        return { text: "Time's up", label: 'The alarm elapsed. Reset it', press: () => this.dismissed.emit() };
       default:
-        return formatRoundTime(this.minutes() * SECONDS_PER_MINUTE);
+        return {
+          text: formatRoundTime(this.minutes() * SECONDS_PER_MINUTE),
+          label: `Start the ${this.minutes()} minute alarm`,
+          press: () => this.started.emit(),
+        };
     }
   });
-
-  protected readonly label = computed(() => {
-    switch (this.alarm().status) {
-      case 'running':
-        return `Cancel the alarm, ${spokenRoundTime(this.remainingSeconds())} left`;
-      case 'elapsed':
-        return 'The alarm elapsed. Reset it';
-      default:
-        return `Start the ${this.minutes()} minute alarm`;
-    }
-  });
+  protected readonly text = computed(() => this.view().text);
+  protected readonly label = computed(() => this.view().label);
 
   constructor() {
-    const timer = setInterval(() => this.now.set(Date.now()), TICK_MILLISECONDS);
+    const timer = setInterval(() => this.now.set(Date.now()), MILLISECONDS_PER_SECOND);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   protected press(): void {
-    switch (this.alarm().status) {
-      case 'running':
-        this.cancelled.emit();
-        break;
-      case 'elapsed':
-        this.dismissed.emit();
-        break;
-      default:
-        this.started.emit();
-    }
+    this.view().press();
   }
 }

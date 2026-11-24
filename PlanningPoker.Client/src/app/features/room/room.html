@@ -1,3 +1,15 @@
+<ng-template #alarmButton>
+  <app-alarm-button
+    [alarm]="store.alarm()"
+    [enabled]="alarmEnabled()"
+    [minutes]="alarmMinutes()"
+    [icon]="alarmSound.icon()"
+    [jingle]="alarmJingling()"
+    (started)="startAlarm()"
+    (cancelled)="cancelAlarm()"
+    (dismissed)="resetAlarm()"
+  />
+</ng-template>
 <section class="page room">
   <div class="title">
     <h1>
@@ -45,15 +57,7 @@
           @if (store.roundStartedAt(); as startedAt) {
             · <app-round-timer [startedAt]="startedAt" />
           }
-          <app-alarm-button
-            [alarm]="store.alarm()"
-            [enabled]="store.configuration()?.alarmEnabled ?? false"
-            [minutes]="store.configuration()?.alarmMinutes ?? 5"
-            [icon]="alarmSound.icon()"
-            (started)="startAlarm()"
-            (cancelled)="cancelAlarm()"
-            (dismissed)="resetAlarm()"
-          />
+          <ng-container [ngTemplateOutlet]="alarmButton" />
         </p>
         <div class="compact-tabs" role="group" aria-label="View">
           <button type="button" [attr.aria-pressed]="compactView() === 'vote'" (click)="compactView.set('vote')">Vote</button>
@@ -81,15 +85,7 @@
               @if (store.roundStartedAt(); as startedAt) {
                 <app-round-timer [startedAt]="startedAt" />
               }
-              <app-alarm-button
-                [alarm]="store.alarm()"
-                [enabled]="store.configuration()?.alarmEnabled ?? false"
-                [minutes]="store.configuration()?.alarmMinutes ?? 5"
-                [icon]="alarmSound.icon()"
-                (started)="startAlarm()"
-                (cancelled)="cancelAlarm()"
-                (dismissed)="resetAlarm()"
-              />
+              <ng-container [ngTemplateOutlet]="alarmButton" />
             </div>
           </div>
           <div class="acts">

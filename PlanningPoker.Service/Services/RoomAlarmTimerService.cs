@@ -12,11 +12,7 @@ public class RoomAlarmTimerService(IRoomService rooms, IRoomAlarmNotifier notifi
         var cancel = new CancellationTokenSource();
         lock (_gate)
         {
-            if (_pending.Remove(roomId, out var older))
-            {
-                Dispose(older);
-            }
-
+            StopPending(roomId);
             _pending[roomId] = cancel;
         }
 
@@ -27,10 +23,7 @@ public class RoomAlarmTimerService(IRoomService rooms, IRoomAlarmNotifier notifi
     {
         lock (_gate)
         {
-            if (_pending.Remove(roomId, out var older))
-            {
-                Dispose(older);
-            }
+            StopPending(roomId);
         }
     }
 
@@ -70,9 +63,13 @@ public class RoomAlarmTimerService(IRoomService rooms, IRoomAlarmNotifier notifi
         }
     }
 
-    private static void Dispose(CancellationTokenSource source)
+    /// <summary>Cancels and releases the room's pending wake-up, if any. The caller holds the gate.</summary>
+    private void StopPending(string roomId)
     {
-        source.Cancel();
-        source.Dispose();
+        if (_pending.Remove(roomId, out var pending))
+        {
+            pending.Cancel();
+            pending.Dispose();
+        }
     }
 }

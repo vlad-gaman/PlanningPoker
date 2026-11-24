@@ -22,7 +22,7 @@ public static class RoomResults
                 Id = "room",
                 OwnerGuid = person.Guid,
                 VotingEnabled = true,
-                Alarm = alarm ?? new AlarmState(),
+                Alarm = alarm ?? new AlarmState { Status = AlarmStatus.Idle },
                 Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = countdownSeconds, ShowFireworks = false, MaxParticipants = 9 }
             },
             Person = person,

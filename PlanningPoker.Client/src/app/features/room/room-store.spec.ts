@@ -1012,6 +1012,21 @@ describe('RoomStore room management', () => {
       expect(store.alarmElapsedCount()).toBe(1);
     });
 
+    it('does not count an elapse that arrived while the join was still in flight', async () => {
+      let respond!: () => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(JOIN_RESPONSE))));
+      const calls = hub.invoke.mock.calls.length;
+      const joining = store.enter('room-2');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(calls + 1));
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ALARM_ENDS_AT });
+      respond();
+      await joining;
+
+      expect(store.alarm().status).toBe('elapsed');
+      expect(store.alarmElapsedCount()).toBe(0);
+    });
+
     it('applies the Alarm a settings save leaves behind, silently', () => {
       hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT });
 

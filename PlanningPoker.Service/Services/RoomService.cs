@@ -374,7 +374,7 @@ public class RoomService(
             }
 
             // Shown votes are dropped (the old rule). So are votes cast for another card set: their marks are not cards of the new one.
-            var alarmOnly = OnlyAlarmDiffers(room.Configuration, configuration);
+            var alarmOnly = room.Configuration.DiffersOnlyInAlarmFrom(configurationEntityMapper.Map(configuration));
             var cleared = !alarmOnly && (!room.VotingEnabled || room.Configuration.CardSet != configuration.CardSet);
             room.Configuration = configurationEntityMapper.Map(configuration);
             alarm.IdleWhenDisabled(room);
@@ -441,12 +441,7 @@ public class RoomService(
 
     public ServiceResponse<AlarmChangeResult> ElapseAlarm(string roomId, DateTimeOffset endsAt)
     {
-        var found = roomUpdater.Update(roomId, room =>
-        {
-            var elapsed = alarm.Elapse(room, endsAt);
-            return RoomUpdate.Of(elapsed, elapsed.IsSuccess);
-        }, out var outcome);
-        return found && outcome is not null ? AlarmResult(roomId, outcome) : ServiceResponse<AlarmChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        return UpdateAlarm(roomId, room => alarm.Elapse(room, endsAt));
     }
 
     /// <summary>Runs an Alarm change in the connection's room under the room lock, for any member.</summary>
@@ -458,25 +453,25 @@ public class RoomService(
             return ServiceResponse<AlarmChangeResult>.Failure(located);
         }
 
-        var roomId = located.Data.RoomId;
+        return UpdateAlarm(located.Data.RoomId, room => IsMember(room, personGuid, connectionId) ? change(room) : ServiceResponse<AlarmState>.Failure(ServiceError.NotInRoom()));
+    }
+
+    /// <summary>Runs an Alarm change under the room lock; only a change that succeeded counts as room activity.</summary>
+    private ServiceResponse<AlarmChangeResult> UpdateAlarm(string roomId, Func<RoomEntity, ServiceResponse<AlarmState>> change)
+    {
         var found = roomUpdater.Update(roomId, room =>
         {
-            if (!IsMember(room, personGuid, connectionId))
-            {
-                return RoomUpdate.Unchanged(ServiceResponse<AlarmState>.Failure(ServiceError.NotInRoom()));
-            }
-
             var changed = change(room);
             return RoomUpdate.Of(changed, changed.IsSuccess);
         }, out var outcome);
-        return found && outcome is not null ? AlarmResult(roomId, outcome) : ServiceResponse<AlarmChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
-    }
+        if (!found || outcome is null)
+        {
+            return ServiceResponse<AlarmChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
 
-    private ServiceResponse<AlarmChangeResult> AlarmResult(string roomId, ServiceResponse<AlarmState> changed)
-    {
-        return changed.IsSuccess
-            ? ServiceResponse<AlarmChangeResult>.Success(alarmChangeResultMapper.Map(roomId, changed.Data!))
-            : ServiceResponse<AlarmChangeResult>.Failure(changed);
+        return outcome.IsSuccess
+            ? ServiceResponse<AlarmChangeResult>.Success(alarmChangeResultMapper.Map(roomId, outcome.Data!))
+            : ServiceResponse<AlarmChangeResult>.Failure(outcome);
     }
 
     public ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid)
@@ -551,15 +546,6 @@ public class RoomService(
             Remaining = tick.Remaining,
             Revealed = tick.Outcome == TickOutcome.Revealed ? CurrentStatus(roomId) : null
         };
-    }
-
-    /// <summary>True when the new settings differ from the stored ones only in the Alarm fields.</summary>
-    private static bool OnlyAlarmDiffers(RoomConfigurationEntity stored, RoomConfiguration next)
-    {
-        return stored.CardSet == next.CardSet
-            && stored.CountdownSeconds == next.CountdownSeconds
-            && stored.ShowFireworks == next.ShowFireworks
-            && stored.MaxParticipants == next.MaxParticipants;
     }
 
     private static bool IsMember(RoomEntity room, Guid personGuid, string connectionId)

@@ -15,7 +15,7 @@ public class RoomConfigurationChangeResult
     public string UpdatedBy { get; init; } = default!;
 
     /// <summary>The Alarm after the save: a running or elapsed one goes back to idle when the save turned the Alarm off.</summary>
-    public AlarmState Alarm { get; init; } = new();
+    public AlarmState Alarm { get; init; } = default!;
 
     /// <summary>True when the save also dropped the votes: they were shown, or the card set changed.</summary>
     public bool VotesCleared { get; init; }
