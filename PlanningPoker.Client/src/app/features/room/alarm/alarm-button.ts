@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { formatRoundTime, spokenRoundTime } from '../round-timer/format-round-time';
 import { AlarmState } from '../../../models/room';
 
@@ -59,6 +59,11 @@ export class AlarmButton {
   protected readonly label = computed(() => this.view().label);
 
   constructor() {
+    // A new state is read against the clock as it is now: the ticker may last have run almost a second ago.
+    effect(() => {
+      this.alarm();
+      untracked(() => this.now.set(Date.now()));
+    });
     const timer = setInterval(() => this.now.set(Date.now()), MILLISECONDS_PER_SECOND);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }

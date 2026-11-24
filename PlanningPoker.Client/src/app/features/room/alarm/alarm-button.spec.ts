@@ -79,6 +79,17 @@ describe('AlarmButton', () => {
     expect(host.events).toEqual(['cancel']);
   });
 
+  it('starts at the full length, not a second above it, when the last tick was a moment ago', () => {
+    const { fixture, host, button } = mount();
+    vi.advanceTimersByTime(900);
+
+    host.alarm.set({ status: 'running', endsAt: Date.now() + 300_000 });
+    fixture.detectChanges();
+
+    expect(button()!.textContent).toContain('5:00');
+    expect(button()!.textContent).not.toContain('5:01');
+  });
+
   it('never counts below zero while it waits for the room to say it elapsed', () => {
     const { fixture, host, button } = mount();
     host.alarm.set({ status: 'running', endsAt: NOW + 1000 });

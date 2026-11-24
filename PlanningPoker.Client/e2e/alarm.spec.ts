@@ -74,6 +74,23 @@ test('only the owner can change the Alarm, and turning it off removes the button
   await Promise.all([ann.context.close(), bob.context.close()]);
 });
 
+test('a small window shows one Alarm button, also once the votes are shown', async ({ browser }) => {
+  const ann = await newPerson(browser);
+  await ann.page.setViewportSize({ width: 400, height: 800 });
+  await seedRoomDefaults(ann.page, { countdownSeconds: 0 });
+  await ann.page.goto('/');
+  await ann.page.getByLabel('Your name').fill('Ann');
+  await ann.page.getByRole('button', { name: 'Create room' }).click();
+  await expect(ann.page).toHaveURL(GUID_ROOM_PATH);
+  await expect(ann.page.locator('app-alarm-button button:visible')).toHaveCount(1);
+
+  await ann.page.getByRole('button', { name: 'Show votes' }).click();
+
+  await expect(ann.page.getByRole('button', { name: 'Table' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(ann.page.locator('app-alarm-button button:visible')).toHaveCount(1);
+  await ann.context.close();
+});
+
 test('a person picks their own sound in the header, kept for the next visit', async ({ page }) => {
   await page.goto('/');
   const picker = page.getByLabel('Alarm sound');
