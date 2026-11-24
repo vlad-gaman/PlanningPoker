@@ -36,6 +36,10 @@ _Avoid_: Easter egg, badge
 The time elapsed since the room's last reveal, clear or creation. Casting or changing a vote does not reset it.
 _Avoid_: Vote timer, idle timer, activity timer
 
+**Alarm**:
+A room's own countdown, shown next to the round timer, that sounds for everyone online when its time has elapsed. Only the owner sets its length in minutes, or turns it off, as a room setting; changing the length does not affect a running Alarm. Any member can start it, cancel it while it runs, and reset it once it has elapsed; a reset returns it to idle and does not start it again. It is independent of rounds: reveal, clear and role changes do not touch it. When it elapses it plays each online member's own chosen sound once, observers included, and its icon jingles; someone who joins afterwards sees it elapsed but does not hear it. A server restart returns it to idle; the setting is kept.
+_Avoid_: Countdown (that is the pre-reveal countdown), timer, reminder
+
 **Abandoned**:
 A room or person nobody is using any more, which the sweep removes from memory. A room is abandoned when it has no open connections and neither it was created nor anything in it changed within the abandon time. A person is abandoned when they have no open connections, no surviving room lists them as owner or member, and they were last seen more than the abandon time ago. "Last seen" is set when the person is created, upserted, or loses a connection, never by reading. The abandon time is 24 hours and the sweep runs every 10 minutes; both can be set in the `Sweep` appsettings section. A room nobody ever joined does not wait for this: the presence sweep deletes it `Presence:NeverJoinedRoomLifetime` (1 minute) after it was created. This has nothing to do with the round timer, which only measures the current round.
 _Avoid_: Idle, stale, expired, timed out

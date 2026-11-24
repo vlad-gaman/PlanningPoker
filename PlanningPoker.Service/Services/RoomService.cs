@@ -34,6 +34,9 @@ public class RoomService(
     IPlanningPokerMetrics metrics,
     IRoomMembership membership,
     IRoomRound round,
+    IRoomAlarm alarm,
+    IAlarmStateMapper alarmStateMapper,
+    IAlarmChangeResultMapper alarmChangeResultMapper,
     TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
@@ -371,8 +374,16 @@ public class RoomService(
             }
 
             // Shown votes are dropped (the old rule). So are votes cast for another card set: their marks are not cards of the new one.
-            var cleared = !room.VotingEnabled || room.Configuration.CardSet != configuration.CardSet;
+            var alarmOnly = OnlyAlarmDiffers(room.Configuration, configuration);
+            var cleared = !alarmOnly && (!room.VotingEnabled || room.Configuration.CardSet != configuration.CardSet);
             room.Configuration = configurationEntityMapper.Map(configuration);
+            alarm.IdleWhenDisabled(room);
+            if (alarmOnly)
+            {
+                // The Alarm settings do not touch the round: shown votes stay and a running countdown keeps ticking.
+                return RoomUpdate.Changed((Response: ServiceResponse.Success(), Cleared: false, Decision: RoundDecision.None));
+            }
+
             if (cleared)
             {
                 round.Clear(room, restartTimer: false);
@@ -406,10 +417,66 @@ public class RoomService(
             Configuration = configurationMapper.Map(snapshot.Configuration),
             Cards = cards.Data!,
             UpdatedBy = person.Name,
+            Alarm = alarmStateMapper.Map(snapshot),
             VotesCleared = outcome.Cleared,
             VoteStatus = status,
             FollowUp = ToFollowUp(outcome.Decision, status)
         });
+    }
+
+    public ServiceResponse<AlarmChangeResult> StartAlarm(Guid personGuid, string connectionId)
+    {
+        return ChangeAlarm(personGuid, connectionId, alarm.Start);
+    }
+
+    public ServiceResponse<AlarmChangeResult> CancelAlarm(Guid personGuid, string connectionId)
+    {
+        return ChangeAlarm(personGuid, connectionId, alarm.Cancel);
+    }
+
+    public ServiceResponse<AlarmChangeResult> ResetAlarm(Guid personGuid, string connectionId)
+    {
+        return ChangeAlarm(personGuid, connectionId, alarm.Reset);
+    }
+
+    public ServiceResponse<AlarmChangeResult> ElapseAlarm(string roomId, DateTimeOffset endsAt)
+    {
+        var found = roomUpdater.Update(roomId, room =>
+        {
+            var elapsed = alarm.Elapse(room, endsAt);
+            return RoomUpdate.Of(elapsed, elapsed.IsSuccess);
+        }, out var outcome);
+        return found && outcome is not null ? AlarmResult(roomId, outcome) : ServiceResponse<AlarmChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+    }
+
+    /// <summary>Runs an Alarm change in the connection's room under the room lock, for any member.</summary>
+    private ServiceResponse<AlarmChangeResult> ChangeAlarm(Guid personGuid, string connectionId, Func<RoomEntity, ServiceResponse<AlarmState>> change)
+    {
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
+        {
+            return ServiceResponse<AlarmChangeResult>.Failure(located);
+        }
+
+        var roomId = located.Data.RoomId;
+        var found = roomUpdater.Update(roomId, room =>
+        {
+            if (!IsMember(room, personGuid, connectionId))
+            {
+                return RoomUpdate.Unchanged(ServiceResponse<AlarmState>.Failure(ServiceError.NotInRoom()));
+            }
+
+            var changed = change(room);
+            return RoomUpdate.Of(changed, changed.IsSuccess);
+        }, out var outcome);
+        return found && outcome is not null ? AlarmResult(roomId, outcome) : ServiceResponse<AlarmChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+    }
+
+    private ServiceResponse<AlarmChangeResult> AlarmResult(string roomId, ServiceResponse<AlarmState> changed)
+    {
+        return changed.IsSuccess
+            ? ServiceResponse<AlarmChangeResult>.Success(alarmChangeResultMapper.Map(roomId, changed.Data!))
+            : ServiceResponse<AlarmChangeResult>.Failure(changed);
     }
 
     public ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid)
@@ -484,6 +551,15 @@ public class RoomService(
             Remaining = tick.Remaining,
             Revealed = tick.Outcome == TickOutcome.Revealed ? CurrentStatus(roomId) : null
         };
+    }
+
+    /// <summary>True when the new settings differ from the stored ones only in the Alarm fields.</summary>
+    private static bool OnlyAlarmDiffers(RoomConfigurationEntity stored, RoomConfiguration next)
+    {
+        return stored.CardSet == next.CardSet
+            && stored.CountdownSeconds == next.CountdownSeconds
+            && stored.ShowFireworks == next.ShowFireworks
+            && stored.MaxParticipants == next.MaxParticipants;
     }
 
     private static bool IsMember(RoomEntity room, Guid personGuid, string connectionId)

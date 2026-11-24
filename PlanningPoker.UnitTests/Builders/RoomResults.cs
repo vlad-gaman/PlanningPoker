@@ -12,7 +12,8 @@ public static class RoomResults
         bool resetCountdown = true,
         int countdownSeconds = 5,
         bool personAdded = true,
-        bool wasOffgrid = false)
+        bool wasOffgrid = false,
+        AlarmState? alarm = null)
     {
         return new JoinRoomResult
         {
@@ -21,6 +22,7 @@ public static class RoomResults
                 Id = "room",
                 OwnerGuid = person.Guid,
                 VotingEnabled = true,
+                Alarm = alarm ?? new AlarmState(),
                 Configuration = new RoomConfiguration { CardSet = "linear", CountdownSeconds = countdownSeconds, ShowFireworks = false, MaxParticipants = 9 }
             },
             Person = person,

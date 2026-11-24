@@ -9,6 +9,9 @@ public class RoomConfigurationUpdatedEvent
 
     public string UpdatedBy { get; init; } = default!;
 
+    /// <summary>The Alarm after the save: idle when the save turned the Alarm off, otherwise as it was.</summary>
+    public AlarmResponse Alarm { get; init; } = default!;
+
     /// <summary>The status after the change; cleared votes and a cancelled countdown show here.</summary>
     public VoteStatusResponse VoteStatus { get; init; } = default!;
 }

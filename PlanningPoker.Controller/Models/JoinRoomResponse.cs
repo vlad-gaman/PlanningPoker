@@ -16,6 +16,8 @@ public class JoinRoomResponse
 
     public RoomConfigurationResponse Configuration { get; init; } = default!;
 
+    public AlarmResponse Alarm { get; init; } = default!;
+
     /// <summary>The room's revealed rounds, newest first.</summary>
     public IReadOnlyList<RoundResultResponse> RoundHistory { get; init; } = [];
 }

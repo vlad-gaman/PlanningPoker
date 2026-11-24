@@ -12,7 +12,7 @@ public class RoomResponseMappersTests
     private static readonly IPersonResponseMapper PersonMapper = new PersonResponseMapper();
     private static readonly Person Ann = new() { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "dev" };
     private static readonly Person Bob = new() { Guid = Guid.NewGuid(), Name = "Bob", PersonType = "obs" };
-    private static readonly RoomConfiguration Configuration = new() { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 4 };
+    private static readonly RoomConfiguration Configuration = new() { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 4, AlarmEnabled = false, AlarmMinutes = 12 };
     private static readonly Room Room = new() { Id = "room", OwnerGuid = Ann.Guid, Configuration = Configuration };
 
     private static JoinRoomResult JoinResult(Dictionary<Guid, string>? votes = null)
@@ -100,6 +100,8 @@ public class RoomResponseMappersTests
         Assert.Equal(9, response.CountdownSeconds);
         Assert.False(response.ShowFireworks);
         Assert.Equal(4, response.MaxParticipants);
+        Assert.False(response.AlarmEnabled);
+        Assert.Equal(12, response.AlarmMinutes);
     }
 
     [Fact]
@@ -126,7 +128,7 @@ public class RoomResponseMappersTests
     [Fact]
     public void JoinRoomResponseMapper_MapsPeopleOwnerStatusAndConfiguration()
     {
-        var mapper = new JoinRoomResponseMapper(PersonMapper, ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper());
+        var mapper = new JoinRoomResponseMapper(PersonMapper, ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper(), new AlarmResponseMapper());
 
         var response = mapper.Map(JoinResult());
 

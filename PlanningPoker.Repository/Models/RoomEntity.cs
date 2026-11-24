@@ -68,6 +68,14 @@ public class RoomEntity
 
     public int CountdownRemaining { get; set; }
 
+    /// <summary>When the running Alarm elapses, in UTC; null while it is idle. Never stored: a restart returns the Alarm to idle.</summary>
+    [JsonIgnore]
+    public DateTimeOffset? AlarmEndsAt { get; set; }
+
+    /// <summary>True once the Alarm ran out and until someone resets it. Never stored.</summary>
+    [JsonIgnore]
+    public bool AlarmElapsed { get; set; }
+
     /// <summary>The member's role; empty for someone who is not a member.</summary>
     public string RoleOf(Guid personGuid)
     {

@@ -10,6 +10,8 @@ public class Room
 
     public RoomConfiguration Configuration { get; init; } = default!;
 
+    public AlarmState Alarm { get; init; } = new();
+
     /// <summary>The revealed rounds, newest first.</summary>
     public IReadOnlyList<RoundResult> RoundHistory { get; init; } = [];
 }

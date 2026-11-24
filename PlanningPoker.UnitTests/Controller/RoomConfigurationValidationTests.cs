@@ -8,9 +8,9 @@ public class RoomConfigurationValidationTests
 {
     private readonly RoomConfigurationValidation _validation = new();
 
-    private static RoomConfigurationRequest Request(string cardSet = "linear", int countdown = 5, int max = 50)
+    private static RoomConfigurationRequest Request(string cardSet = "linear", int countdown = 5, int max = 50, bool alarmEnabled = true, int alarmMinutes = 5)
     {
-        return new RoomConfigurationRequest { CardSet = cardSet, CountdownSeconds = countdown, ShowFireworks = true, MaxParticipants = max };
+        return new RoomConfigurationRequest { CardSet = cardSet, CountdownSeconds = countdown, ShowFireworks = true, MaxParticipants = max, AlarmEnabled = alarmEnabled, AlarmMinutes = alarmMinutes };
     }
 
     private List<string> Fields(RoomConfigurationRequest? request, string prefix = "")
@@ -26,6 +26,30 @@ public class RoomConfigurationValidationTests
     public void Validate_BoundaryCountdowns_Pass(int countdown)
     {
         Assert.True(_validation.Validate(Request(countdown: countdown)).IsSuccess);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(60)]
+    public void Validate_BoundaryAlarmLengths_Pass(int minutes)
+    {
+        Assert.True(_validation.Validate(Request(alarmMinutes: minutes)).IsSuccess);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(61)]
+    [InlineData(-5)]
+    public void Validate_AlarmLengthOutOfRange_NamesTheField(int minutes)
+    {
+        Assert.Equal(["alarmMinutes"], Fields(Request(alarmMinutes: minutes)));
+        Assert.Equal(["configuration.alarmMinutes"], Fields(Request(alarmMinutes: minutes), "configuration."));
+    }
+
+    [Fact]
+    public void Validate_ATurnedOffAlarm_StillNeedsAValidLength()
+    {
+        Assert.Equal(["alarmMinutes"], Fields(Request(alarmEnabled: false, alarmMinutes: 0)));
     }
 
     [Fact]

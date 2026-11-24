@@ -27,6 +27,7 @@ public class RoomHubWorkflowTests
     private readonly FakePresenceService _presence = new();
     private readonly FakeRoomEventPublisher _publisher = new();
     private readonly FakeRoomTimerService _timer = new();
+    private readonly FakeRoomAlarmTimer _alarmTimer = new();
     private readonly FakeGroupManager _groups = new();
     private readonly FailedJoinLimiter _failedJoins = new(Options.Create(new RateLimitingOptions()));
 
@@ -44,12 +45,13 @@ public class RoomHubWorkflowTests
             _presence,
             _publisher,
             _timer,
+            _alarmTimer,
             new RoomIdentifierValidation(),
             new PersonTypeValidation(),
             new RoomConfigurationValidation(),
             new TransferTargetValidation(),
             new RoomConfigurationRequestMapper(),
-            new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper()),
+            new JoinRoomResponseMapper(new PersonResponseMapper(), ResponseMappers.VoteStatus(), new RoomConfigurationResponseMapper(), new CardResponseMapper(), new RoundResultResponseMapper(), new AlarmResponseMapper()),
             new ApiResponseMapper(new ApiErrorMapper()),
             _failedJoins,
             NullLogger<RoomHub>.Instance)
@@ -644,4 +646,80 @@ public class RoomHubWorkflowTests
         Assert.Empty(_publisher.Shown);
     }
 
+    private static AlarmChangeResult AlarmChange(AlarmStatus status, DateTimeOffset? endsAt = null)
+    {
+        return new AlarmChangeResult { RoomId = "room", Alarm = new AlarmState { Status = status, EndsAt = endsAt } };
+    }
+
+    [Fact]
+    public async Task StartAlarm_Success_PublishesTheChangeAndSchedulesTheWakeUp()
+    {
+        var endsAt = new DateTimeOffset(2026, 1, 1, 12, 5, 0, TimeSpan.Zero);
+        _rooms.AlarmResult = ServiceResponse<AlarmChangeResult>.Success(AlarmChange(AlarmStatus.Running, endsAt));
+
+        var response = await NewHub(Ann).StartAlarm();
+
+        Assert.Null(response.Errors);
+        Assert.Equal(["start"], _rooms.AlarmCalls);
+        Assert.Equal(AlarmStatus.Running, Assert.Single(_publisher.AlarmChanges).Alarm.Status);
+        Assert.Equal(("room", endsAt), Assert.Single(_alarmTimer.Scheduled));
+    }
+
+    [Fact]
+    public async Task StartAlarm_Refused_ReturnsTheErrorAndAnnouncesAndSchedulesNothing()
+    {
+        _rooms.AlarmResult = ServiceResponse<AlarmChangeResult>.Failure(ServiceError.AlarmNotIdle());
+
+        var response = await NewHub(Ann).StartAlarm();
+
+        Assert.Equal(ErrorCodes.AlarmNotIdle, ErrorCode(response));
+        Assert.Empty(_publisher.AlarmChanges);
+        Assert.Empty(_alarmTimer.Scheduled);
+    }
+
+    [Fact]
+    public async Task CancelAlarm_Success_PublishesTheChangeAndCancelsTheWakeUp()
+    {
+        _rooms.AlarmResult = ServiceResponse<AlarmChangeResult>.Success(AlarmChange(AlarmStatus.Idle));
+
+        var response = await NewHub(Ann).CancelAlarm();
+
+        Assert.Null(response.Errors);
+        Assert.Equal(["cancel"], _rooms.AlarmCalls);
+        Assert.Equal(AlarmStatus.Idle, Assert.Single(_publisher.AlarmChanges).Alarm.Status);
+        Assert.Equal("room", Assert.Single(_alarmTimer.Cancelled));
+    }
+
+    [Fact]
+    public async Task ResetAlarm_Success_PublishesTheChange()
+    {
+        _rooms.AlarmResult = ServiceResponse<AlarmChangeResult>.Success(AlarmChange(AlarmStatus.Idle));
+
+        var response = await NewHub(Ann).ResetAlarm();
+
+        Assert.Null(response.Errors);
+        Assert.Equal(["reset"], _rooms.AlarmCalls);
+        Assert.Single(_publisher.AlarmChanges);
+    }
+
+    [Fact]
+    public async Task TheAlarmCommands_WithoutASession_ReturnNoSession()
+    {
+        var hub = NewHub(null);
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(await hub.StartAlarm()));
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(await hub.CancelAlarm()));
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(await hub.ResetAlarm()));
+        Assert.Empty(_rooms.AlarmCalls);
+    }
+
+    [Fact]
+    public async Task UpdateRoomConfiguration_ThatLeavesTheAlarmIdle_CancelsAnyPendingWakeUp()
+    {
+        _rooms.UpdateConfigurationResult = ServiceResponse<RoomConfigurationChangeResult>.Success(ConfigurationChange(VotingFollowUp.None));
+
+        await NewHub(Ann).UpdateRoomConfiguration(ConfigurationRequest());
+
+        Assert.Equal("room", Assert.Single(_alarmTimer.Cancelled));
+    }
 }

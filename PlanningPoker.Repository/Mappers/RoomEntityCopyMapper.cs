@@ -28,6 +28,8 @@ public class RoomEntityCopyMapper : IRoomEntityCopyMapper
             CreatedAt = source.CreatedAt,
             LastActivityAt = source.LastActivityAt,
             AwaitingReturn = source.AwaitingReturn,
+            AlarmEndsAt = source.AlarmEndsAt,
+            AlarmElapsed = source.AlarmElapsed,
             Configuration = MapConfiguration(source.Configuration),
             RoundsRevealed = source.RoundsRevealed,
             RoundHistory = [.. source.RoundHistory.Select(result => new RoundResultEntity { Round = result.Round, AverageMark = result.AverageMark, RevealedAt = result.RevealedAt })]
@@ -41,7 +43,9 @@ public class RoomEntityCopyMapper : IRoomEntityCopyMapper
             CardSet = source.CardSet,
             CountdownSeconds = source.CountdownSeconds,
             ShowFireworks = source.ShowFireworks,
-            MaxParticipants = source.MaxParticipants
+            MaxParticipants = source.MaxParticipants,
+            AlarmEnabled = source.AlarmEnabled,
+            AlarmMinutes = source.AlarmMinutes
         };
     }
 

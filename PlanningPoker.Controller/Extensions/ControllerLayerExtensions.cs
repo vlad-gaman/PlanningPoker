@@ -62,6 +62,8 @@ public static class ControllerLayerExtensions
         services.AddSingleton<RoomEventPublisher>();
         services.AddSingleton<IRoomEventPublisher>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<IRoomCountdownNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
+        services.AddSingleton<IRoomAlarmNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
+        services.AddSingleton<IAlarmResponseMapper, AlarmResponseMapper>();
         services.AddSingleton<IRoomPresenceNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<IRoomAdminNotifier>(provider => provider.GetRequiredService<RoomEventPublisher>());
         services.AddSingleton<UpdateMeRequestValidation>();

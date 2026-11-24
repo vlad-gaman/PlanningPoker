@@ -27,7 +27,9 @@ public class RoomEntityCopyMapperTests
             DepartedVotes = new Dictionary<Guid, string> { [owner] = "3" },
             DroppedAt = new Dictionary<Guid, DateTimeOffset> { [owner] = new DateTimeOffset(2026, 1, 2, 3, 4, 6, TimeSpan.Zero) },
             OffgridGuids = [owner],
-            Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7 }
+            Configuration = new RoomConfigurationEntity { CardSet = "linear", CountdownSeconds = 9, ShowFireworks = false, MaxParticipants = 7, AlarmEnabled = false, AlarmMinutes = 12 },
+            AlarmEndsAt = new DateTimeOffset(2026, 1, 1, 0, 5, 0, TimeSpan.Zero),
+            AlarmElapsed = true
         };
 
         var copy = new RoomEntityCopyMapper().Map(source);
@@ -52,6 +54,10 @@ public class RoomEntityCopyMapperTests
         Assert.Equal(9, copy.Configuration.CountdownSeconds);
         Assert.False(copy.Configuration.ShowFireworks);
         Assert.Equal(7, copy.Configuration.MaxParticipants);
+        Assert.False(copy.Configuration.AlarmEnabled);
+        Assert.Equal(12, copy.Configuration.AlarmMinutes);
+        Assert.Equal(source.AlarmEndsAt, copy.AlarmEndsAt);
+        Assert.True(copy.AlarmElapsed);
         Assert.NotSame(source.MemberGuids, copy.MemberGuids);
         Assert.NotSame(source.MemberConnections, copy.MemberConnections);
         Assert.NotSame(source.MemberConnections[owner], copy.MemberConnections[owner]);

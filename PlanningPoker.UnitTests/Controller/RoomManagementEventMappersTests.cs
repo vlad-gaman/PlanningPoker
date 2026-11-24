@@ -40,7 +40,7 @@ public class RoomManagementEventMappersTests
             VoteStatus = Status()
         };
 
-        var mapped = new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus()).Map(result);
+        var mapped = new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus(), new AlarmResponseMapper()).Map(result);
 
         Assert.Equal(("t-shirt-sizes", 8, true, 3), (mapped.Configuration.CardSet, mapped.Configuration.CountdownSeconds, mapped.Configuration.ShowFireworks, mapped.Configuration.MaxParticipants));
         Assert.Equal(["XS", "coffee"], mapped.Cards.Select(card => card.Value));

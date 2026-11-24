@@ -36,8 +36,9 @@ public class RoomEventPublisherTests
             new VoteCastEventMapper(),
             ResponseMappers.VoteStatus(),
             new PersonTypeChangedEventMapper(PersonMapper, ResponseMappers.VoteStatus()),
-            new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus()),
-            new VotesClearedEventMapper());
+            new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus(), new AlarmResponseMapper()),
+            new VotesClearedEventMapper(),
+            new AlarmResponseMapper());
     }
 
     [Fact]
@@ -330,5 +331,28 @@ public class RoomEventPublisherTests
         await notifier.VotesRevealedAsync("room", new VoteStatus { Votes = new Dictionary<Guid, string>(), VotingFinished = true });
 
         Assert.Equal([HubEvents.CountdownUpdate, HubEvents.VotesShown], _hub.Clients.Sent.Select(message => message.Method));
+    }
+
+    [Fact]
+    public async Task PublishAlarmChanged_SendsTheStateToTheWholeRoom()
+    {
+        var endsAt = new DateTimeOffset(2026, 1, 1, 12, 5, 0, TimeSpan.Zero);
+
+        await _publisher.PublishAlarmChangedAsync(new AlarmChangeResult { RoomId = "room", Alarm = new AlarmState { Status = AlarmStatus.Elapsed, EndsAt = endsAt } });
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.AlarmChanged, sent.Method);
+        Assert.Equal(RoomGroup, sent.Target);
+        var alarm = Assert.IsType<AlarmResponse>(sent.Payload);
+        Assert.Equal("elapsed", alarm.Status);
+        Assert.Equal(endsAt, alarm.EndsAt);
+    }
+
+    [Fact]
+    public async Task AsTheAlarmNotifier_AnnouncesLikeAChange()
+    {
+        await ((IRoomAlarmNotifier)_publisher).AlarmChangedAsync(new AlarmChangeResult { RoomId = "room", Alarm = new AlarmState() });
+
+        Assert.Equal(HubEvents.AlarmChanged, Assert.Single(_hub.Clients.Sent).Method);
     }
 }

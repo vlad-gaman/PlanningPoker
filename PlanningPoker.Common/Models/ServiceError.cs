@@ -62,6 +62,30 @@ public class ServiceError
         return Create(ErrorCodes.VotingClosed, "Voting is closed until the votes are cleared.");
     }
 
+    /// <summary>The single definition of the error returned when the Alarm is started in a room that has turned it off.</summary>
+    public static ServiceError AlarmDisabled()
+    {
+        return Create(ErrorCodes.AlarmDisabled, "The Alarm is turned off in this room.");
+    }
+
+    /// <summary>The single definition of the error returned when the Alarm is started while it is running or has elapsed.</summary>
+    public static ServiceError AlarmNotIdle()
+    {
+        return Create(ErrorCodes.AlarmNotIdle, "The Alarm is already running or has elapsed.");
+    }
+
+    /// <summary>The single definition of the error returned when an Alarm that is not running is cancelled.</summary>
+    public static ServiceError AlarmNotRunning()
+    {
+        return Create(ErrorCodes.AlarmNotRunning, "The Alarm is not running.");
+    }
+
+    /// <summary>The single definition of the error returned when an Alarm that has not elapsed is reset.</summary>
+    public static ServiceError AlarmNotElapsed()
+    {
+        return Create(ErrorCodes.AlarmNotElapsed, "The Alarm has not elapsed.");
+    }
+
     /// <summary>The single definition of the error returned when a non-owner uses an owner-only command.</summary>
     public static ServiceError NotRoomOwner()
     {

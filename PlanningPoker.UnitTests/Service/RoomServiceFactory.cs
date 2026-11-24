@@ -18,7 +18,7 @@ public static class RoomServiceFactory
             people,
             generator ?? new StubRoomNameGenerator("unused"),
             new RoomEntityMapper(new RoomConfigurationEntityMapper(), time ?? TimeProvider.System),
-            new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper()),
+            new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper(), new AlarmStateMapper()),
             new PersonMapper(),
             VoteStatusMappers.Create(),
             new JoinRoomResultMapper(),
@@ -32,6 +32,9 @@ public static class RoomServiceFactory
             metrics ?? new FakePlanningPokerMetrics(),
             Rounds.Membership(time),
             Rounds.Create(time),
+            new RoomAlarm(new AlarmStateMapper(), time ?? TimeProvider.System),
+            new AlarmStateMapper(),
+            new AlarmChangeResultMapper(),
             time ?? TimeProvider.System);
     }
 }

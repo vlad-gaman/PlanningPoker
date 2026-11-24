@@ -40,6 +40,10 @@ public static class ServiceServiceCollectionExtensions
         services.AddSingleton<ICardSetService, CardSetService>();
         services.AddSingleton<IPlanningPokerMetrics, PlanningPokerMetrics>();
         services.AddSingleton<IRoomRound, RoomRound>();
+        services.AddSingleton<IRoomAlarm, RoomAlarm>();
+        services.AddSingleton<IRoomAlarmTimer, RoomAlarmTimerService>();
+        services.AddSingleton<IAlarmStateMapper, AlarmStateMapper>();
+        services.AddSingleton<IAlarmChangeResultMapper, AlarmChangeResultMapper>();
         services.AddSingleton<IRoomMembership, RoomMembership>();
         services.AddSingleton<IRoomUpdater, RoomUpdater>();
         services.AddSingleton<IRoomService, RoomService>();

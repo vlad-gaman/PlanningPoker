@@ -12,7 +12,9 @@ public class RoomConfigurationRequestMapper : IRoomConfigurationRequestMapper
             CardSet = request.CardSet,
             CountdownSeconds = request.CountdownSeconds,
             ShowFireworks = request.ShowFireworks,
-            MaxParticipants = request.MaxParticipants
+            MaxParticipants = request.MaxParticipants,
+            AlarmEnabled = request.AlarmEnabled,
+            AlarmMinutes = request.AlarmMinutes
         };
     }
 }

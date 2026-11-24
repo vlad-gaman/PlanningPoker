@@ -49,6 +49,18 @@ public interface IRoomService
     /// </summary>
     ServiceResponse<RoomConfigurationChangeResult> UpdateConfiguration(Guid personGuid, string connectionId, RoomConfiguration configuration);
 
+    /// <summary>Starts the room's Alarm; any member. Fails when the Alarm is off or is not idle.</summary>
+    ServiceResponse<AlarmChangeResult> StartAlarm(Guid personGuid, string connectionId);
+
+    /// <summary>Returns a running Alarm to idle; any member. Fails when it is not running.</summary>
+    ServiceResponse<AlarmChangeResult> CancelAlarm(Guid personGuid, string connectionId);
+
+    /// <summary>Returns an elapsed Alarm to idle without starting it again; any member. Fails when it has not elapsed.</summary>
+    ServiceResponse<AlarmChangeResult> ResetAlarm(Guid personGuid, string connectionId);
+
+    /// <summary>Elapses the Alarm run that ends at <paramref name="endsAt"/>. Fails when the run was cancelled, replaced or is gone, so a stale wake-up announces nothing.</summary>
+    ServiceResponse<AlarmChangeResult> ElapseAlarm(string roomId, DateTimeOffset endsAt);
+
     /// <summary>Hands the room to another member; owner only. Handing it to the current owner changes nothing.</summary>
     ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid);
 
