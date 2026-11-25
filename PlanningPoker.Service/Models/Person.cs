@@ -8,6 +8,9 @@ public class Person
 
     public string PersonType { get; init; } = default!;
 
+    /// <summary>The design shown on the person's face-down card.</summary>
+    public string CardBack { get; init; } = default!;
+
     /// <summary>True once the person has been without a connection for longer than the grace period. They are still a member.</summary>
     public bool IsOffgrid { get; init; }
 }

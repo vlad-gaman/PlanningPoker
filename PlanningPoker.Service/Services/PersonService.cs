@@ -24,7 +24,7 @@ public class PersonService(
         return ServiceResponse<Person>.Success(personMapper.Map(entity));
     }
 
-    public ServiceResponse<PersonSession> Upsert(string? sessionToken, string name, string personType)
+    public ServiceResponse<PersonSession> Upsert(string? sessionToken, string name, string personType, string? cardBack = null)
     {
         var trimmedName = name.Trim();
         var existing = repository.GetBySessionToken(sessionToken);
@@ -32,6 +32,7 @@ public class PersonService(
             {
                 person.Name = trimmedName;
                 person.PersonType = personType;
+                person.CardBack = cardBack ?? person.CardBack;
                 person.LastSeenAt = time.GetUtcNow();
                 return sessionMapper.Map(person);
             }, out var updated))
@@ -39,7 +40,7 @@ public class PersonService(
             return ServiceResponse<PersonSession>.Success(updated!);
         }
 
-        var created = entityMapper.Map(Guid.NewGuid(), trimmedName, personType);
+        var created = entityMapper.Map(Guid.NewGuid(), trimmedName, personType, cardBack ?? CardBacks.Default);
         if (!repository.TryAdd(created))
         {
             return ServiceResponse<PersonSession>.Failure(ServiceError.PersonNotStored());

@@ -31,7 +31,7 @@ public class MeController(
         return ToResult(persons.Get(cookies.Read(Request)), personResponseMapper.Map);
     }
 
-    /// <summary>Sets the name and person type; mints the session cookie when no valid person exists.</summary>
+    /// <summary>Sets the name, person type and, when given, card back; mints the session cookie when no valid person exists.</summary>
     [HttpPut]
     [EnableRateLimiting(RateLimitingConstants.MeUpdatePolicy)]
     [ProducesResponseType<ApiResponse<PersonResponse>>(StatusCodes.Status200OK)]
@@ -48,7 +48,7 @@ public class MeController(
         }
 
         var existingToken = cookies.Read(Request);
-        var result = persons.Upsert(existingToken, request.Name, request.PersonType);
+        var result = persons.Upsert(existingToken, request.Name, request.PersonType, request.CardBack);
         if (result.IsSuccess && result.Data!.SessionToken != existingToken)
         {
             cookies.Write(Response, result.Data.SessionToken);

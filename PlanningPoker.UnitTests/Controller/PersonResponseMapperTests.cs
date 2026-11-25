@@ -19,6 +19,14 @@ public class PersonResponseMapperTests
     }
 
     [Fact]
+    public void Map_CarriesTheCardBack()
+    {
+        var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "dev", CardBack = "waves" };
+
+        Assert.Equal("waves", new PersonResponseMapper().Map(person).CardBack);
+    }
+
+    [Fact]
     public void Map_CarriesTheOffgridState()
     {
         var person = new Person { Guid = Guid.NewGuid(), Name = "Ann", PersonType = "obs", IsOffgrid = true };

@@ -26,6 +26,9 @@ public interface IRoomEventPublisher
     /// <summary>Tells the whole room, the person included, that a person changed type. Sends nothing when <see cref="PersonTypeChangeResult.Changed"/> is false.</summary>
     Task PublishPersonTypeChangedAsync(PersonTypeChangeResult result);
 
+    /// <summary>Tells the whole room, the person included, that a person changed card back. Sends nothing when <see cref="CardBackChangeResult.Changed"/> is false.</summary>
+    Task PublishCardBackChangedAsync(CardBackChangeResult result);
+
     /// <summary>Tells the whole room that the settings were saved, followed by <c>VotesCleared</c> when the save dropped the votes.</summary>
     Task PublishRoomConfigurationUpdatedAsync(RoomConfigurationChangeResult result);
 

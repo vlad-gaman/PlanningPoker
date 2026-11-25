@@ -1,7 +1,8 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiRequestError, errorMessage } from '../../core/api-request-error';
+import { CardBackService, resolveCardBack } from '../../core/card-back.service';
 import { ClosingBeacon } from '../../core/closing-beacon';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
@@ -17,6 +18,7 @@ import { orderPeople } from './order-people';
 import {
   AlarmResponse,
   AlarmState,
+  CardBackChangedEvent,
   CardOption,
   CountdownEvent,
   JoinRoomResponse,
@@ -91,6 +93,9 @@ export class RoomStore {
   private readonly rooms = inject(RoomsService);
   private readonly personDefaults = inject(PersonDefaultsService);
   private readonly closingBeacon = inject(ClosingBeacon);
+  private readonly cardBacks = inject(CardBackService);
+  /** The card back last sent to the server, so a pick is sent once; cleared on every join, which learns what the server holds. */
+  private sentCardBack: string | null = null;
   private stopWatchingTabs: (() => void) | null = null;
   /** Stops the page-hide watch that tells the server this page is closing; only a shown room has one. */
   private stopWatchingPage: (() => void) | null = null;
@@ -132,6 +137,21 @@ export class RoomStore {
 
   /** False while the connection to the server is down (trying to get back) or closed. */
   readonly connected = this.connectedState.asReadonly();
+  constructor() {
+    // The browser's choice is the source of truth: whenever the server holds another one for this person, send it.
+    effect(() => {
+      const wanted = this.cardBacks.cardBack();
+      const person = this.myPerson();
+      const connected = this.connectedState();
+      untracked(() => {
+        if (person && connected && resolveCardBack(person.cardBack) !== wanted && this.sentCardBack !== wanted) {
+          this.sentCardBack = wanted;
+          void this.send(this.generation, 'ChangeCardBack', wanted);
+        }
+      });
+    });
+  }
+
   /** The guid of the person using this client; null until enter() or submitName() learns it. */
   readonly me = this.meState.asReadonly();
   /** Entering the room: `loading` while checking, `name` while asking for a name, `joined` once in. */
@@ -231,7 +251,7 @@ export class RoomStore {
     const gen = ++this.generation;
     this.errorState.set(null);
     try {
-      const me = await firstValueFrom(this.meService.update(request));
+      const me = await firstValueFrom(this.meService.update({ ...request, cardBack: this.cardBacks.cardBack() }));
       if (gen === this.generation) {
         this.meState.set(me.guid);
         this.personDefaults.save(request);
@@ -377,6 +397,7 @@ export class RoomStore {
     this.hub.on(HUB_EVENTS.PersonTypeChanged, (event: PersonTypeChangedEvent) =>
       this.apply(() => this.personTypeChanged(event)),
     );
+    this.hub.on(HUB_EVENTS.CardBackChanged, (event: CardBackChangedEvent) => this.apply(() => this.cardBackChanged(event)));
     this.hub.on(HUB_EVENTS.RoomConfigurationUpdated, (event: RoomConfigurationUpdatedEvent) =>
       this.apply(() => this.configurationUpdated(event)),
     );
@@ -428,6 +449,7 @@ export class RoomStore {
     if (gen !== this.generation) {
       return;
     }
+    this.sentCardBack = null;
     this.peopleState.set(response.people);
     this.ownerState.set(response.ownerGuid);
     this.applyVoteStatus(response.voteStatus);
@@ -611,6 +633,12 @@ export class RoomStore {
     const { person } = event;
     this.peopleState.update((people) => people.map((p) => (p.guid === person.guid ? person : p)));
     this.applyVoteStatus(event.voteStatus);
+  }
+
+  private cardBackChanged(event: CardBackChangedEvent): void {
+    this.peopleState.update((people) =>
+      people.map((p) => (p.guid === event.personGuid ? { ...p, cardBack: event.cardBack } : p)),
+    );
   }
 
   private configurationUpdated(event: RoomConfigurationUpdatedEvent): void {

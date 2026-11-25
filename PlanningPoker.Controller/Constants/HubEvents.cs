@@ -15,6 +15,7 @@ public static class HubEvents
     public const string VotesShown = "VotesShown";
     public const string VotesCleared = "VotesCleared";
     public const string PersonTypeChanged = "PersonTypeChanged";
+    public const string CardBackChanged = "CardBackChanged";
     public const string RoomConfigurationUpdated = "RoomConfigurationUpdated";
     public const string AlarmChanged = "AlarmChanged";
 }

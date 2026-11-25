@@ -20,6 +20,8 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
 
     public List<PersonTypeChangeResult> TypeChanges { get; } = [];
 
+    public List<CardBackChangeResult> CardBackChanges { get; } = [];
+
     public List<RoomConfigurationChangeResult> ConfigurationUpdates { get; } = [];
 
     public List<OwnershipTransferResult> OwnershipTransfers { get; } = [];
@@ -33,6 +35,13 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
     {
         TypeChanges.Add(result);
         Order.Add("PersonTypeChanged");
+        return Task.CompletedTask;
+    }
+
+    public Task PublishCardBackChangedAsync(CardBackChangeResult result)
+    {
+        CardBackChanges.Add(result);
+        Order.Add("CardBackChanged");
         return Task.CompletedTask;
     }
 

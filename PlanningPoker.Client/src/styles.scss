@@ -1,6 +1,7 @@
 @use '@angular/material' as mat;
 @use './compact';
 @use './accents';
+@use './card-backs';
 
 // Shared styles: every screen uses these instead of its own look-alike (see "Decorations" in CLAUDE.md;
 // e2e/style-guard.spec.ts fails when a component stylesheet redefines one of them).

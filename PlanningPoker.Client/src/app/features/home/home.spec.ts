@@ -107,7 +107,7 @@ describe('Home', () => {
     submit(element, 0);
     await fixture.whenStable();
 
-    expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+    expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev', cardBack: 'classic' });
     expect(rooms.create).toHaveBeenCalledWith({
       useFunRoomName: true,
       configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50, alarmEnabled: true, alarmMinutes: 5 },
@@ -208,7 +208,7 @@ describe('Home', () => {
     submit(element, 1);
     await fixture.whenStable();
 
-    expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+    expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev', cardBack: 'classic' });
     expect(navigate).toHaveBeenCalledWith(['/room', 'room-9']);
   });
 

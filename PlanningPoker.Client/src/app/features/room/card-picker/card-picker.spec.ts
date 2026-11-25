@@ -27,7 +27,7 @@ describe('CardPicker', () => {
     render();
 
     expect(radios()).toHaveLength(3);
-    const labels = Array.from(element.querySelectorAll('label')).map((label) => label.textContent?.trim());
+    const labels = Array.from(element.querySelectorAll('label > span')).map((value) => value.textContent?.trim());
     expect(labels.slice(0, 2)).toEqual(['1', '½']);
   });
 

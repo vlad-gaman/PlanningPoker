@@ -16,6 +16,7 @@ public class StoredRoomMapper : IStoredRoomMapper
                 SessionToken = person.SessionToken,
                 Name = person.Name,
                 PersonType = person.PersonType,
+                CardBack = person.CardBack,
                 LastSeenAt = person.LastSeenAt
             }, out var copy) && copy is not null)
             {

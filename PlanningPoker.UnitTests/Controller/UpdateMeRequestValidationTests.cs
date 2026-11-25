@@ -46,6 +46,28 @@ public class UpdateMeRequestValidationTests
         Assert.Equal("personType", error.Metadata["field"]);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("classic")]
+    [InlineData("nouveau")]
+    public void Validate_KnownOrAbsentCardBack_Succeeds(string? cardBack)
+    {
+        Assert.True(_validation.Validate(new UpdateMeRequest { Name = "Ann", PersonType = "dev", CardBack = cardBack }).IsSuccess);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("sparkles")]
+    [InlineData("CLASSIC")]
+    public void Validate_UnknownCardBack_FailsWithFieldName(string cardBack)
+    {
+        var response = _validation.Validate(new UpdateMeRequest { Name = "Ann", PersonType = "dev", CardBack = cardBack });
+
+        var error = Assert.Single(response.Errors);
+        Assert.Equal("cardBack", error.Metadata["field"]);
+        Assert.Equal("invalid_card_back", error.Metadata["reason"]);
+    }
+
     [Fact]
     public void Validate_BothBad_ReportsBothErrors()
     {

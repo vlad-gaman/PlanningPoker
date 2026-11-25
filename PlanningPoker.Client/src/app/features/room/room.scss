@@ -168,12 +168,13 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  position: relative;
   width: var(--card-w);
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 5 / 7;
   margin-top: 0.5rem;
   border: 3px solid transparent;
   border-radius: 10px;
-  background: var(--primary-color);
+  background-color: var(--primary-color);
   color: var(--on-primary);
   font-size: calc(var(--card-w) * 0.29);
   font-weight: 700;
@@ -181,7 +182,7 @@
   // No vote yet: an empty dashed slot of the same size.
   &.none {
     border: 3px dashed var(--card-border);
-    background: transparent;
+    background-color: transparent;
   }
 
   img {
@@ -201,17 +202,45 @@
     aspect-ratio: 5 / 7;
   }
 
-  // Voted but still hidden: a face-down card back. The block character stays as text for assistive tech.
+  // Voted but still hidden: the voter's card back (the shared .card-back, src/card-backs.scss). The block character
+  // stays as text for assistive tech.
   &.back {
-    border-color: var(--on-primary);
+    border-color: var(--card-bg);
     font-size: 0;
     color: transparent;
-    background: repeating-linear-gradient(45deg, var(--primary-hover) 0, var(--primary-hover) 5px, var(--primary-color) 7px, var(--primary-color) 11px, var(--primary-hover) 12px);
     box-shadow: 0 4px 10px var(--shadow-color);
   }
 
+  // Revealed: a playing-card face on paper, with the value in two corners when it is text.
   &.flip {
+    border-color: var(--card-border);
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    box-shadow: 0 3px 8px var(--shadow-color);
     animation: flip-in 0.35s ease-out;
+
+    img {
+      background-color: var(--text-color);
+    }
+
+    &[data-value]::before,
+    &[data-value]::after {
+      content: attr(data-value);
+      position: absolute;
+      font-size: calc(var(--card-w) * 0.14);
+      line-height: 1;
+    }
+
+    &[data-value]::before {
+      top: 4px;
+      left: 5px;
+    }
+
+    &[data-value]::after {
+      right: 5px;
+      bottom: 4px;
+      transform: rotate(180deg);
+    }
   }
 }
 

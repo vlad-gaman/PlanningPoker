@@ -148,7 +148,7 @@
                 <span class="name">{{ person.name }}</span>
                 <span class="visually-hidden">{{ roleLabel(person.personType) }}</span>
                 @let mark = markOf(person);
-                <span class="mark" [class.none]="!mark.text && !mark.image" [class.back]="mark.hidden" [class.flip]="mark.revealed">
+                <span class="mark" [class.none]="!mark.text && !mark.image && !mark.art" [class.back]="mark.hidden" [class.card-back]="mark.hidden" [attr.data-back]="mark.back" [class.flip]="mark.revealed" [attr.data-value]="mark.revealed && !mark.image && !mark.art ? mark.text : null">
                   @if (mark.image; as src) {
                     <img [src]="src" [alt]="mark.alt" [style.--mark-mask]="'url(' + src + ')'" />
                   } @else if (mark.art; as art) {

@@ -1,0 +1,41 @@
+<div class="card-back-select">
+  <button
+    type="button"
+    class="trigger input input-sm"
+    role="combobox"
+    aria-label="Card back"
+    aria-haspopup="listbox"
+    aria-controls="card-back-listbox"
+    [attr.aria-expanded]="open()"
+    [attr.aria-activedescendant]="open() ? 'card-back-option-' + options[active()].id : null"
+    (click)="toggle()"
+    (keydown)="onKeydown($event)"
+    (blur)="close()"
+  >
+    <span class="card-back swatch" [attr.data-back]="cardBacks.cardBack()" aria-hidden="true"></span>
+    <span class="label">{{ selected().label }}</span>
+    <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  </button>
+  @if (open()) {
+    <ul id="card-back-listbox" class="list" role="listbox" aria-label="Card back">
+      @for (option of options; track option.id; let i = $index) {
+        <li
+          role="option"
+          [id]="'card-back-option-' + option.id"
+          [attr.aria-selected]="option.id === cardBacks.cardBack()"
+          [class.active]="i === active()"
+          (mousedown)="$event.preventDefault()"
+          tabindex="-1"
+          (click)="choose(option.id)"
+          (keydown.enter)="choose(option.id)"
+          (mouseenter)="active.set(i)"
+        >
+          <span class="card-back swatch" [attr.data-back]="option.id" aria-hidden="true"></span>
+          {{ option.label }}
+        </li>
+      }
+    </ul>
+  }
+</div>

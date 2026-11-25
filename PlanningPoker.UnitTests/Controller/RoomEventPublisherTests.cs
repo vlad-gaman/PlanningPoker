@@ -36,6 +36,7 @@ public class RoomEventPublisherTests
             new VoteCastEventMapper(),
             ResponseMappers.VoteStatus(),
             new PersonTypeChangedEventMapper(PersonMapper, ResponseMappers.VoteStatus()),
+            new CardBackChangedEventMapper(),
             new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus(), new AlarmResponseMapper()),
             new VotesClearedEventMapper(),
             new AlarmResponseMapper());
@@ -114,6 +115,28 @@ public class RoomEventPublisherTests
     public async Task PublishPersonTypeChanged_Unchanged_SendsNothing()
     {
         await _publisher.PublishPersonTypeChangedAsync(TypeChange(changed: false));
+
+        Assert.Empty(_hub.Clients.Sent);
+    }
+
+    [Fact]
+    public async Task PublishCardBackChanged_GoesToTheWholeRoomIncludingTheCaller()
+    {
+        await _publisher.PublishCardBackChangedAsync(new CardBackChangeResult { RoomId = "room", PersonGuid = Ann.Guid, CardBack = "dots", Changed = true });
+
+        var sent = Assert.Single(_hub.Clients.Sent);
+        Assert.Equal(HubEvents.CardBackChanged, sent.Method);
+        Assert.Equal(RoomGroup, sent.Target);
+        Assert.Empty(sent.Excluded);
+        var payload = Assert.IsType<CardBackChangedEvent>(sent.Payload);
+        Assert.Equal(Ann.Guid, payload.PersonGuid);
+        Assert.Equal("dots", payload.CardBack);
+    }
+
+    [Fact]
+    public async Task PublishCardBackChanged_Unchanged_SendsNothing()
+    {
+        await _publisher.PublishCardBackChangedAsync(new CardBackChangeResult { RoomId = "room", PersonGuid = Ann.Guid, CardBack = "dots", Changed = false });
 
         Assert.Empty(_hub.Clients.Sent);
     }

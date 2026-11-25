@@ -34,6 +34,7 @@ public class OperatorEventReasonTests
             new VoteCastEventMapper(),
             ResponseMappers.VoteStatus(),
             new PersonTypeChangedEventMapper(PersonMapper, ResponseMappers.VoteStatus()),
+            new CardBackChangedEventMapper(),
             new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus(), new AlarmResponseMapper()),
             new VotesClearedEventMapper(),
             new AlarmResponseMapper());

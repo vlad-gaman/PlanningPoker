@@ -175,6 +175,11 @@ export interface PersonTypeChangedEvent {
   voteStatus: VoteStatus;
 }
 
+export interface CardBackChangedEvent {
+  personGuid: string;
+  cardBack: string;
+}
+
 export interface RoomConfigurationUpdatedEvent {
   configuration: RoomConfiguration;
   cards: CardOption[];

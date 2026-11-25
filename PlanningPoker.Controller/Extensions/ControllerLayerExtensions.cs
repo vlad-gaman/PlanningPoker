@@ -56,6 +56,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<IVoteCastEventMapper, VoteCastEventMapper>();
         services.AddSingleton<IVotesClearedEventMapper, VotesClearedEventMapper>();
         services.AddSingleton<IPersonTypeChangedEventMapper, PersonTypeChangedEventMapper>();
+        services.AddSingleton<ICardBackChangedEventMapper, CardBackChangedEventMapper>();
         services.AddSingleton<IRoomConfigurationUpdatedEventMapper, RoomConfigurationUpdatedEventMapper>();
         services.AddSingleton<ICardResponseMapper, CardResponseMapper>();
         services.AddSingleton<IRoomNameWordResponseMapper, RoomNameWordResponseMapper>();
@@ -71,6 +72,7 @@ public static class ControllerLayerExtensions
         services.AddSingleton<RoomConfigurationValidation>();
         services.AddSingleton<CreateRoomRequestValidation>();
         services.AddSingleton<PersonTypeValidation>();
+        services.AddSingleton<CardBackValidation>();
         services.AddSingleton<TransferTargetValidation>();
         services.AddOptions<MetricsOptions>().BindConfiguration(MetricsConstants.ConfigurationSection);
         services.AddSingleton<MetricsTokenValidation>();
