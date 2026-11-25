@@ -66,7 +66,7 @@ test('only the owner can change the Alarm, and turning it off removes the button
   await expect(alarm(bob.page)).toContainText('9:00');
 
   await ann.page.getByRole('button', { name: 'Settings' }).click();
-  await dialog.locator('label.switch', { has: ann.page.locator('#alarm-enabled') }).click();
+  await dialog.getByRole('switch', { name: 'Alarm', exact: true }).click();
   await dialog.getByRole('button', { name: 'Save Settings' }).click();
   await expect(dialog).toHaveCount(0);
 

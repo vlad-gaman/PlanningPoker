@@ -41,6 +41,5 @@ describe('ThemeSelect', () => {
     fixture.detectChanges();
 
     expect(buttons[2].getAttribute('aria-checked')).toBe('true');
-    expect(buttons[2].classList).toContain('on');
   });
 });

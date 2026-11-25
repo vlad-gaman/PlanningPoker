@@ -8,7 +8,7 @@
   }
   <div class="field">
     <span class="field-label" [id]="roleId">Role</span>
-    <div class="role-picker" role="radiogroup" [attr.aria-labelledby]="roleId">
+    <div class="segmented role-picker" role="radiogroup" [attr.aria-labelledby]="roleId">
       @for (option of personTypes; track option.value) {
         <label [attr.data-role]="option.value">
           <input type="radio" name="personType" [value]="option.value" formControlName="personType" />

@@ -37,6 +37,7 @@ function templates(): string[] {
 // Retired styles; use .primary-button / .secondary-button / .danger-button (+ .button-sm), .icon-btn, .link and .input (+ .input-sm).
 const retiredClasses = [
   'form-control',
+  'seg',
   'role-toggle',
   'check',
   'btn',
@@ -68,7 +69,7 @@ test('component styles do not redefine the shared buttons and fields', () => {
   const offences: string[] = [];
   for (const path of files(join(SRC, 'app'), ['.scss'])) {
     const text = readFileSync(path, 'utf8');
-    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?|field-label|hint)\s*[{,:]/m.test(text)) {
+    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?|field-label|hint|segmented(-icons)?)\s*[{,:]/m.test(text)) {
       offences.push(path);
     }
   }
@@ -80,15 +81,16 @@ const sharedButtonClasses = ['primary-button', 'secondary-button', 'danger-butto
 
 // Buttons that keep their own look until a later part of issue #181 moves them; shrink this as each part lands.
 const exemptButtons: Record<string, number> = {
-  'features/room/room.html': 2, // compact Vote/Table tabs -> shared .segmented
-  'shared/theme-select/theme-select.html': 1, // theme options -> shared .segmented
   'features/room/alarm/alarm-button.html': 1, // alarm pill
 };
+
+// The options of a .segmented control take its look, so they need no class of their own.
+const segmented = /<div class="segmented[^"]*"[^>]*>[\s\S]*?<\/div>/g;
 
 test('every button uses a shared button style', () => {
   const found: Record<string, number> = {};
   for (const path of templates()) {
-    const text = readFileSync(path, 'utf8');
+    const text = readFileSync(path, 'utf8').replace(segmented, '');
     for (const tag of tags(text, 'button')) {
       if (!classesOf(tag).some((name) => sharedButtonClasses.includes(name))) {
         const key = appPath(path);
@@ -172,6 +174,20 @@ test('no field label ends in a colon', () => {
     for (const [, label] of text.matchAll(/<(?:label|span class="field-label")\b[^>]*>([^<]*)</g)) {
       if (label.trim().endsWith(':')) {
         offences.push(`${appPath(path)}: ${label.trim()}`);
+      }
+    }
+  }
+  expect(offences).toEqual([]);
+});
+
+test('segmented options are only buttons or radio labels', () => {
+  const offences: string[] = [];
+  for (const path of templates()) {
+    for (const [group] of readFileSync(path, 'utf8').matchAll(segmented)) {
+      const body = group.replace(/^<div[^>]*>/, '').replace(/<\/div>$/, '');
+      const options = [...tags(body, 'button'), ...tags(body, 'label')];
+      if (options.length === 0 || tags(body, 'input').some((tag) => !/\stype="radio"/.test(tag))) {
+        offences.push(`${appPath(path)}: ${group.slice(0, 80)}`);
       }
     }
   }

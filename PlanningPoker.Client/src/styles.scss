@@ -66,6 +66,8 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   // Off track of a switch: at least 3:1 against the panel and card backgrounds it sits on.
   --switch-off: #80878f;
   --switch-thumb: #ffffff;
+  // Text on a role colour fill (the role picker, the corner tag).
+  --on-role: #ffffff;
   --avatar-from: #1b6ec2;
   --avatar-to: #7a4fd6;
   --seg-1: #1b6ec2;
@@ -510,39 +512,60 @@ select.input {
   &[data-role='obs'] { --role: #7c7c8a; }
 }
 
-// Role picker: one segmented control, shared by the room and the name fields. The radios stay in the layout for keyboard use.
-.role-picker {
+// Segmented control: one row of options with the chosen one filled. The theme switch, the role picker and the compact
+// Vote/Table tabs share the look; each keeps its own semantics (radios, role="radio" buttons, or aria-pressed buttons).
+.segmented {
+  --segmented-on: var(--primary-color);
+  --on-segmented: var(--on-primary);
+
   display: inline-flex;
+  box-sizing: border-box;
   padding: 3px;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   background: var(--panel-bg);
-  border: 1px solid var(--border-color);
 
-  label {
+  > button,
+  > label {
     position: relative;
-    padding: 4px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    box-sizing: border-box;
+    min-height: 28px;
+    padding: 0 12px;
+    border: 0;
     border-radius: 8px;
+    background: transparent;
     color: var(--muted-color);
+    font: inherit;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
 
     &:hover {
       color: var(--text-color);
     }
-
-    &:has(input:checked) {
-      background: var(--role);
-      color: #fff;
-    }
-
-    &:has(input:focus-visible) {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 2px;
-    }
   }
 
-  // The invisible radio covers its whole label, so a click anywhere on the option lands on it, whatever pixel the layout puts it on.
-  input {
+  > [aria-checked='true'],
+  > [aria-pressed='true'],
+  > label:has(input:checked) {
+    background: var(--segmented-on);
+    color: var(--on-segmented);
+  }
+
+  > button:focus-visible,
+  > label:has(input:focus-visible) {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  // A radio option: the invisible radio covers its whole label, so a click anywhere on the option lands on it.
+  > label input {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -551,6 +574,18 @@ select.input {
     opacity: 0;
     cursor: pointer;
   }
+}
+
+// Icon-only options stay square.
+.segmented-icons > button {
+  width: 34px;
+  padding: 0;
+}
+
+// The role picker fills the chosen role with that role's colour.
+.role-picker > label {
+  --segmented-on: var(--role);
+  --on-segmented: var(--on-role);
 }
 
 // Shared page container; each page sets its own max-width.
