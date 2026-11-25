@@ -10,11 +10,11 @@
     (dismissed)="resetAlarm()"
   />
 </ng-template>
-<section class="page room">
+<section class="page page-wide room">
   <div class="title">
     <h1>
       @if (store.nameWords(); as words) {
-        Room {{ namePrefix() }}@for (word of words; track $index) {_@if (word.linkable) {<a class="word-link" [href]="searchUrl(word)" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Search Google for ' + word.text">{{ word.text }}</a>} @else {{{ word.text }}}}
+        Room {{ namePrefix() }}@for (word of words; track $index) {_<wbr />@if (word.linkable) {<a class="word-link" [href]="searchUrl(word)" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Search Google for ' + word.text">{{ word.text }}</a>} @else {{{ word.text }}}}
       } @else {
         Room {{ id() }}
       }

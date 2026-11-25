@@ -237,7 +237,7 @@ describe('AdminHome', () => {
       await vi.waitFor(() => expect(overview.closeRoom).toHaveBeenCalled());
       await settle(fixture);
 
-      expect(element.querySelector('.banner.error')?.textContent).toContain('An unexpected error occurred.');
+      expect(element.querySelector('.notice.notice-error')?.textContent).toContain('An unexpected error occurred.');
     });
   });
 

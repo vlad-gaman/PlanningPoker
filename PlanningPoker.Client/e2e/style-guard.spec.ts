@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-// Guards the shared UI pattern: new screens reuse the global button and form styles in src/styles.scss
+// Guards the shared UI pattern: new screens reuse the global buttons, fields, containers and text styles in src/styles.scss
 // instead of growing their own look-alikes. See "Decorations" in CLAUDE.md.
 
 const SRC = join(__dirname, '..', 'src');
@@ -34,8 +34,13 @@ function templates(): string[] {
   return files(SRC, ['.html', '.ts']).filter((path) => !path.endsWith('.spec.ts'));
 }
 
-// Retired styles; use .primary-button / .secondary-button / .danger-button (+ .button-sm), .icon-btn, .link and .input (+ .input-sm).
+// Retired styles; use .primary-button / .secondary-button / .danger-button (+ .button-sm), .icon-btn, .link, .input (+ .input-sm),
+// .page (+ .page-wide), .notice (+ .notice-error) and .dialog-header / .dialog-body / .dialog-footer.
 const retiredClasses = [
+  'home',
+  'banner',
+  'settings-header',
+  'settings-footer',
   'form-control',
   'seg',
   'role-toggle',
@@ -52,7 +57,7 @@ const retiredClasses = [
   'link-button',
 ];
 
-test('templates do not use retired button and form classes', () => {
+test('templates do not use retired classes', () => {
   const offences: string[] = [];
   for (const path of templates()) {
     const text = readFileSync(path, 'utf8');
@@ -65,11 +70,15 @@ test('templates do not use retired button and form classes', () => {
   expect(offences).toEqual([]);
 });
 
-test('component styles do not redefine the shared buttons and fields', () => {
+test('component styles do not redefine the shared classes', () => {
   const offences: string[] = [];
   for (const path of files(join(SRC, 'app'), ['.scss'])) {
     const text = readFileSync(path, 'utf8');
-    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?|field-label|hint|segmented(-icons)?)\s*[{,:]/m.test(text)) {
+    if (
+      /^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?|field-label|hint|segmented(-icons)?|page(-wide)?|eyebrow|notice(-error)?|chip|list-row|dialog-(header|body|footer))\s*[{,:]/m.test(
+        text,
+      )
+    ) {
       offences.push(path);
     }
   }
@@ -165,6 +174,11 @@ for (const [theme, block] of [
       expect(contrast(colours['switch-off'], colours[background]), `--switch-off on --${background}`).toBeGreaterThanOrEqual(3);
     }
   });
+
+  test(`text on the danger colour reads at 4.5:1 in the ${theme} theme`, () => {
+    const colours = { ...tokens(':root'), ...tokens(block) };
+    expect(contrast(colours['on-danger'], colours['danger'])).toBeGreaterThanOrEqual(4.5);
+  });
 }
 
 test('no field label ends in a colon', () => {
@@ -189,6 +203,52 @@ test('segmented options are only buttons or radio labels', () => {
       if (options.length === 0 || tags(body, 'input').some((tag) => !/\stype="radio"/.test(tag))) {
         offences.push(`${appPath(path)}: ${group.slice(0, 80)}`);
       }
+    }
+  }
+  expect(offences).toEqual([]);
+});
+
+// Component styles and compact.scss, which the shared rules in styles.scss must not be undercut by.
+function componentStyles(): string[] {
+  return [...files(join(SRC, 'app'), ['.scss']), join(SRC, 'compact.scss')];
+}
+
+test('error colours come from --danger', () => {
+  const offences: string[] = [];
+  for (const path of [...componentStyles(), join(SRC, 'styles.scss')]) {
+    for (const line of readFileSync(path, 'utf8').split('\n')) {
+      // The one allowed use: styles.scss points Material's error token at --danger.
+      if (/var\(--mat-sys-error\)|#b3261e/i.test(line)) {
+        offences.push(`${path}: ${line.trim()}`);
+      }
+    }
+  }
+  expect(offences).toEqual([]);
+});
+
+test('only the home hero sizes its own h1', () => {
+  const offences = componentStyles()
+    .filter((path) => appPath(path) !== 'features/home/home.scss')
+    .filter((path) => /\bh1\s*\{[^}]*font-size/.test(readFileSync(path, 'utf8')));
+  expect(offences).toEqual([]);
+});
+
+test('the focus ring is the one global :focus-visible', () => {
+  const offences = componentStyles().filter((path) => /focus-visible[^{]*\{[^}]*outline/.test(readFileSync(path, 'utf8')));
+  expect(offences).toEqual([]);
+});
+
+test('every dialog has the shared header, body and footer', () => {
+  const offences: string[] = [];
+  for (const path of templates().filter((path) => readFileSync(path, 'utf8').includes('mat-dialog-title'))) {
+    const text = readFileSync(path, 'utf8');
+    for (const part of ['dialog-header', 'dialog-body', 'dialog-footer']) {
+      if (!new RegExp(String.raw`class="[^"]*(?<![\w-])${part}(?![\w-])`).test(text)) {
+        offences.push(`${appPath(path)}: no .${part}`);
+      }
+    }
+    if (!/<div class="dialog-header">\s*<h2 mat-dialog-title>/.test(text)) {
+      offences.push(`${appPath(path)}: the title is not the first thing in .dialog-header`);
     }
   }
   expect(offences).toEqual([]);
