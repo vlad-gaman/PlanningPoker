@@ -14,7 +14,7 @@ import { RoomSettingsDialog, RoomSettingsDialogData } from './room-settings-dial
 
 const REMEMBERED: CreateRoomRequest = {
   useFunRoomName: false,
-  configuration: { cardSet: 'linear', countdownSeconds: 7, showFireworks: false, maxParticipants: 9 },
+  configuration: { cardSet: 'linear', countdownSeconds: 7, showFireworks: false, maxParticipants: 9, alarmEnabled: true, alarmMinutes: 5 },
 };
 
 describe('extractRoomId', () => {
@@ -110,7 +110,7 @@ describe('Home', () => {
     expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
     expect(rooms.create).toHaveBeenCalledWith({
       useFunRoomName: true,
-      configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
+      configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50, alarmEnabled: true, alarmMinutes: 5 },
     });
     expect(navigate).toHaveBeenCalledWith(['/room', 'new-room']);
   });

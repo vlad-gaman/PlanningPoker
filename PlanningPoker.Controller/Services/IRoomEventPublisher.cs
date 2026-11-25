@@ -29,6 +29,9 @@ public interface IRoomEventPublisher
     /// <summary>Tells the whole room that the settings were saved, followed by <c>VotesCleared</c> when the save dropped the votes.</summary>
     Task PublishRoomConfigurationUpdatedAsync(RoomConfigurationChangeResult result);
 
+    /// <summary>Tells the whole room where its Alarm is now: started, cancelled, elapsed or reset.</summary>
+    Task PublishAlarmChangedAsync(AlarmChangeResult result);
+
     /// <summary>Tells the whole room who owns it now. Sends nothing when the ownership did not change.</summary>
     Task PublishOwnershipTransferredAsync(OwnershipTransferResult result);
 

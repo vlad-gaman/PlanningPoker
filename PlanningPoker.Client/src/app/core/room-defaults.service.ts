@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import {
+  ALARM_MINUTES_MAX,
+  ALARM_MINUTES_MIN,
   COUNTDOWN_MAX_SECONDS,
   COUNTDOWN_MIN_SECONDS,
   CreateRoomRequest,
@@ -21,7 +23,7 @@ export class RoomDefaultsService {
   load(): CreateRoomRequest {
     try {
       const stored: unknown = JSON.parse(localStorage.getItem(ROOM_DEFAULTS_STORAGE_KEY) ?? 'null');
-      return isRequest(stored) ? stored : DEFAULT_CREATE_ROOM_REQUEST;
+      return isRequest(stored) ? withAlarm(stored) : DEFAULT_CREATE_ROOM_REQUEST;
     } catch {
       return DEFAULT_CREATE_ROOM_REQUEST;
     }
@@ -44,6 +46,19 @@ export class RoomDefaultsService {
   }
 }
 
+/** Defaults saved before the Alarm existed carry no Alarm fields: they get the default Alarm. */
+function withAlarm(request: CreateRoomRequest): CreateRoomRequest {
+  const { alarmEnabled, alarmMinutes } = request.configuration as Partial<RoomConfiguration>;
+  return {
+    ...request,
+    configuration: {
+      ...request.configuration,
+      alarmEnabled: alarmEnabled ?? DEFAULT_ROOM_CONFIGURATION.alarmEnabled,
+      alarmMinutes: alarmMinutes ?? DEFAULT_ROOM_CONFIGURATION.alarmMinutes,
+    },
+  };
+}
+
 function isRequest(value: unknown): value is CreateRoomRequest {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -56,8 +71,14 @@ function isConfiguration(value: unknown): value is RoomConfiguration {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
-  const { cardSet, countdownSeconds, showFireworks, maxParticipants } = value as Partial<RoomConfiguration>;
+  const { cardSet, countdownSeconds, showFireworks, maxParticipants, alarmEnabled, alarmMinutes } =
+    value as Partial<RoomConfiguration>;
+  const alarmValid =
+    (alarmEnabled === undefined || typeof alarmEnabled === 'boolean') &&
+    (alarmMinutes === undefined ||
+      (Number.isInteger(alarmMinutes) && alarmMinutes >= ALARM_MINUTES_MIN && alarmMinutes <= ALARM_MINUTES_MAX));
   return (
+    alarmValid &&
     typeof cardSet === 'string' &&
     cardSet.length > 0 &&
     typeof showFireworks === 'boolean' &&

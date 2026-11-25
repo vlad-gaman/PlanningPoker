@@ -21,7 +21,8 @@ public class RoomEventPublisher(
     IVoteStatusResponseMapper voteStatusResponseMapper,
     IPersonTypeChangedEventMapper personTypeChangedEventMapper,
     IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper,
-    IVotesClearedEventMapper votesClearedEventMapper) : IRoomEventPublisher, IRoomCountdownNotifier, IRoomPresenceNotifier, IRoomAdminNotifier
+    IVotesClearedEventMapper votesClearedEventMapper,
+    IAlarmResponseMapper alarmResponseMapper) : IRoomEventPublisher, IRoomCountdownNotifier, IRoomAlarmNotifier, IRoomPresenceNotifier, IRoomAdminNotifier
 {
     public async Task PublishPersonJoinedAsync(JoinRoomResult result, string joinerConnectionId)
     {
@@ -143,6 +144,16 @@ public class RoomEventPublisher(
     public Task PublishVotesShownAsync(string roomId, VoteStatus status)
     {
         return hub.Clients.Group(roomId).SendAsync(HubEvents.VotesShown, voteStatusResponseMapper.Map(status));
+    }
+
+    public Task PublishAlarmChangedAsync(AlarmChangeResult result)
+    {
+        return hub.Clients.Group(result.RoomId).SendAsync(HubEvents.AlarmChanged, alarmResponseMapper.Map(result.Alarm));
+    }
+
+    Task IRoomAlarmNotifier.AlarmChangedAsync(AlarmChangeResult result)
+    {
+        return PublishAlarmChangedAsync(result);
     }
 
     public Task PublishCountdownUpdateAsync(string roomId, int countdown)

@@ -72,4 +72,46 @@ describe('RoomSettingsDialog in a room', () => {
     expect(data.transfer).toHaveBeenCalledWith(BOB.guid);
     expect(close).toHaveBeenCalled();
   });
+
+  describe('the Alarm settings', () => {
+    interface Form {
+      getRawValue(): unknown;
+      patchValue(value: unknown): void;
+    }
+    interface Dialog {
+      form: Form;
+      submit(): Promise<void>;
+    }
+
+    function dialogOf(fixture: ReturnType<typeof create>) {
+      return fixture.componentInstance as unknown as Dialog;
+    }
+
+    it('shows the Alarm switch and length, prefilled from the room', () => {
+      const fixture = create();
+
+      expect(fixture.nativeElement.querySelector('#alarm-enabled')).not.toBeNull();
+      expect((fixture.nativeElement.querySelector('#alarm-minutes') as HTMLInputElement).value).toBe('5');
+    });
+
+    it('saves a changed length and a switched off Alarm', async () => {
+      const fixture = create();
+      dialogOf(fixture).form.patchValue({ alarmEnabled: false, alarmMinutes: 25 });
+
+      await dialogOf(fixture).submit();
+
+      expect(data.save).toHaveBeenCalledWith({ ...JOIN_RESPONSE.configuration, alarmEnabled: false, alarmMinutes: 25 });
+    });
+
+    it.each([0, 61])('refuses a length of %i minutes and says what is allowed', async (minutes) => {
+      const fixture = create();
+      dialogOf(fixture).form.patchValue({ alarmMinutes: minutes });
+
+      await dialogOf(fixture).submit();
+      fixture.detectChanges();
+
+      expect(data.save).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.textContent).toContain('Use 1 to 60 minutes.');
+    });
+  });
 });

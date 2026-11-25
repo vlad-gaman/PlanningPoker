@@ -32,6 +32,11 @@ public class RoomConfigurationValidation
             errors.Add(ServiceError.ValidationFailed($"{fieldPrefix}maxParticipants", "too_small"));
         }
 
+        if (configuration.AlarmMinutes is < RoomConstraints.AlarmMinutesMin or > RoomConstraints.AlarmMinutesMax)
+        {
+            errors.Add(ServiceError.ValidationFailed($"{fieldPrefix}alarmMinutes", "out_of_range"));
+        }
+
         return errors.Count == 0 ? ServiceResponse.Success() : ServiceResponse.Failure([.. errors]);
     }
 }

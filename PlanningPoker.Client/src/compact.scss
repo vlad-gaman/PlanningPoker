@@ -175,11 +175,6 @@ $compact-max: 520px;
   :root:root {
     --tap: 44px;
 
-    // The muted grey is 3.7:1 on the dark page; this one passes 4.5:1.
-    &[data-theme='dark'] {
-      --muted-color: #a9b1b9;
-    }
-
     // ---- Page chrome ----
     .navbar {
       padding: 0.3rem 0.5rem;
@@ -231,6 +226,7 @@ $compact-max: 520px;
     // ---- Targets and focus ----
     .primary-button,
     .secondary-button,
+    .danger-button,
     .input {
       min-height: var(--tap);
     }
@@ -372,7 +368,8 @@ $compact-max: 520px;
     }
 
     // The sticky bar already shows the time; drop the duplicate in the table view.
-    .head app-round-timer {
+    .head app-round-timer,
+    .head app-alarm-button {
       display: none;
     }
 

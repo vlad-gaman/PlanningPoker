@@ -23,6 +23,7 @@ public class RoomHub(
     IPresenceService presence,
     IRoomEventPublisher roomEvents,
     IRoomTimerService timer,
+    IRoomAlarmTimer alarmTimer,
     RoomIdentifierValidation identifierValidation,
     PersonTypeValidation personTypeValidation,
     RoomConfigurationValidation configurationValidation,
@@ -214,7 +215,46 @@ public class RoomHub(
 
         await roomEvents.PublishRoomConfigurationUpdatedAsync(updated.Data!);
         await timer.ApplyAsync(updated.Data!.RoomId, updated.Data.FollowUp);
+        if (updated.Data.Alarm.Status != AlarmStatus.Running)
+        {
+            // Turning the Alarm off sent a running one back to idle: its pending wake-up has nothing left to elapse.
+            alarmTimer.Cancel(updated.Data.RoomId);
+        }
+
         return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Starts the Alarm of the caller's room; any member.</summary>
+    public async Task<ApiResponse<object>> StartAlarm()
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        return await ApplyAlarmAsync(rooms.StartAlarm(person.Guid, Context.ConnectionId), changed => alarmTimer.Schedule(changed.RoomId, changed.Alarm.EndsAt!.Value));
+    }
+
+    /// <summary>Returns a running Alarm of the caller's room to idle; any member.</summary>
+    public async Task<ApiResponse<object>> CancelAlarm()
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        return await ApplyAlarmAsync(rooms.CancelAlarm(person.Guid, Context.ConnectionId), changed => alarmTimer.Cancel(changed.RoomId));
+    }
+
+    /// <summary>Returns an elapsed Alarm of the caller's room to idle without starting it again; any member.</summary>
+    public async Task<ApiResponse<object>> ResetAlarm()
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        return await ApplyAlarmAsync(rooms.ResetAlarm(person.Guid, Context.ConnectionId), _ => { });
     }
 
     /// <summary>Hands the caller's room to another member; owner only.</summary>
@@ -252,6 +292,19 @@ public class RoomHub(
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    /// <summary>Announces an Alarm change the service accepted, after the caller's own timer step, or returns why it was refused.</summary>
+    private async Task<ApiResponse<object>> ApplyAlarmAsync(ServiceResponse<AlarmChangeResult> change, Action<AlarmChangeResult> timerStep)
+    {
+        if (!change.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(change.Errors.ToArray()));
+        }
+
+        timerStep(change.Data!);
+        await roomEvents.PublishAlarmChangedAsync(change.Data!);
+        return apiResponseMapper.Map(ServiceResponse.Success());
     }
 
     private async Task ExitAndPublishAsync(Guid personGuid)

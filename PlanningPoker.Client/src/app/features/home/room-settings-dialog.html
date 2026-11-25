@@ -1,6 +1,8 @@
 <div class="settings-header">
   <h2 mat-dialog-title>Room Settings</h2>
-  <button type="button" class="btn btn-sm close" mat-dialog-close aria-label="Close">×</button>
+  <button type="button" class="secondary-button button-sm icon-only" mat-dialog-close aria-label="Close">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
+  </button>
 </div>
 <form [formGroup]="form" (ngSubmit)="submit()">
   <div class="settings-content">
@@ -36,6 +38,29 @@
       </div>
     </section>
     <section class="group">
+      <h3>Alarm</h3>
+      <div class="setting">
+        <div class="meta">
+          <label for="alarm-enabled">Alarm</label>
+          <small class="hint">A sound for everyone when the time is up</small>
+        </div>
+        <label class="switch">
+          <input id="alarm-enabled" type="checkbox" formControlName="alarmEnabled" />
+          <span class="track"></span>
+        </label>
+      </div>
+      <div class="setting">
+        <div class="meta">
+          <label for="alarm-minutes">Alarm length (minutes)</label>
+          <small class="hint">Anyone can start it; only you set the length</small>
+        </div>
+        <input id="alarm-minutes" class="form-control" type="number" formControlName="alarmMinutes" />
+        @if (form.controls.alarmMinutes.invalid) {
+          <div class="field-error" role="alert">Use {{ alarmRange.min }} to {{ alarmRange.max }} minutes.</div>
+        }
+      </div>
+    </section>
+    <section class="group">
       <h3>Room</h3>
       <div class="setting">
         <div class="meta"><label for="max-participants">Max participants</label><small class="hint">Who can join</small></div>
@@ -65,7 +90,7 @@
                 <option [value]="person.guid">{{ person.name }}</option>
               }
             </select>
-            <button type="button" class="btn btn-sm" [disabled]="!transferTarget()" (click)="transferOwnership()">
+            <button type="button" class="secondary-button button-sm" [disabled]="!transferTarget()" (click)="transferOwnership()">
               Transfer
             </button>
           </div>
@@ -77,7 +102,7 @@
     }
   </div>
   <div class="settings-footer">
-    <button type="button" class="btn" mat-dialog-close>Cancel</button>
-    <button type="submit" class="btn">Save Settings</button>
+    <button type="button" class="secondary-button" mat-dialog-close>Cancel</button>
+    <button type="submit" class="primary-button">Save Settings</button>
   </div>
 </form>

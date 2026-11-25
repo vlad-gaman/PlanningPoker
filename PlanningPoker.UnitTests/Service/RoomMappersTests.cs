@@ -37,7 +37,7 @@ public class RoomMappersTests
         var entity = new RoomEntityMapper(new RoomConfigurationEntityMapper(), TimeProvider.System).Map("room", owner, Configuration);
         entity.VotingEnabled = true;
 
-        var room = new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper()).Map(entity);
+        var room = new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper(), new AlarmStateMapper()).Map(entity);
 
         Assert.Equal("room", room.Id);
         Assert.Equal(owner, room.OwnerGuid);

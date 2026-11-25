@@ -31,6 +31,35 @@ public sealed class FakeRoomService : IRoomService
         return ExitResult;
     }
 
+    /// <summary>The scripted result of every Alarm call (start, cancel, reset, elapse).</summary>
+    public ServiceResponse<AlarmChangeResult> AlarmResult { get; set; } = ServiceResponse<AlarmChangeResult>.Failure();
+
+    public List<string> AlarmCalls { get; } = [];
+
+    public ServiceResponse<AlarmChangeResult> StartAlarm(Guid personGuid, string connectionId)
+    {
+        AlarmCalls.Add("start");
+        return AlarmResult;
+    }
+
+    public ServiceResponse<AlarmChangeResult> CancelAlarm(Guid personGuid, string connectionId)
+    {
+        AlarmCalls.Add("cancel");
+        return AlarmResult;
+    }
+
+    public ServiceResponse<AlarmChangeResult> ResetAlarm(Guid personGuid, string connectionId)
+    {
+        AlarmCalls.Add("reset");
+        return AlarmResult;
+    }
+
+    public ServiceResponse<AlarmChangeResult> ElapseAlarm(string roomId, DateTimeOffset endsAt)
+    {
+        AlarmCalls.Add("elapse");
+        return AlarmResult;
+    }
+
     public VotingFollowUp FollowUpAfterChange(string roomId)
     {
         return VotingFollowUp.None;

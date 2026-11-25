@@ -8,7 +8,7 @@ public class RoomConfigurationRequestMapperTests
     [Fact]
     public void Map_CopiesAllRequestFields()
     {
-        var request = new RoomConfigurationRequest { CardSet = "fibonacci", CountdownSeconds = 12, ShowFireworks = true, MaxParticipants = 3 };
+        var request = new RoomConfigurationRequest { CardSet = "fibonacci", CountdownSeconds = 12, ShowFireworks = true, MaxParticipants = 3, AlarmEnabled = false, AlarmMinutes = 25 };
 
         var configuration = new RoomConfigurationRequestMapper().Map(request);
 
@@ -16,5 +16,7 @@ public class RoomConfigurationRequestMapperTests
         Assert.Equal(12, configuration.CountdownSeconds);
         Assert.True(configuration.ShowFireworks);
         Assert.Equal(3, configuration.MaxParticipants);
+        Assert.False(configuration.AlarmEnabled);
+        Assert.Equal(25, configuration.AlarmMinutes);
     }
 }

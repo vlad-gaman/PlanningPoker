@@ -6,7 +6,8 @@ namespace PlanningPoker.Controller.Mappers;
 public class RoomConfigurationUpdatedEventMapper(
     IRoomConfigurationResponseMapper configurationMapper,
     ICardResponseMapper cardMapper,
-    IVoteStatusResponseMapper voteStatusMapper) : IRoomConfigurationUpdatedEventMapper
+    IVoteStatusResponseMapper voteStatusMapper,
+    IAlarmResponseMapper alarmMapper) : IRoomConfigurationUpdatedEventMapper
 {
     public RoomConfigurationUpdatedEvent Map(RoomConfigurationChangeResult result)
     {
@@ -15,6 +16,7 @@ public class RoomConfigurationUpdatedEventMapper(
             Configuration = configurationMapper.Map(result.Configuration),
             Cards = result.Cards.Select(cardMapper.Map).ToList(),
             UpdatedBy = result.UpdatedBy,
+            Alarm = alarmMapper.Map(result.Alarm),
             VoteStatus = voteStatusMapper.Map(result.VoteStatus)
         };
     }

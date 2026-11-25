@@ -9,4 +9,8 @@ public class RoomConfigurationResponse
     public bool ShowFireworks { get; init; }
 
     public int MaxParticipants { get; init; }
+
+    public bool AlarmEnabled { get; init; }
+
+    public int AlarmMinutes { get; init; }
 }
