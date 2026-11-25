@@ -11,6 +11,12 @@ public class CardBacksTests
     [InlineData(CardBacks.Geometric)]
     [InlineData(CardBacks.Waves)]
     [InlineData(CardBacks.Checker)]
+    [InlineData(CardBacks.Diamonds)]
+    [InlineData(CardBacks.Zigzag)]
+    [InlineData(CardBacks.Grid)]
+    [InlineData(CardBacks.Rings)]
+    [InlineData(CardBacks.Sunburst)]
+    [InlineData(CardBacks.Plaid)]
     public void IsValid_KnownDesign_IsTrue(string design)
     {
         Assert.True(CardBacks.IsValid(design));

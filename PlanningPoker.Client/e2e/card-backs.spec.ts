@@ -46,7 +46,7 @@ test('a face-down vote shows its voter\'s chosen card back to everyone, and the 
   await join(bob.page, roomUrl, 'Bob');
 
   await backTrigger(ann.page).click();
-  await expect(ann.page.getByRole('listbox', { name: 'Card back' }).getByRole('option')).toHaveCount(6);
+  await expect(ann.page.getByRole('listbox', { name: 'Card back' }).getByRole('option')).toHaveCount(12);
   await ann.page.getByRole('option', { name: 'Dots' }).click();
   await expect(backTrigger(ann.page)).toHaveText(/Dots/);
 

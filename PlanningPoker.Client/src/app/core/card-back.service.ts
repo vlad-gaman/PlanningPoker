@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-/** The card back designs. The artwork lives in `features/room/card-backs.scss`, keyed by the same ids; the ids match PlanningPoker.Common/Constants/CardBacks.cs. */
+/** The card back designs. The artwork lives in `src/card-backs.scss`, keyed by the same ids; the ids match PlanningPoker.Common/Constants/CardBacks.cs. */
 export const CARD_BACKS = [
   { id: 'classic', label: 'Classic' },
   { id: 'stripes', label: 'Stripes' },
@@ -8,6 +8,12 @@ export const CARD_BACKS = [
   { id: 'geometric', label: 'Geometric' },
   { id: 'waves', label: 'Waves' },
   { id: 'checker', label: 'Checker' },
+  { id: 'diamonds', label: 'Diamonds' },
+  { id: 'zigzag', label: 'Zigzag' },
+  { id: 'grid', label: 'Grid' },
+  { id: 'rings', label: 'Rings' },
+  { id: 'sunburst', label: 'Sunburst' },
+  { id: 'plaid', label: 'Plaid' },
 ] as const;
 
 export type CardBackId = (typeof CARD_BACKS)[number]['id'];

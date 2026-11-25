@@ -9,12 +9,18 @@ public static class CardBacks
     public const string Geometric = "geometric";
     public const string Waves = "waves";
     public const string Checker = "checker";
+    public const string Diamonds = "diamonds";
+    public const string Zigzag = "zigzag";
+    public const string Grid = "grid";
+    public const string Rings = "rings";
+    public const string Sunburst = "sunburst";
+    public const string Plaid = "plaid";
 
     /// <summary>What everyone starts with, and what a person stored before card backs existed has.</summary>
     public const string Default = Classic;
 
     public static bool IsValid(string? value)
     {
-        return value is Classic or Stripes or Dots or Geometric or Waves or Checker;
+        return value is Classic or Stripes or Dots or Geometric or Waves or Checker or Diamonds or Zigzag or Grid or Rings or Sunburst or Plaid;
     }
 }
