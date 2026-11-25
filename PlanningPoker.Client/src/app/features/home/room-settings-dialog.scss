@@ -47,17 +47,13 @@ form {
 .setting {
   margin-bottom: 14px;
 
+  // The label with its hint underneath.
   .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
     margin-bottom: 5px;
   }
-  .meta label {
-    display: block;
-  }
-}
-
-.hint {
-  display: block;
-  opacity: 0.7;
 }
 
 .transfer-row {

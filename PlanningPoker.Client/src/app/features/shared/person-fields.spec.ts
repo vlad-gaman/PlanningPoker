@@ -19,7 +19,7 @@ describe('PersonFields', () => {
   it('labels the name input and lists the four roles', () => {
     const label = element().querySelector('label') as HTMLLabelElement;
     const input = element().querySelector(`#${label.htmlFor}`) as HTMLInputElement;
-    expect(label.textContent).toContain('Your Name:');
+    expect(label.textContent).toContain('Your Name');
     expect(input).toBeTruthy();
     expect(Array.from(element().querySelectorAll('.role-picker label')).map((o) => o.textContent?.trim())).toEqual([
       'Developer',

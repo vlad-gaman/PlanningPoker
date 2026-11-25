@@ -227,12 +227,14 @@ a {
   flex-direction: column;
   gap: 0.3rem;
   text-align: left;
+}
 
-  label {
-    color: var(--muted-color);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
+// The one label style for a field, a select, a switch or a group of options; no trailing colon.
+.field > label,
+.field-label {
+  color: var(--muted-color);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .input {

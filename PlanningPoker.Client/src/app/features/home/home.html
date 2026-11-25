@@ -29,7 +29,7 @@
     <form class="panel" [formGroup]="joinForm" (ngSubmit)="joinRoom()">
       <h2>Join a room</h2>
       <div class="field">
-        <label for="room-name">Room Name:</label>
+        <label for="room-name">Room Name</label>
         <input class="input" id="room-name" formControlName="room" autocomplete="off" placeholder="A room name or link" />
       </div>
       @if (joinForm.controls.room.invalid && joinForm.controls.room.touched) {

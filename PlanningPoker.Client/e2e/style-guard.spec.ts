@@ -68,7 +68,7 @@ test('component styles do not redefine the shared buttons and fields', () => {
   const offences: string[] = [];
   for (const path of files(join(SRC, 'app'), ['.scss'])) {
     const text = readFileSync(path, 'utf8');
-    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?)\s*[{,:]/m.test(text)) {
+    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?|field-label|hint)\s*[{,:]/m.test(text)) {
       offences.push(path);
     }
   }
@@ -164,3 +164,16 @@ for (const [theme, block] of [
     }
   });
 }
+
+test('no field label ends in a colon', () => {
+  const offences: string[] = [];
+  for (const path of templates()) {
+    const text = readFileSync(path, 'utf8');
+    for (const [, label] of text.matchAll(/<(?:label|span class="field-label")\b[^>]*>([^<]*)</g)) {
+      if (label.trim().endsWith(':')) {
+        offences.push(`${appPath(path)}: ${label.trim()}`);
+      }
+    }
+  }
+  expect(offences).toEqual([]);
+});
