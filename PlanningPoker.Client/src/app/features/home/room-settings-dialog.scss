@@ -61,6 +61,25 @@
   align-items: center;
 }
 
+// The shared buttons are 42px tall; the close and transfer buttons sit beside smaller content, so they get a compact size and keep the same look.
+.close,
+.transfer-row .secondary-button {
+  height: 36px;
+  padding: 0 0.9rem;
+}
+
+.close {
+  padding: 0;
+  width: 36px;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.transfer-row .secondary-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .settings-footer {
   display: flex;
   justify-content: flex-end;
