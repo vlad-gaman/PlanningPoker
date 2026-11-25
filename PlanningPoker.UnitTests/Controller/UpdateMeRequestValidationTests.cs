@@ -49,7 +49,7 @@ public class UpdateMeRequestValidationTests
     [Theory]
     [InlineData(null)]
     [InlineData("classic")]
-    [InlineData("checker")]
+    [InlineData("nouveau")]
     public void Validate_KnownOrAbsentCardBack_Succeeds(string? cardBack)
     {
         Assert.True(_validation.Validate(new UpdateMeRequest { Name = "Ann", PersonType = "dev", CardBack = cardBack }).IsSuccess);

@@ -41,7 +41,8 @@ describe('CardBackService', () => {
   it('knows its own ids and falls back to classic for any other', () => {
     expect(isCardBackId('stripes')).toBe(true);
     expect(isCardBackId('Stripes')).toBe(false);
-    expect(resolveCardBack('checker')).toBe('checker');
+    expect(resolveCardBack('nouveau')).toBe('nouveau');
+    expect(resolveCardBack('checker')).toBe('classic');
     expect(resolveCardBack('sparkles')).toBe('classic');
     expect(resolveCardBack(undefined)).toBe('classic');
   });

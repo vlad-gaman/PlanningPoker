@@ -121,8 +121,8 @@ public class PersonServiceTests
         _service.Upsert(created.SessionToken, "Ann", "dev");
         Assert.Equal(CardBacks.Waves, _repository.Get(created.Person.Guid)!.CardBack);
 
-        _service.Upsert(created.SessionToken, "Ann", "dev", CardBacks.Checker);
-        Assert.Equal(CardBacks.Checker, _repository.Get(created.Person.Guid)!.CardBack);
+        _service.Upsert(created.SessionToken, "Ann", "dev", CardBacks.Nouveau);
+        Assert.Equal(CardBacks.Nouveau, _repository.Get(created.Person.Guid)!.CardBack);
     }
 
     [Fact]

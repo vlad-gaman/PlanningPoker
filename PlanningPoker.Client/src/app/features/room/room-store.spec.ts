@@ -1568,8 +1568,8 @@ describe('RoomStore card back', () => {
   it('shows a card back another person picked', async () => {
     await enter(null);
 
-    hub.emit(HUB_EVENTS.CardBackChanged, { personGuid: ANN.guid, cardBack: 'checker' });
+    hub.emit(HUB_EVENTS.CardBackChanged, { personGuid: ANN.guid, cardBack: 'nouveau' });
 
-    expect(store.people()[0].cardBack).toBe('checker');
+    expect(store.people()[0].cardBack).toBe('nouveau');
   });
 });

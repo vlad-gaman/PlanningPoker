@@ -1,10 +1,16 @@
 // The face-down side of a card: one design per card back id (see core/card-back.service.ts). Every colour comes from the
 // theme tokens, so each design reads in light and dark mode. The element sets its own size and radius; a design only
 // paints the surface. The paper-coloured frame is the card's edge, like a printed back.
+//
+// Patterns are drawn in --u, a unit that follows the card's width (--card-w, which grows on a big screen), so a larger
+// card shows larger motifs instead of finer ones. A small preview sets its own --u.
 .card-back {
+  --u: calc(var(--card-w, 72px) / 9);
   --back-a: var(--primary-hover);
-  --back-b: color-mix(in srgb, var(--on-primary) 38%, transparent);
+  --back-b: color-mix(in srgb, var(--on-primary) 45%, transparent);
+  --ornament: color-mix(in srgb, var(--on-primary) 80%, transparent);
 
+  position: relative;
   box-sizing: border-box;
   border: 2px solid var(--card-bg);
   background-color: var(--primary-color);
@@ -13,17 +19,17 @@
 
 .card-back[data-back='classic'] {
   background-image:
-    repeating-linear-gradient(45deg, transparent 0 5px, var(--back-b) 5px 6px),
-    repeating-linear-gradient(-45deg, transparent 0 5px, var(--back-b) 5px 6px);
+    repeating-linear-gradient(45deg, transparent 0 calc(var(--u) * 0.6), var(--back-b) calc(var(--u) * 0.6) calc(var(--u) * 0.7)),
+    repeating-linear-gradient(-45deg, transparent 0 calc(var(--u) * 0.6), var(--back-b) calc(var(--u) * 0.6) calc(var(--u) * 0.7));
 }
 
 .card-back[data-back='stripes'] {
-  background-image: repeating-linear-gradient(90deg, var(--back-a) 0 6px, transparent 6px 12px);
+  background-image: repeating-linear-gradient(90deg, var(--back-a) 0 calc(var(--u) * 0.7), transparent calc(var(--u) * 0.7) calc(var(--u) * 1.4));
 }
 
 .card-back[data-back='dots'] {
-  background-image: radial-gradient(circle at center, var(--back-b) 0 2px, transparent 2.5px);
-  background-size: 10px 10px;
+  background-image: radial-gradient(circle at center, var(--back-b) 0 calc(var(--u) * 0.24), transparent calc(var(--u) * 0.3));
+  background-size: calc(var(--u) * 1.2) calc(var(--u) * 1.2);
 }
 
 .card-back[data-back='geometric'] {
@@ -39,49 +45,41 @@
 }
 
 .card-back[data-back='waves'] {
-  background-image: repeating-radial-gradient(circle at 50% 120%, transparent 0 6px, var(--back-b) 6px 7px);
-}
-
-.card-back[data-back='checker'] {
-  background-image: conic-gradient(var(--back-a) 0 25%, transparent 0 50%, var(--back-a) 0 75%, transparent 0);
-  background-size: 14px 14px;
+  background-image: repeating-radial-gradient(circle at 50% 120%, transparent 0 calc(var(--u) * 0.7), var(--back-b) calc(var(--u) * 0.7) calc(var(--u) * 0.8));
 }
 
 .card-back[data-back='diamonds'] {
   background-image:
     linear-gradient(45deg, var(--back-a) 25%, transparent 25% 75%, var(--back-a) 75%),
     linear-gradient(-45deg, var(--back-a) 25%, transparent 25% 75%, var(--back-a) 75%);
-  background-size: 14px 14px;
-}
-
-.card-back[data-back='zigzag'] {
-  background-image:
-    linear-gradient(135deg, var(--back-a) 25%, transparent 25%),
-    linear-gradient(225deg, var(--back-a) 25%, transparent 25%),
-    linear-gradient(315deg, var(--back-a) 25%, transparent 25%),
-    linear-gradient(45deg, var(--back-a) 25%, transparent 25%);
-  background-size: 14px 14px;
-  background-position: -7px 0, -7px 0, 0 0, 0 0;
-}
-
-.card-back[data-back='grid'] {
-  background-image:
-    linear-gradient(var(--back-b) 1px, transparent 1px),
-    linear-gradient(90deg, var(--back-b) 1px, transparent 1px);
-  background-size: 10px 10px;
+  background-size: calc(var(--u) * 1.8) calc(var(--u) * 1.8);
 }
 
 .card-back[data-back='rings'] {
-  background-image: radial-gradient(circle at center, transparent 0 3px, var(--back-b) 3px 4px, transparent 4px);
-  background-size: 14px 14px;
+  background-image: radial-gradient(circle at center, transparent 0 calc(var(--u) * 0.4), var(--back-b) calc(var(--u) * 0.4) calc(var(--u) * 0.5), transparent calc(var(--u) * 0.5));
+  background-size: calc(var(--u) * 1.8) calc(var(--u) * 1.8);
 }
 
 .card-back[data-back='sunburst'] {
   background-image: repeating-conic-gradient(from 0deg at 50% 50%, var(--back-a) 0 10deg, transparent 10deg 20deg);
 }
 
-.card-back[data-back='plaid'] {
-  background-image:
-    repeating-linear-gradient(0deg, var(--back-a) 0 4px, transparent 4px 10px),
-    repeating-linear-gradient(90deg, var(--back-a) 0 4px, transparent 4px 10px);
+// The ornamental backs: one symmetrical drawing over the whole card, cut out of a flat fill so it takes the theme colour.
+// The drawings are line art in a 100 x 140 box, mirrored from one quarter, stretched to the card.
+$ornaments: (
+  'scrollwork': "%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20140%22%20preserveAspectRatio%3D%22none%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cdefs%3E%3Cg%20id%3D%22q%22%3E%3Cpath%20d%3D%22M14%2014C26%2012%2034%2018%2032%2027C30%2034%2021%2034%2021%2028C21%2024%2026%2023%2027%2026%22%2F%3E%3Cpath%20d%3D%22M32%2027C34%2040%2040%2050%2050%2054%22%2F%3E%3Cpath%20d%3D%22M50%2060C42%2060%2036%2054%2038%2047C40%2042%2046%2043%2045%2048%22%2F%3E%3Cpath%20d%3D%22M26%2014C36%2010%2044%2012%2050%2016%22%2F%3E%3Cpath%20d%3D%22M16%2040C22%2036%2028%2040%2026%2046C24%2050%2019%2049%2020%2045%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2270%22%20r%3D%222%22%20fill%3D%22%23000%22%2F%3E%3C%2Fg%3E%3C%2Fdefs%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%2290%22%20height%3D%22130%22%20rx%3D%226%22%2F%3E%3Crect%20x%3D%229%22%20y%3D%229%22%20width%3D%2282%22%20height%3D%22122%22%20rx%3D%224%22%20stroke-width%3D%220.8%22%2F%3E%3Cuse%20href%3D%22%23q%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%200%29%20scale%28-1%201%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%280%20140%29%20scale%281%20-1%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%20140%29%20scale%28-1%20-1%29%22%2F%3E%3C%2Fsvg%3E",
+  'flourish': "%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20140%22%20preserveAspectRatio%3D%22none%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cdefs%3E%3Cg%20id%3D%22q%22%3E%3Cpath%20d%3D%22M50%2070C42%2066%2036%2058%2040%2048C46%2054%2050%2062%2050%2070%22%2F%3E%3Cpath%20d%3D%22M50%2070C40%2074%2030%2070%2026%2062C34%2060%2044%2062%2050%2070%22%2F%3E%3Cpath%20d%3D%22M12%2012C24%2012%2030%2020%2028%2030C26%2022%2020%2018%2012%2022%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2220%22%20r%3D%221.6%22%20fill%3D%22%23000%22%2F%3E%3Cpath%20d%3D%22M14%2040C20%2034%2028%2038%2026%2046C24%2052%2017%2050%2018%2045%22%2F%3E%3Cpath%20d%3D%22M34%2014C40%2018%2044%2024%2050%2024%22%2F%3E%3C%2Fg%3E%3C%2Fdefs%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%2290%22%20height%3D%22130%22%20rx%3D%226%22%2F%3E%3Crect%20x%3D%229%22%20y%3D%229%22%20width%3D%2282%22%20height%3D%22122%22%20rx%3D%224%22%20stroke-width%3D%220.8%22%2F%3E%3Cuse%20href%3D%22%23q%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%200%29%20scale%28-1%201%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%280%20140%29%20scale%281%20-1%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%20140%29%20scale%28-1%20-1%29%22%2F%3E%3C%2Fsvg%3E",
+  'nouveau': "%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20140%22%20preserveAspectRatio%3D%22none%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cdefs%3E%3Cg%20id%3D%22q%22%3E%3Cpath%20d%3D%22M10%2066C10%2046%2030%2048%2030%2032C30%2020%2020%2014%2014%2018%22%2F%3E%3Cpath%20d%3D%22M20%2070C20%2054%2040%2052%2042%2038C43%2028%2036%2022%2030%2024%22%2F%3E%3Cpath%20d%3D%22M50%2022C44%2030%2046%2040%2040%2046%22%2F%3E%3Cpath%20d%3D%22M50%2070C44%2062%2044%2052%2050%2044%22%2F%3E%3Cpath%20d%3D%22M16%2022C22%2026%2022%2032%2016%2034%22%20%2F%3E%3C%2Fg%3E%3C%2Fdefs%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%2290%22%20height%3D%22130%22%20rx%3D%226%22%2F%3E%3Crect%20x%3D%229%22%20y%3D%229%22%20width%3D%2282%22%20height%3D%22122%22%20rx%3D%224%22%20stroke-width%3D%220.8%22%2F%3E%3Cuse%20href%3D%22%23q%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%200%29%20scale%28-1%201%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%280%20140%29%20scale%281%20-1%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%20140%29%20scale%28-1%20-1%29%22%2F%3E%3C%2Fsvg%3E",
+  'victorian': "%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20140%22%20preserveAspectRatio%3D%22none%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cdefs%3E%3Cg%20id%3D%22q%22%3E%3Cpath%20d%3D%22M50%2070C42%2068%2038%2060%2042%2052C48%2056%2050%2062%2050%2070%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2236%22%20r%3D%226%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2236%22%20r%3D%222%22%20fill%3D%22%23000%22%2F%3E%3Cpath%20d%3D%22M9%2022A13%2013%200%200%200%2022%209%22%2F%3E%3Ccircle%20cx%3D%2214%22%20cy%3D%2214%22%20r%3D%221.6%22%20fill%3D%22%23000%22%2F%3E%3Cpath%20d%3D%22M18%2018L30%2030%22%20stroke-dasharray%3D%221%203%22%2F%3E%3Cpath%20d%3D%22M24%2052C30%2046%2038%2048%2038%2054C32%2058%2026%2058%2024%2052%22%2F%3E%3Cpath%20d%3D%22M50%2020C44%2022%2040%2026%2040%2030%22%2F%3E%3C%2Fg%3E%3C%2Fdefs%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%2290%22%20height%3D%22130%22%20rx%3D%226%22%2F%3E%3Crect%20x%3D%229%22%20y%3D%229%22%20width%3D%2282%22%20height%3D%22122%22%20rx%3D%224%22%20stroke-width%3D%220.8%22%2F%3E%3Cuse%20href%3D%22%23q%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%200%29%20scale%28-1%201%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%280%20140%29%20scale%281%20-1%29%22%2F%3E%3Cuse%20href%3D%22%23q%22%20transform%3D%22translate%28100%20140%29%20scale%28-1%20-1%29%22%2F%3E%3C%2Fsvg%3E",
+);
+
+@each $id, $drawing in $ornaments {
+  .card-back[data-back='#{$id}']::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--ornament);
+    -webkit-mask: url('data:image/svg+xml,#{$drawing}') center / 100% 100% no-repeat;
+    mask: url('data:image/svg+xml,#{$drawing}') center / 100% 100% no-repeat;
+  }
 }

@@ -6,12 +6,15 @@
 }
 
 // A small card back; the design itself is the shared .card-back (src/card-backs.scss).
+// It sets its own --u, so the pattern is scaled to the preview and not to the room's cards.
 .swatch {
+  --u: 2px;
+
   flex: none;
   display: block;
-  width: 12px;
+  width: 18px;
   aspect-ratio: 5 / 7;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 // The look comes from the shared .input.input-sm; this only lays out the swatch, the name and the chevron.

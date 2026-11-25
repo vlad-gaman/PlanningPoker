@@ -7,13 +7,13 @@ export const CARD_BACKS = [
   { id: 'dots', label: 'Dots' },
   { id: 'geometric', label: 'Geometric' },
   { id: 'waves', label: 'Waves' },
-  { id: 'checker', label: 'Checker' },
   { id: 'diamonds', label: 'Diamonds' },
-  { id: 'zigzag', label: 'Zigzag' },
-  { id: 'grid', label: 'Grid' },
   { id: 'rings', label: 'Rings' },
   { id: 'sunburst', label: 'Sunburst' },
-  { id: 'plaid', label: 'Plaid' },
+  { id: 'scrollwork', label: 'Scrollwork' },
+  { id: 'flourish', label: 'Flourish' },
+  { id: 'nouveau', label: 'Nouveau' },
+  { id: 'victorian', label: 'Victorian' },
 ] as const;
 
 export type CardBackId = (typeof CARD_BACKS)[number]['id'];
