@@ -11,7 +11,7 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --bg-color: #ffffff;
   --text-color: #212529;
   --border-color: #e5e5e5;
-  --muted-color: #6c757d;
+  --muted-color: #687079;
   --card-bg: #ffffff;
   --card-hover-bg: rgba(0, 0, 0, 0.075);
   --card-selected-bg: rgba(0, 0, 0, 0.3);
@@ -65,23 +65,29 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   // Errors and destructive actions, and things that went well.
   --danger: #d93025;
   --on-danger: #ffffff;
-  --success: #1e8e3e;
+  --success: #1a7f37;
   --verdict-good: var(--success);
-  --verdict-mid: #b57e00;
+  --verdict-mid: #946200;
   --verdict-bad: var(--danger);
   // Off track of a switch: at least 3:1 against the panel and card backgrounds it sits on.
   --switch-off: #80878f;
   --switch-thumb: #ffffff;
-  // Text on a role colour fill (the role picker, the corner tag).
+  // Each role's colour (the role picker, the corner tag, the avatar ring) and the text on it.
+  --role-dev: #2563eb;
+  --role-test: #15803d;
+  --role-sre: #b45309;
+  --role-obs: #6b6b78;
   --on-role: #ffffff;
   --avatar-from: #1b6ec2;
   --avatar-to: #7a4fd6;
+  // The result bar's segments and the text on them.
   --seg-1: #1b6ec2;
   --seg-2: #7a4fd6;
   --seg-3: #c2417f;
-  --seg-4: #c77a1b;
-  --seg-5: #1e8e3e;
-  --seg-6: #1c8ca8;
+  --seg-4: #9a5b0b;
+  --seg-5: #1a7f37;
+  --seg-6: #157a93;
+  --on-seg: #ffffff;
   color-scheme: light;
 }
 
@@ -141,6 +147,11 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --verdict-mid: #ffd43b;
   --switch-off: #7c838b;
   --switch-thumb: #ffffff;
+  --role-dev: #4dabf7;
+  --role-test: #51cf66;
+  --role-sre: #ffa94d;
+  --role-obs: #adb5bd;
+  --on-role: #1a1a1a;
   --avatar-from: #4dabf7;
   --avatar-to: #9775fa;
   --seg-1: #4dabf7;
@@ -149,6 +160,7 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --seg-4: #ffa94d;
   --seg-5: #51cf66;
   --seg-6: #3bc9db;
+  --on-seg: #1a1a1a;
   color-scheme: dark;
 }
 
@@ -496,10 +508,10 @@ select.input {
 [data-role] {
   --role: var(--muted-color);
 
-  &[data-role='dev'] { --role: #3b82f6; }
-  &[data-role='test'] { --role: #16a34a; }
-  &[data-role='sre'] { --role: #d97706; }
-  &[data-role='obs'] { --role: #7c7c8a; }
+  &[data-role='dev'] { --role: var(--role-dev); }
+  &[data-role='test'] { --role: var(--role-test); }
+  &[data-role='sre'] { --role: var(--role-sre); }
+  &[data-role='obs'] { --role: var(--role-obs); }
 }
 
 // Segmented control: one row of options with the chosen one filled. The theme switch, the role picker and the compact

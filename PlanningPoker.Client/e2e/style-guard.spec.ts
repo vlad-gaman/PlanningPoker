@@ -145,12 +145,34 @@ test('every checkbox is a shared .switch', () => {
   expect(offences).toEqual([]);
 });
 
-// The colour tokens of one theme block in styles.scss: ':root' (light) or "[data-theme='dark']".
-function tokens(block: string): Record<string, string> {
+// The raw token values of one theme block in styles.scss: ':root' (light) or "[data-theme='dark']".
+function block(selector: string): Record<string, string> {
   const styles = readFileSync(join(SRC, 'styles.scss'), 'utf8');
-  const start = styles.indexOf(`${block} {`);
+  const start = styles.indexOf(`${selector} {`);
   const body = styles.slice(start, styles.indexOf('\n}', start));
-  return Object.fromEntries([...body.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})\s*;/gi)].map(([, name, value]) => [name, value]));
+  return Object.fromEntries([...body.matchAll(/^\s*--([\w-]+):\s*([^;]+);/gm)].map(([, name, value]) => [name, value.trim()]));
+}
+
+// The colour tokens of a theme as six-digit hex. The dark block sits on :root too (data-theme is an attribute of
+// <html>), so it overrides the light values and a var() alias resolves against the merged set, as in the browser.
+function tokens(theme: 'light' | 'dark'): Record<string, string> {
+  const raw = { ...block(':root'), ...(theme === 'dark' ? block("[data-theme='dark']") : {}) };
+  const resolve = (value: string, seen: string[]): string | undefined => {
+    const alias = /^var\(--([\w-]+)\)$/.exec(value);
+    if (alias) {
+      return seen.includes(alias[1]) || raw[alias[1]] === undefined ? undefined : resolve(raw[alias[1]], [...seen, alias[1]]);
+    }
+    const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(value);
+    if (short) {
+      return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`;
+    }
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
+  };
+  return Object.fromEntries(
+    Object.entries(raw)
+      .map(([name, value]) => [name, resolve(value, [name])])
+      .filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
 }
 
 function contrast(a: string, b: string): number {
@@ -164,22 +186,46 @@ function contrast(a: string, b: string): number {
   return (light + 0.05) / (dark + 0.05);
 }
 
-for (const [theme, block] of [
-  ['light', ':root'],
-  ['dark', "[data-theme='dark']"],
-]) {
-  test(`a switch's off track stands out at 3:1 from what it sits on in the ${theme} theme`, () => {
-    const colours = { ...tokens(':root'), ...tokens(block) };
-    for (const background of ['panel-bg', 'card-bg', 'bg-color']) {
-      expect(contrast(colours['switch-off'], colours[background]), `--switch-off on --${background}`).toBeGreaterThanOrEqual(3);
-    }
-  });
+const SURFACES = ['bg-color', 'panel-bg', 'card-bg'];
 
-  test(`text on the danger colour reads at 4.5:1 in the ${theme} theme`, () => {
-    const colours = { ...tokens(':root'), ...tokens(block) };
-    expect(contrast(colours['on-danger'], colours['danger'])).toBeGreaterThanOrEqual(4.5);
+// Every foreground and the fill or surface it sits on, with the WCAG AA minimum: 4.5:1 for text, 3:1 for a control's
+// parts (a switch's track and thumb).
+const PAIRS: [string, string, number][] = [
+  ...['text-color', 'muted-color', 'primary-color', 'danger', 'verdict-good', 'verdict-mid'].flatMap((text) =>
+    SURFACES.map((surface): [string, string, number] => [text, surface, 4.5]),
+  ),
+  ['on-primary', 'primary-color', 4.5],
+  ['on-primary', 'primary-hover', 4.5],
+  ['on-primary-container', 'primary-container', 4.5],
+  ['on-danger', 'danger', 4.5],
+  ...['dev', 'test', 'sre', 'obs'].map((role): [string, string, number] => ['on-role', `role-${role}`, 4.5]),
+  ...[1, 2, 3, 4, 5, 6].map((seg): [string, string, number] => ['on-seg', `seg-${seg}`, 4.5]),
+  ...SURFACES.map((surface): [string, string, number] => ['switch-off', surface, 3]),
+  ['switch-thumb', 'switch-off', 3],
+];
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`every colour pair meets its contrast minimum in the ${theme} theme`, () => {
+    const colours = tokens(theme);
+    const offences = PAIRS.flatMap(([fg, bg, min]) => {
+      if (!colours[fg] || !colours[bg]) {
+        return [`--${fg} on --${bg}: not a hex colour`];
+      }
+      const ratio = contrast(colours[fg], colours[bg]);
+      return ratio < min ? [`--${fg} on --${bg}: ${ratio.toFixed(2)} < ${min}`] : [];
+    });
+    expect(offences).toEqual([]);
   });
 }
+
+test('component styles take white and black from a token, never a literal', () => {
+  const offences = componentStyles().filter((path) =>
+    /(?<![\w-])(color|background|background-color|border-color):\s*(#fff\b|#ffffff\b|white\b|#000\b|#000000\b|black\b)/i.test(
+      readFileSync(path, 'utf8'),
+    ),
+  );
+  expect(offences).toEqual([]);
+});
 
 test('no field label ends in a colon', () => {
   const offences: string[] = [];
