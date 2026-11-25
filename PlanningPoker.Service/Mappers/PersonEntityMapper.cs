@@ -5,8 +5,8 @@ namespace PlanningPoker.Service.Mappers;
 
 public class PersonEntityMapper(TimeProvider time, ISessionTokenGenerator tokens) : IPersonEntityMapper
 {
-    public PersonEntity Map(Guid guid, string name, string personType)
+    public PersonEntity Map(Guid guid, string name, string personType, string cardBack)
     {
-        return new PersonEntity { Guid = guid, SessionToken = tokens.Generate(), Name = name, PersonType = personType, LastSeenAt = time.GetUtcNow() };
+        return new PersonEntity { Guid = guid, SessionToken = tokens.Generate(), Name = name, PersonType = personType, CardBack = cardBack, LastSeenAt = time.GetUtcNow() };
     }
 }

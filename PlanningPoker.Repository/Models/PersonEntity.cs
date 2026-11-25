@@ -15,6 +15,9 @@ public class PersonEntity
 
     public string PersonType { get; set; } = default!;
 
+    /// <summary>The design (a <see cref="PlanningPoker.Common.Constants.CardBacks"/> value) shown on the person's face-down card. A person stored before card backs existed has the default.</summary>
+    public string CardBack { get; set; } = PlanningPoker.Common.Constants.CardBacks.Default;
+
     /// <summary>
     /// Index from open hub connection to the room it joined: connectionId to roomId. It only tells an Exit which room to
     /// ask; whether the person is still in that room is decided by the room's <see cref="RoomEntity.MemberConnections"/>.

@@ -121,6 +121,16 @@ public sealed class FakeRoomService : IRoomService
 
     public List<(Guid PersonGuid, string ConnectionId, Guid Target)> TransferCalls { get; } = [];
 
+    public ServiceResponse<CardBackChangeResult> ChangeCardBackResult { get; set; } = ServiceResponse<CardBackChangeResult>.Failure();
+
+    public List<(Guid PersonGuid, string ConnectionId, string CardBack)> ChangeCardBackCalls { get; } = [];
+
+    public ServiceResponse<CardBackChangeResult> ChangeCardBack(Guid personGuid, string connectionId, string cardBack)
+    {
+        ChangeCardBackCalls.Add((personGuid, connectionId, cardBack));
+        return ChangeCardBackResult;
+    }
+
     public ServiceResponse<PersonTypeChangeResult> ChangePersonType(Guid personGuid, string connectionId, string personType)
     {
         ChangeTypeCalls.Add((personGuid, connectionId, personType));

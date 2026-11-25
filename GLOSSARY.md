@@ -32,6 +32,10 @@ _Avoid_: Mascot, easter egg
 A rose crown with a gem and a wand that a person named `Lolle` (ignoring case and surrounding spaces) wears on their avatar, in any role and whether online or offgrid. If they are also the owner they keep the owner's gold crown instead of the rose one, and still get the wand. It is shown to everyone and decided from the name alone. It is a surprise: nothing in the app mentions it, and it has no setting of its own.
 _Avoid_: Easter egg, badge
 
+**Card back**:
+The design shown on a person's face-down card: what everyone in the room sees in place of their vote after they cast it and before the Reveal. Each person chooses their own from a fixed set of designs, so it is a personal preference, not a room setting, and the Owner has no say in it. It follows the person into every room they join, and a change made in a room shows to the others at once. Everyone starts with the classic design. A person who has not voted, and an Observer, show no card back. On Reveal the back turns over to the card's face.
+_Avoid_: Card cover, deck skin, card theme
+
 **Round timer**:
 The time elapsed since the room's last reveal, clear or creation. Casting or changing a vote does not reset it.
 _Avoid_: Vote timer, idle timer, activity timer

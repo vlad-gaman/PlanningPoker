@@ -26,6 +26,7 @@ public class RoomHub(
     IRoomAlarmTimer alarmTimer,
     RoomIdentifierValidation identifierValidation,
     PersonTypeValidation personTypeValidation,
+    CardBackValidation cardBackValidation,
     RoomConfigurationValidation configurationValidation,
     TransferTargetValidation transferTargetValidation,
     IRoomConfigurationRequestMapper configurationRequestMapper,
@@ -190,6 +191,30 @@ public class RoomHub(
 
         await roomEvents.PublishPersonTypeChangedAsync(changed.Data!);
         await timer.ApplyAsync(changed.Data!.RoomId, changed.Data.FollowUp);
+        return apiResponseMapper.Map(ServiceResponse.Success());
+    }
+
+    /// <summary>Changes the caller's card back; the room hears about it at once.</summary>
+    public async Task<ApiResponse<object>> ChangeCardBack(string cardBack)
+    {
+        if (Context.GetHttpContext()?.GetSessionPerson() is not { } person)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(ServiceError.NoSession()));
+        }
+
+        var valid = cardBackValidation.Validate(cardBack);
+        if (!valid.IsSuccess)
+        {
+            return apiResponseMapper.Map(valid);
+        }
+
+        var changed = rooms.ChangeCardBack(person.Guid, Context.ConnectionId, cardBack);
+        if (!changed.IsSuccess)
+        {
+            return apiResponseMapper.Map(ServiceResponse.Failure(changed.Errors.ToArray()));
+        }
+
+        await roomEvents.PublishCardBackChangedAsync(changed.Data!);
         return apiResponseMapper.Map(ServiceResponse.Success());
     }
 

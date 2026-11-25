@@ -20,6 +20,7 @@ public class RoomEventPublisher(
     IVoteCastEventMapper voteCastEventMapper,
     IVoteStatusResponseMapper voteStatusResponseMapper,
     IPersonTypeChangedEventMapper personTypeChangedEventMapper,
+    ICardBackChangedEventMapper cardBackChangedEventMapper,
     IRoomConfigurationUpdatedEventMapper roomConfigurationUpdatedEventMapper,
     IVotesClearedEventMapper votesClearedEventMapper,
     IAlarmResponseMapper alarmResponseMapper) : IRoomEventPublisher, IRoomCountdownNotifier, IRoomAlarmNotifier, IRoomPresenceNotifier, IRoomAdminNotifier
@@ -116,6 +117,13 @@ public class RoomEventPublisher(
     {
         return result.Changed
             ? hub.Clients.Group(result.RoomId).SendAsync(HubEvents.PersonTypeChanged, personTypeChangedEventMapper.Map(result))
+            : Task.CompletedTask;
+    }
+
+    public Task PublishCardBackChangedAsync(CardBackChangeResult result)
+    {
+        return result.Changed
+            ? hub.Clients.Group(result.RoomId).SendAsync(HubEvents.CardBackChanged, cardBackChangedEventMapper.Map(result))
             : Task.CompletedTask;
     }
 

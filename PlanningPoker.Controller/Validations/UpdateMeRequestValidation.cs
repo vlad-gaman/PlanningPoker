@@ -29,6 +29,11 @@ public class UpdateMeRequestValidation
             errors.Add(ServiceError.ValidationFailed("personType", "invalid_person_type"));
         }
 
+        if (request.CardBack is not null && !CardBacks.IsValid(request.CardBack))
+        {
+            errors.Add(ServiceError.ValidationFailed("cardBack", "invalid_card_back"));
+        }
+
         return errors.Count == 0 ? ServiceResponse.Success() : ServiceResponse.Failure([.. errors]);
     }
 }

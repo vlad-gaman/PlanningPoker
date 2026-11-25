@@ -44,6 +44,12 @@ public interface IRoomService
     ServiceResponse<PersonTypeChangeResult> ChangePersonType(Guid personGuid, string connectionId, string personType);
 
     /// <summary>
+    /// Sets the card back of the caller, who must be a member of a room. The same card back is a success with
+    /// <see cref="CardBackChangeResult.Changed"/> false. It belongs to the person, so it stays when they join another room.
+    /// </summary>
+    ServiceResponse<CardBackChangeResult> ChangeCardBack(Guid personGuid, string connectionId, string cardBack);
+
+    /// <summary>
     /// Replaces the configuration of the caller's room; owner only. Shown votes are cleared, and so are votes cast for a card
     /// set that is no longer the room's. Any change cancels a running countdown.
     /// </summary>

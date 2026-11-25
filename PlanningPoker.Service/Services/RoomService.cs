@@ -346,6 +346,41 @@ public class RoomService(
         });
     }
 
+    public ServiceResponse<CardBackChangeResult> ChangeCardBack(Guid personGuid, string connectionId, string cardBack)
+    {
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
+        {
+            return ServiceResponse<CardBackChangeResult>.Failure(located);
+        }
+
+        var roomId = located.Data.RoomId;
+        var found = roomUpdater.Update(roomId, room => RoomUpdate.Unchanged(IsMember(room, personGuid, connectionId)), out var isMember);
+        if (!found)
+        {
+            return ServiceResponse<CardBackChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        if (!isMember)
+        {
+            return ServiceResponse<CardBackChangeResult>.Failure(ServiceError.NotInRoom());
+        }
+
+        // The person lock is taken after the room lock is released, so the two are never nested.
+        var updated = people.Update(personGuid, entity =>
+        {
+            var changed = entity.CardBack != cardBack;
+            entity.CardBack = cardBack;
+            return changed;
+        }, out var changed);
+        if (!updated)
+        {
+            return ServiceResponse<CardBackChangeResult>.Failure(ServiceError.NoSession());
+        }
+
+        return ServiceResponse<CardBackChangeResult>.Success(new CardBackChangeResult { RoomId = roomId, PersonGuid = personGuid, CardBack = cardBack, Changed = changed });
+    }
+
     public ServiceResponse<RoomConfigurationChangeResult> UpdateConfiguration(Guid personGuid, string connectionId, RoomConfiguration configuration)
     {
         var located = Locate(personGuid, connectionId);

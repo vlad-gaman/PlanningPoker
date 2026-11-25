@@ -98,6 +98,34 @@ public class PersonServiceTests
     }
 
     [Fact]
+    public void Upsert_NewPersonWithoutCardBack_GetsTheDefault()
+    {
+        var created = _service.Upsert(null, "Ann", "dev").Data!;
+
+        Assert.Equal(CardBacks.Default, created.Person.CardBack);
+    }
+
+    [Fact]
+    public void Upsert_NewPersonWithCardBack_KeepsIt()
+    {
+        var created = _service.Upsert(null, "Ann", "dev", CardBacks.Dots).Data!;
+
+        Assert.Equal(CardBacks.Dots, _repository.Get(created.Person.Guid)!.CardBack);
+    }
+
+    [Fact]
+    public void Upsert_ExistingPerson_ChangesCardBackOnlyWhenGiven()
+    {
+        var created = _service.Upsert(null, "Ann", "dev", CardBacks.Waves).Data!;
+
+        _service.Upsert(created.SessionToken, "Ann", "dev");
+        Assert.Equal(CardBacks.Waves, _repository.Get(created.Person.Guid)!.CardBack);
+
+        _service.Upsert(created.SessionToken, "Ann", "dev", CardBacks.Checker);
+        Assert.Equal(CardBacks.Checker, _repository.Get(created.Person.Guid)!.CardBack);
+    }
+
+    [Fact]
     public void Upsert_UnknownToken_CreatesNewPersonWithDifferentToken()
     {
         var unknown = new SessionTokenGenerator().Generate();

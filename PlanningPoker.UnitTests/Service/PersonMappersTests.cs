@@ -35,11 +35,12 @@ public class PersonMappersTests
         var guid = Guid.NewGuid();
 
         var now = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
-        var entity = new PersonEntityMapper(new Microsoft.Extensions.Time.Testing.FakeTimeProvider(now), new SessionTokenGenerator()).Map(guid, "Ann", "obs");
+        var entity = new PersonEntityMapper(new Microsoft.Extensions.Time.Testing.FakeTimeProvider(now), new SessionTokenGenerator()).Map(guid, "Ann", "obs", "dots");
 
         Assert.Equal(guid, entity.Guid);
         Assert.Equal("Ann", entity.Name);
         Assert.Equal("obs", entity.PersonType);
+        Assert.Equal("dots", entity.CardBack);
         Assert.Empty(entity.Connections);
         Assert.Equal(now, entity.LastSeenAt);
     }
@@ -49,8 +50,8 @@ public class PersonMappersTests
     {
         var mapper = new PersonEntityMapper(TimeProvider.System, new SessionTokenGenerator());
 
-        var first = mapper.Map(Guid.NewGuid(), "Ann", "dev");
-        var second = mapper.Map(Guid.NewGuid(), "Bob", "dev");
+        var first = mapper.Map(Guid.NewGuid(), "Ann", "dev", "classic");
+        var second = mapper.Map(Guid.NewGuid(), "Bob", "dev", "classic");
 
         Assert.Equal(SessionTokenConstants.EncodedLength, first.SessionToken!.Length);
         Assert.NotEqual(first.SessionToken, second.SessionToken);

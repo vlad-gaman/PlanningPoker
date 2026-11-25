@@ -48,6 +48,7 @@ public class RoomHubWorkflowTests
             _alarmTimer,
             new RoomIdentifierValidation(),
             new PersonTypeValidation(),
+            new CardBackValidation(),
             new RoomConfigurationValidation(),
             new TransferTargetValidation(),
             new RoomConfigurationRequestMapper(),
@@ -406,6 +407,48 @@ public class RoomHubWorkflowTests
 
         Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
         Assert.Empty(_rooms.ChangeTypeCalls);
+    }
+
+    [Fact]
+    public async Task ChangeCardBack_Success_PublishesTheChange()
+    {
+        _rooms.ChangeCardBackResult = ServiceResponse<CardBackChangeResult>.Success(new CardBackChangeResult { RoomId = "room", PersonGuid = Ann.Guid, CardBack = "dots", Changed = true });
+
+        var response = await NewHub(Ann).ChangeCardBack("dots");
+
+        Assert.Null(response.Errors);
+        Assert.Equal((Ann.Guid, ConnectionId, "dots"), Assert.Single(_rooms.ChangeCardBackCalls));
+        Assert.Equal(["CardBackChanged"], _publisher.Order);
+    }
+
+    [Fact]
+    public async Task ChangeCardBack_InvalidDesign_IsRejectedBeforeTheService()
+    {
+        var response = await NewHub(Ann).ChangeCardBack("sparkles");
+
+        Assert.Equal(ErrorCodes.ValidationFailed, ErrorCode(response));
+        Assert.Empty(_rooms.ChangeCardBackCalls);
+        Assert.Empty(_publisher.Order);
+    }
+
+    [Fact]
+    public async Task ChangeCardBack_NotInRoom_ReturnsTheErrorAndPublishesNothing()
+    {
+        _rooms.ChangeCardBackResult = ServiceResponse<CardBackChangeResult>.Failure(ServiceError.NotInRoom());
+
+        var response = await NewHub(Ann).ChangeCardBack("dots");
+
+        Assert.Equal(ErrorCodes.NotInRoom, ErrorCode(response));
+        Assert.Empty(_publisher.Order);
+    }
+
+    [Fact]
+    public async Task ChangeCardBack_NoSession_ReturnsNoSession()
+    {
+        var response = await NewHub(null).ChangeCardBack("dots");
+
+        Assert.Equal(ErrorCodes.NoSession, ErrorCode(response));
+        Assert.Empty(_rooms.ChangeCardBackCalls);
     }
 
     [Fact]

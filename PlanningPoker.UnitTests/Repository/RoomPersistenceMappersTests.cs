@@ -25,7 +25,7 @@ public class RoomPersistenceMappersTests
         var owner = Guid.NewGuid();
         var member = Guid.NewGuid();
         people.TryAdd(new PersonEntity { Guid = owner, Name = "Ann", PersonType = "dev", Connections = { ["c1"] = "r" } });
-        people.TryAdd(new PersonEntity { Guid = member, Name = "Bob", PersonType = "test" });
+        people.TryAdd(new PersonEntity { Guid = member, Name = "Bob", PersonType = "test", CardBack = "checker" });
         var room = new RoomEntity
         {
             Id = "r",
@@ -41,6 +41,8 @@ public class RoomPersistenceMappersTests
         Assert.All(stored.People, person => Assert.Empty(person.Connections));
         Assert.Empty(stored.Room.MemberConnections);
         Assert.Equal(savedAt, stored.SavedAt);
+        Assert.Equal("checker", stored.People.Single(person => person.Name == "Bob").CardBack);
+        Assert.Equal("classic", stored.People.Single(person => person.Name == "Ann").CardBack);
     }
 
     [Fact]
