@@ -1,10 +1,41 @@
 <div class="accent">
-  <span class="swatch" aria-hidden="true"></span>
-  <select aria-label="Accent colour" #select (change)="pick(select.value)">
-    @for (preset of presets; track preset.id) {
-      <option [value]="preset.id" [selected]="preset.id === accent.accent()">
-        {{ preset.label }}
-      </option>
-    }
-  </select>
+  <button
+    type="button"
+    class="trigger"
+    role="combobox"
+    aria-label="Accent colour"
+    aria-haspopup="listbox"
+    aria-controls="accent-listbox"
+    [attr.aria-expanded]="open()"
+    [attr.aria-activedescendant]="open() ? 'accent-option-' + presets[active()].id : null"
+    (click)="toggle()"
+    (keydown)="onKeydown($event)"
+    (blur)="close()"
+  >
+    <span class="dot" [attr.data-accent]="accent.accent()" aria-hidden="true"></span>
+    <span class="label">{{ selected().label }}</span>
+    <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  </button>
+  @if (open()) {
+    <ul id="accent-listbox" class="list" role="listbox" aria-label="Accent colour">
+      @for (preset of presets; track preset.id; let i = $index) {
+        <li
+          role="option"
+          [id]="'accent-option-' + preset.id"
+          [attr.aria-selected]="preset.id === accent.accent()"
+          [class.active]="i === active()"
+          (mousedown)="$event.preventDefault()"
+          tabindex="-1"
+          (click)="choose(preset.id)"
+          (keydown.enter)="choose(preset.id)"
+          (mouseenter)="active.set(i)"
+        >
+          <span class="dot" [attr.data-accent]="preset.id" aria-hidden="true"></span>
+          {{ preset.label }}
+        </li>
+      }
+    </ul>
+  }
 </div>
