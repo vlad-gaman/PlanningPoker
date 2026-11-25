@@ -8,8 +8,6 @@
 
   h1 {
     margin: 0.5rem 0 0;
-    font-size: 1.8rem;
-    font-weight: 700;
   }
 }
 
@@ -23,11 +21,6 @@
   margin-bottom: 1.25rem;
 }
 
-.lead {
-  margin: -0.5rem 0 1rem;
-  color: var(--muted-color);
-}
-
 ul {
   display: flex;
   flex-direction: column;
@@ -37,16 +30,7 @@ ul {
   list-style: none;
 }
 
-// Each credit is a row of its own, like a person tile.
-li {
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--card-bg);
-}
-
 a {
-  color: var(--primary-color);
   font-weight: 600;
 }
 

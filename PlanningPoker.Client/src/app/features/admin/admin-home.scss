@@ -1,6 +1,4 @@
 .admin-home {
-  max-width: 1140px;
-
   > header {
     display: flex;
     flex-wrap: wrap;
@@ -12,7 +10,6 @@
 
   h1 {
     margin: 0;
-    font-size: 1.5rem;
   }
 
   h2 {
@@ -32,19 +29,6 @@
   color: var(--muted-color);
 }
 
-.banner {
-  margin: 0 0 1rem;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--card-bg);
-
-  &.error {
-    border-color: var(--verdict-bad);
-    color: var(--verdict-bad);
-  }
-}
-
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
@@ -55,7 +39,7 @@
 .tile {
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   background: var(--panel-bg);
   color: var(--muted-color);
   font-size: 0.8rem;
@@ -73,7 +57,7 @@
   }
 
   &.warn b {
-    color: var(--verdict-bad);
+    color: var(--danger);
   }
 }
 
@@ -96,7 +80,7 @@
 .card {
   padding: 0.9rem;
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--card-bg);
 }
 
@@ -112,10 +96,10 @@
   }
 }
 
+// A room's state is a smaller, unfilled chip.
 .state {
   padding: 0.05rem 0.55rem;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
+  background: none;
   font-size: 0.75rem;
 
   &.voting {
@@ -141,15 +125,9 @@
   padding: 0;
   list-style: none;
 
+  // The remove button sits at the chip's right edge.
   li {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.2rem 0.3rem 0.2rem 0.65rem;
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    background: var(--panel-bg);
-    font-size: 0.85rem;
+    padding-right: 0.3rem;
 
     &.offgrid {
       border-style: dashed;
@@ -160,7 +138,6 @@
   small {
     color: var(--muted-color);
   }
-
 }
 
 .feed {
@@ -168,7 +145,7 @@
   gap: 0.5rem;
   padding: 0.9rem;
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--card-bg);
 
   h2 small {
@@ -190,7 +167,7 @@
   }
 
   &.error {
-    border-left-color: var(--verdict-bad);
+    border-left-color: var(--danger);
   }
 
   &.warning {

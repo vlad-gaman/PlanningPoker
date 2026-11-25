@@ -1,8 +1,13 @@
-<h2 mat-dialog-title>{{ data.title }}</h2>
-<div class="content">
+<div class="dialog-header">
+  <h2 mat-dialog-title>{{ data.title }}</h2>
+  <button type="button" class="icon-btn" [mat-dialog-close]="false" aria-label="Close">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
+  </button>
+</div>
+<div class="dialog-body">
   <p>{{ data.detail }}</p>
 </div>
-<div class="actions">
+<div class="dialog-footer">
   <button type="button" class="secondary-button" [mat-dialog-close]="false">Cancel</button>
   <button type="button" class="danger-button" [mat-dialog-close]="true" cdkFocusInitial>{{ data.confirmLabel }}</button>
 </div>

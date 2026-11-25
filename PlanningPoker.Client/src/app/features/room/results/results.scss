@@ -1,7 +1,7 @@
 .results {
   padding: 1.25rem;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: var(--radius-panel);
   background: var(--panel-bg);
 }
 
@@ -112,7 +112,7 @@
   align-items: center;
   justify-content: center;
   min-width: 34px;
-  color: #fff;
+  color: var(--on-seg);
   line-height: 1.1;
 
   b {
@@ -120,7 +120,6 @@
   }
 
   small {
-    opacity: 0.85;
     font-size: 0.7rem;
   }
 }
@@ -146,7 +145,7 @@
   height: 1.25rem;
   width: 1.25rem;
   vertical-align: middle;
-  // Line-art cards: the PNG is the mask. Inside a coloured segment the fill is white; in the detail line it is the text colour.
+  // Line-art cards: the PNG is the mask. Inside a coloured segment the fill is --on-seg; in the detail line it is the text colour.
   background-color: var(--text-color);
   -webkit-mask: var(--mark-mask) center / contain no-repeat;
   mask: var(--mark-mask) center / contain no-repeat;
@@ -155,7 +154,7 @@
 }
 
 .segment .mark-image {
-  background-color: #fff;
+  background-color: var(--on-seg);
 }
 
 // The "By role" switch sits at the far right of the header row.

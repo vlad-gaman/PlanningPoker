@@ -3,6 +3,24 @@
 @use './accents';
 @use './card-backs';
 
+// Shared styles: every screen uses these instead of its own look-alike (see "Decorations" in CLAUDE.md;
+// e2e/style-guard.spec.ts fails when a component stylesheet redefines one of them).
+//
+// Tokens, each set in both theme blocks below:
+//   Surfaces and text   --bg-color, --text-color, --muted-color, --border-color, --panel-bg, --navbar-bg, --footer-bg
+//   Actions             --primary-color, --primary-hover, --primary-container, --danger, --success, --verdict-*
+//   Text on a fill      --on-primary, --on-primary-container, --on-danger, --on-role, --on-seg
+//   Fills               --role-*, --seg-1 to --seg-6, --switch-off, --switch-thumb, --avatar-from, --avatar-to
+//   Shape               --radius-panel, --radius-row, --card-w
+//
+// Components:
+//   Buttons             .primary-button, .secondary-button, .danger-button (+ .button-sm), .icon-btn, .link
+//   Fields              .field, .field-label, .input (+ .input-sm), .switch, .segmented, .hint, .field-error, .form-error
+//   Layout              .page (+ .page-wide), .panel, .actions, .list-row
+//   Text                h1, .eyebrow, .lead, .chip, .notice (+ .notice-error), .visually-hidden
+//   Dialogs             .dialog-header, .dialog-body, .dialog-footer
+//   Focus               one global :focus-visible ring; never add another
+
 // System font stack; no webfont, so Material controls and the page render the same face.
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
 
@@ -12,7 +30,7 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --bg-color: #ffffff;
   --text-color: #212529;
   --border-color: #e5e5e5;
-  --muted-color: #6c757d;
+  --muted-color: #687079;
   --card-bg: #ffffff;
   --card-hover-bg: rgba(0, 0, 0, 0.075);
   --card-selected-bg: rgba(0, 0, 0, 0.3);
@@ -60,23 +78,35 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --esendex-top-face: #f5f8fb;
   --esendex-metal-deep: #8f9284;
   --panel-bg: #f8f9fb;
-  --verdict-good: #1e8e3e;
-  --verdict-mid: #b57e00;
-  --verdict-bad: #d93025;
-  --on-danger: #fff;
+  // Corner radius of a panel (a card, a tile, a dialog box) and of a row inside one (a field, a button, a list row).
+  --radius-panel: 16px;
+  --radius-row: 10px;
+  // Errors and destructive actions, and things that went well.
+  --danger: #d93025;
+  --on-danger: #ffffff;
+  --success: #1a7f37;
+  --verdict-good: var(--success);
+  --verdict-mid: #946200;
+  --verdict-bad: var(--danger);
   // Off track of a switch: at least 3:1 against the panel and card backgrounds it sits on.
   --switch-off: #80878f;
   --switch-thumb: #ffffff;
-  // Text on a role colour fill (the role picker, the corner tag).
+  // Each role's colour (the role picker, the corner tag, the avatar ring) and the text on it.
+  --role-dev: #2563eb;
+  --role-test: #15803d;
+  --role-sre: #b45309;
+  --role-obs: #6b6b78;
   --on-role: #ffffff;
   --avatar-from: #1b6ec2;
   --avatar-to: #7a4fd6;
+  // The result bar's segments and the text on them.
   --seg-1: #1b6ec2;
   --seg-2: #7a4fd6;
   --seg-3: #c2417f;
-  --seg-4: #c77a1b;
-  --seg-5: #1e8e3e;
-  --seg-6: #1c8ca8;
+  --seg-4: #9a5b0b;
+  --seg-5: #1a7f37;
+  --seg-6: #157a93;
+  --on-seg: #ffffff;
   color-scheme: light;
 }
 
@@ -130,12 +160,17 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --esendex-top-face: #e6ebf0;
   --esendex-metal-deep: #3f443e;
   --panel-bg: #232323;
-  --verdict-good: #51cf66;
-  --verdict-mid: #ffd43b;
-  --verdict-bad: #ff8787;
+  --danger: #ff8787;
   --on-danger: #1a1a1a;
+  --success: #51cf66;
+  --verdict-mid: #ffd43b;
   --switch-off: #7c838b;
   --switch-thumb: #ffffff;
+  --role-dev: #4dabf7;
+  --role-test: #51cf66;
+  --role-sre: #ffa94d;
+  --role-obs: #adb5bd;
+  --on-role: #1a1a1a;
   --avatar-from: #4dabf7;
   --avatar-to: #9775fa;
   --seg-1: #4dabf7;
@@ -144,6 +179,7 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --seg-4: #ffa94d;
   --seg-5: #51cf66;
   --seg-6: #3bc9db;
+  --on-seg: #1a1a1a;
   color-scheme: dark;
 }
 
@@ -181,6 +217,7 @@ html {
   --mat-sys-on-surface: var(--text-color);
   --mat-sys-outline: var(--card-border);
   --mat-sys-outline-variant: var(--border-color);
+  --mat-sys-error: var(--danger);
 }
 
 // The old page's root font size: 14px on a phone, 16px from the 768px breakpoint up (all rem sizes follow).
@@ -211,17 +248,13 @@ a {
 .panel {
   padding: 1.5rem;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: var(--radius-panel);
   background: var(--panel-bg);
 
   h2 {
     margin: 0 0 1rem;
     font-size: 1.15rem;
     font-weight: 700;
-  }
-
-  .hint {
-    margin: -0.5rem 0 1rem;
   }
 }
 
@@ -246,7 +279,7 @@ a {
   width: 100%;
   padding: 0 12px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-row);
   background: var(--card-bg);
   color: var(--text-color);
   font: inherit;
@@ -351,7 +384,7 @@ select.input {
   box-sizing: border-box;
   height: 42px;
   padding: 0 1.25rem;
-  border-radius: 10px;
+  border-radius: var(--radius-row);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -403,8 +436,8 @@ select.input {
 }
 
 .danger-button {
-  border: 1px solid var(--verdict-bad);
-  background: var(--verdict-bad);
+  border: 1px solid var(--danger);
+  background: var(--danger);
   color: var(--on-danger);
 
   &:hover:not(:disabled) {
@@ -441,11 +474,6 @@ select.input {
     background: var(--card-hover-bg);
     color: var(--text-color);
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
 }
 
 // Small borderless icon button that fits inside a line of text, such as a chip; add it to .icon-btn.
@@ -462,7 +490,7 @@ select.input {
 
 // An icon button that removes or deletes something turns the danger colour on hover; add it to .icon-btn.
 .icon-btn.icon-btn-danger:hover:not(:disabled) {
-  color: var(--verdict-bad);
+  color: var(--danger);
 }
 
 // A button that reads as a text link.
@@ -478,11 +506,6 @@ select.input {
     color: var(--primary-hover);
     text-decoration: underline;
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
 }
 
 .primary-button:disabled,
@@ -496,21 +519,14 @@ select.input {
   background: var(--primary-hover);
 }
 
-.primary-button:focus-visible,
-.secondary-button:focus-visible,
-.danger-button:focus-visible {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
-}
-
 // Each role has a colour, used by the role picker, the corner tag and the avatar ring.
 [data-role] {
   --role: var(--muted-color);
 
-  &[data-role='dev'] { --role: #3b82f6; }
-  &[data-role='test'] { --role: #16a34a; }
-  &[data-role='sre'] { --role: #d97706; }
-  &[data-role='obs'] { --role: #7c7c8a; }
+  &[data-role='dev'] { --role: var(--role-dev); }
+  &[data-role='test'] { --role: var(--role-test); }
+  &[data-role='sre'] { --role: var(--role-sre); }
+  &[data-role='obs'] { --role: var(--role-obs); }
 }
 
 // Segmented control: one row of options with the chosen one filled. The theme switch, the role picker and the compact
@@ -523,7 +539,7 @@ select.input {
   box-sizing: border-box;
   padding: 3px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-row);
   background: var(--panel-bg);
 
   > button,
@@ -559,7 +575,6 @@ select.input {
     color: var(--on-segmented);
   }
 
-  > button:focus-visible,
   > label:has(input:focus-visible) {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
@@ -589,17 +604,122 @@ select.input {
   --on-segmented: var(--on-role);
 }
 
-// Shared page container; each page sets its own max-width.
+// Page container: .page for a form or a short read, .page-wide for a dashboard such as the room or Management.
 .page {
+  max-width: 880px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
 
-.form-error {
-  color: var(--mat-sys-error);
+.page.page-wide {
+  max-width: 1140px;
 }
 
-// Plain (non-Material) form controls, coloured from the site variables.
+// The page title: 1.8rem, scaling down on a phone so a long title such as a room name fits. The home hero's title is
+// the one bigger heading.
+h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.3rem, 1rem + 2vw, 1.8rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+// Small uppercase heading over a group, such as a settings group or the round history.
+.eyebrow {
+  margin: 0 0 0.6rem;
+  color: var(--muted-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+// A message in a box above a page or a form; add .notice-error for something that went wrong.
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-row);
+  background: var(--card-bg);
+}
+
+.notice.notice-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+// A pill with a short label, such as a person in a room or a room's state.
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  font-size: 0.85rem;
+}
+
+// One entry of a list drawn as a row of its own, such as a credit or a past round.
+.list-row {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-row);
+  background: var(--card-bg);
+  color: var(--text-color);
+}
+
+// A dialog: a bordered header with the title and a close .icon-btn, the body, and a bordered footer of buttons.
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+
+  // Material's mat-dialog-title brings its own padding and a spacer line; the header sets the spacing instead.
+  > h2.mat-mdc-dialog-title {
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.dialog-body {
+  padding: 1rem;
+  overflow-y: auto;
+  color: var(--text-color);
+}
+
+.dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+// The one keyboard focus ring, at every width. A control whose real input is invisible (a switch, a segmented
+// radio) draws it on the visible part instead.
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.form-error {
+  color: var(--danger);
+}
+
+// Hidden on screen, still read by screen readers.
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -612,13 +732,20 @@ select.input {
   border: 0;
 }
 
+// The muted sentence under a page or panel heading.
+.lead {
+  margin: -0.5rem 0 1rem;
+  color: var(--muted-color);
+}
+
+// Small muted text beside a field or setting.
 .hint {
   color: var(--muted-color);
   font-size: 0.875rem;
 }
 
 .field-error {
-  color: var(--mat-sys-error);
+  color: var(--danger);
   font-size: 0.875rem;
 }
 
@@ -627,11 +754,11 @@ select.input {
   background: rgba(0, 0, 0, 0.5);
 }
 
-// The popup for failures (ErrorPopupService): red, on top of everything, readable in both themes.
+// The popup for failures (ErrorPopupService): the danger colour, on top of everything, readable in both themes.
 .error-popup {
-  --mat-snack-bar-container-color: #b3261e;
-  --mat-snack-bar-supporting-text-color: #fff;
-  --mat-snack-bar-button-color: #fff;
+  --mat-snack-bar-container-color: var(--danger);
+  --mat-snack-bar-supporting-text-color: var(--on-danger);
+  --mat-snack-bar-button-color: var(--on-danger);
 
   // Dismiss is a small shared button outlined in the popup's text colour, so it reads on the red in both themes.
   .mat-mdc-snack-bar-action.mdc-button {

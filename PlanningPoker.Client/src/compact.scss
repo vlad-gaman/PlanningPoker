@@ -236,11 +236,6 @@ $compact-max: 520px;
       height: var(--tap);
     }
 
-    :focus-visible {
-      outline: 3px solid var(--primary-color);
-      outline-offset: 2px;
-    }
-
     // The role picker (room and name fields) fills the width; each option is a full-size target.
     // Two classes, so these win over the shared .segmented rules that come later in styles.scss.
     .segmented.role-picker {
@@ -267,14 +262,12 @@ $compact-max: 520px;
       flex-wrap: nowrap;
       margin: 0 0 0.5rem;
 
+      // A long room name wraps onto a second line rather than being cut off.
       h1 {
         flex: 1 1 0;
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
         word-break: normal;
-        font-size: 0.85rem;
+        overflow-wrap: anywhere;
       }
     }
 

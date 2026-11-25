@@ -25,11 +25,6 @@
     height: 100%;
     user-select: none;
   }
-
-  &:focus-visible {
-    outline: 3px solid var(--mat-sys-primary, currentColor);
-    outline-offset: 2px;
-  }
 }
 
 // It slides out from behind its edge along its own axis, and back in when it leaves.
