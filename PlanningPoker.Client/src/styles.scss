@@ -63,6 +63,9 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --verdict-mid: #b57e00;
   --verdict-bad: #d93025;
   --on-danger: #fff;
+  // Off track of a switch: at least 3:1 against the panel and card backgrounds it sits on.
+  --switch-off: #80878f;
+  --switch-thumb: #ffffff;
   --avatar-from: #1b6ec2;
   --avatar-to: #7a4fd6;
   --seg-1: #1b6ec2;
@@ -128,6 +131,8 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --verdict-mid: #ffd43b;
   --verdict-bad: #ff8787;
   --on-danger: #1a1a1a;
+  --switch-off: #7c838b;
+  --switch-thumb: #ffffff;
   --avatar-from: #4dabf7;
   --avatar-to: #9775fa;
   --seg-1: #4dabf7;
@@ -260,6 +265,69 @@ select.input {
   width: auto;
   height: 36px;
   padding: 0 0.6rem;
+}
+
+// On/off switch: <span class="switch"><input type="checkbox" role="switch" /><span class="track"></span></span>.
+// The real checkbox covers the track, so it keeps its keyboard, form and screen-reader behaviour.
+.switch {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 42px;
+  height: 24px;
+
+  input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .track {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--switch-off);
+    transition: background-color 0.2s ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--switch-thumb);
+      transition: transform 0.2s ease;
+    }
+  }
+
+  input:checked + .track {
+    background: var(--primary-color);
+  }
+
+  input:checked + .track::after {
+    background: var(--on-primary);
+    transform: translateX(18px);
+  }
+
+  input:focus-visible + .track {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// A switch with its label text beside it, the whole row clickable.
+.switch-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
 
 .actions {

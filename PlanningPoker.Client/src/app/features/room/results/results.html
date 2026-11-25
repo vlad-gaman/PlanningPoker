@@ -23,10 +23,13 @@
         · {{ voters() }} {{ voters() === 1 ? 'vote' : 'votes' }}
       </span>
     </div>
-    <button type="button" class="role-toggle" role="switch" [attr.aria-checked]="byRole()" (click)="toggle()">
-      <span class="track"><span class="thumb"></span></span>
+    <label class="switch-field by-role">
+      <span class="switch">
+        <input type="checkbox" role="switch" [checked]="byRole()" (change)="toggle()" />
+        <span class="track"></span>
+      </span>
       By role
-    </button>
+    </label>
   </div>
 
   <ul class="split" aria-label="How the votes split">

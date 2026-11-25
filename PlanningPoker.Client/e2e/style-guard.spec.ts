@@ -37,6 +37,8 @@ function templates(): string[] {
 // Retired styles; use .primary-button / .secondary-button / .danger-button (+ .button-sm), .icon-btn, .link and .input (+ .input-sm).
 const retiredClasses = [
   'form-control',
+  'role-toggle',
+  'check',
   'btn',
   'btn-sm',
   'plain-button',
@@ -66,7 +68,7 @@ test('component styles do not redefine the shared buttons and fields', () => {
   const offences: string[] = [];
   for (const path of files(join(SRC, 'app'), ['.scss'])) {
     const text = readFileSync(path, 'utf8');
-    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?)\s*[{,:]/m.test(text)) {
+    if (/^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?)\s*[{,:]/m.test(text)) {
       offences.push(path);
     }
   }
@@ -78,7 +80,6 @@ const sharedButtonClasses = ['primary-button', 'secondary-button', 'danger-butto
 
 // Buttons that keep their own look until a later part of issue #181 moves them; shrink this as each part lands.
 const exemptButtons: Record<string, number> = {
-  'features/room/results/results.html': 1, // "By role" toggle -> shared .switch
   'features/room/room.html': 2, // compact Vote/Table tabs -> shared .segmented
   'shared/theme-select/theme-select.html': 1, // theme options -> shared .segmented
   'features/room/alarm/alarm-button.html': 1, // alarm pill
@@ -113,3 +114,53 @@ test('every text field and select uses the shared .input', () => {
   }
   expect(offences).toEqual([]);
 });
+
+test('every checkbox is a shared .switch', () => {
+  const offences: string[] = [];
+  for (const path of templates()) {
+    const text = readFileSync(path, 'utf8');
+    for (const tag of tags(text, 'input').filter((tag) => /\stype="checkbox"/.test(tag))) {
+      if (!/\srole="switch"/.test(tag)) {
+        offences.push(`${appPath(path)}: ${tag.replace(/\s+/g, ' ')}`);
+      }
+    }
+    // The checkbox sits inside its .switch, followed by the track it draws.
+    const switches = text.match(/<span class="switch">/g)?.length ?? 0;
+    const wellFormed = text.match(/<span class="switch">\s*<input\b[^>]*role="switch"[^>]*\/>\s*<span class="track"><\/span>\s*<\/span>/g)?.length ?? 0;
+    if (switches !== wellFormed) {
+      offences.push(`${appPath(path)}: a .switch is not <span class="switch"><input role="switch" /><span class="track"></span></span>`);
+    }
+  }
+  expect(offences).toEqual([]);
+});
+
+// The colour tokens of one theme block in styles.scss: ':root' (light) or "[data-theme='dark']".
+function tokens(block: string): Record<string, string> {
+  const styles = readFileSync(join(SRC, 'styles.scss'), 'utf8');
+  const start = styles.indexOf(`${block} {`);
+  const body = styles.slice(start, styles.indexOf('\n}', start));
+  return Object.fromEntries([...body.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})\s*;/gi)].map(([, name, value]) => [name, value]));
+}
+
+function contrast(a: string, b: string): number {
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+for (const [theme, block] of [
+  ['light', ':root'],
+  ['dark', "[data-theme='dark']"],
+]) {
+  test(`a switch's off track stands out at 3:1 from what it sits on in the ${theme} theme`, () => {
+    const colours = { ...tokens(':root'), ...tokens(block) };
+    for (const background of ['panel-bg', 'card-bg', 'bg-color']) {
+      expect(contrast(colours['switch-off'], colours[background]), `--switch-off on --${background}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+}
