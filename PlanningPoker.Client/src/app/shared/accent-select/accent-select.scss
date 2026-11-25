@@ -1,18 +1,9 @@
 // The accent dropdown: a native select, so the keyboard works without extra code. Colours come from the site
-// variables, so it reads in light and dark. The swatch shows the current accent.
+// variables, so it reads in light and dark. The closed select shows the picked accent in its own colour.
 .accent {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-}
-
-.swatch {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  box-shadow: inset 0 0 0 1px var(--border-color);
 }
 
 // Each option starts with a dot in its preset's colour (light values; the dark block follows the dark theme). Keep these
@@ -54,7 +45,7 @@ select {
   border: 1px solid var(--border-color);
   border-radius: 999px;
   background: var(--panel-bg);
-  color: var(--text-color);
+  color: var(--primary-color);
   font: inherit;
   cursor: pointer;
 

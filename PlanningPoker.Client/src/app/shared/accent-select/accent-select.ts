@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ACCENT_PRESETS, AccentService, isAccentId } from '../../core/accent.service';
 
-/** The accent colour as a dropdown, placed beside the theme selector. The swatch shows the current accent. */
+/** The accent colour as a dropdown, placed beside the theme selector. The picked accent shows in its own colour. */
 @Component({
   selector: 'app-accent-select',
   templateUrl: './accent-select.html',

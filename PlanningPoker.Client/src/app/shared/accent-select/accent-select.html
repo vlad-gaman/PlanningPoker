@@ -1,5 +1,4 @@
 <div class="accent">
-  <span class="swatch" aria-hidden="true"></span>
   <select aria-label="Accent colour" #select (change)="pick(select.value)">
     @for (preset of presets; track preset.id) {
       <option [value]="preset.id" [attr.data-accent]="preset.id" [selected]="preset.id === accent.accent()">
