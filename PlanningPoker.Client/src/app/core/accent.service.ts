@@ -9,6 +9,18 @@ export const ACCENT_PRESETS = [
   { id: 'magenta', label: 'Magenta' },
   { id: 'cyan', label: 'Cyan' },
   { id: 'graphite', label: 'Graphite' },
+  { id: 'red', label: 'Red' },
+  { id: 'orange', label: 'Orange' },
+  { id: 'amber', label: 'Amber' },
+  { id: 'green', label: 'Green' },
+  { id: 'teal', label: 'Teal' },
+  { id: 'brown', label: 'Brown' },
+  { id: 'lime', label: 'Lime' },
+  { id: 'sky', label: 'Sky' },
+  { id: 'rose', label: 'Rose' },
+  { id: 'plum', label: 'Plum' },
+  { id: 'slate', label: 'Slate' },
+  { id: 'gold', label: 'Gold' },
 ] as const;
 
 export type AccentId = (typeof ACCENT_PRESETS)[number]['id'];

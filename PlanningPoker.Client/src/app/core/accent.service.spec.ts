@@ -27,7 +27,7 @@ describe('AccentService', () => {
   });
 
   it('ignores an unknown stored value', () => {
-    localStorage.setItem(ACCENT_STORAGE_KEY, 'green');
+    localStorage.setItem(ACCENT_STORAGE_KEY, 'chartreuse');
 
     expect(TestBed.inject(AccentService).accent()).toBe('blue');
   });
@@ -60,14 +60,14 @@ describe('isAccentId', () => {
   });
 
   it('rejects anything else', () => {
-    expect(isAccentId('green')).toBe(false);
+    expect(isAccentId('chartreuse')).toBe(false);
     expect(isAccentId('')).toBe(false);
     expect(isAccentId(null)).toBe(false);
   });
 });
 
 describe('ACCENT_PRESETS', () => {
-  it('lists the six presets, blue first', () => {
+  it('lists the eighteen presets, blue first', () => {
     expect(ACCENT_PRESETS.map((preset) => preset.id)).toEqual([
       'blue',
       'indigo',
@@ -75,6 +75,18 @@ describe('ACCENT_PRESETS', () => {
       'magenta',
       'cyan',
       'graphite',
+      'red',
+      'orange',
+      'amber',
+      'green',
+      'teal',
+      'brown',
+      'lime',
+      'sky',
+      'rose',
+      'plum',
+      'slate',
+      'gold',
     ]);
     expect(ACCENT_PRESETS.map((preset) => preset.label)).toEqual([
       'Blue',
@@ -83,6 +95,18 @@ describe('ACCENT_PRESETS', () => {
       'Magenta',
       'Cyan',
       'Graphite',
+      'Red',
+      'Orange',
+      'Amber',
+      'Green',
+      'Teal',
+      'Brown',
+      'Lime',
+      'Sky',
+      'Rose',
+      'Plum',
+      'Slate',
+      'Gold',
     ]);
   });
 });

@@ -13,18 +13,30 @@ describe('AccentSelect', () => {
     return { fixture, element, select };
   }
 
-  it('offers the six presets as a labelled dropdown and shows the stored one', () => {
+  it('offers the eighteen presets as a labelled dropdown and shows the stored one', () => {
     localStorage.setItem(ACCENT_STORAGE_KEY, 'indigo');
 
     const { select } = create();
 
     expect(Array.from(select.options).map((option) => option.textContent?.trim())).toEqual([
-      'Blue',
-      'Indigo',
-      'Violet',
-      'Magenta',
-      'Cyan',
-      'Graphite',
+      '● Blue',
+      '● Indigo',
+      '● Violet',
+      '● Magenta',
+      '● Cyan',
+      '● Graphite',
+      '● Red',
+      '● Orange',
+      '● Amber',
+      '● Green',
+      '● Teal',
+      '● Brown',
+      '● Lime',
+      '● Sky',
+      '● Rose',
+      '● Plum',
+      '● Slate',
+      '● Gold',
     ]);
     expect(select.value).toBe('indigo');
     expect(select.getAttribute('aria-label')).toBe('Accent colour');
@@ -47,7 +59,7 @@ describe('AccentSelect', () => {
     const { fixture, select } = create();
     const set = vi.spyOn(TestBed.inject(AccentService), 'set');
 
-    fixture.componentInstance.pick('green');
+    fixture.componentInstance.pick('chartreuse');
 
     expect(set).not.toHaveBeenCalled();
     expect(select.value).toBe('blue');
