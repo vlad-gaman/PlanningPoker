@@ -212,7 +212,7 @@
 
   // Voted but still hidden: a face-down card back. The block character stays as text for assistive tech.
   &.back {
-    border-color: #fff;
+    border-color: var(--on-primary);
     font-size: 0;
     color: transparent;
     background: repeating-linear-gradient(45deg, var(--primary-hover) 0, var(--primary-hover) 5px, var(--primary-color) 7px, var(--primary-color) 11px, var(--primary-hover) 12px);
@@ -326,7 +326,7 @@
     padding: 2px 9px;
     border-radius: 0 0 0 10px;
     background: var(--role);
-    color: #fff;
+    color: var(--on-role);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.06em;

@@ -249,8 +249,9 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
     await expect(results(page)).toHaveCount(1);
 
     // Cards on the page surface follow the theme text colour; the selected card and the vote card sit on the accent
-    // fill and follow the theme's on-primary colour (white in light, near-black in dark). The split bar segments keep
-    // their own fixed colours, so their card stays white like the segment text. Every one is a mask with no backing tile.
+    // fill and follow the theme's on-primary colour (white in light, near-black in dark). The split bar segments are
+    // dark fills in light and bright fills in dark, so their card follows --on-seg like the segment text: white in light,
+    // near-black in dark. Every one is a mask with no backing tile.
     const textColor = await page.evaluate(() => getComputedStyle(document.body).color);
     const onPrimaryColor = await page.evaluate(() => {
       const probe = document.createElement('span');
@@ -264,7 +265,7 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
       { selector: 'label.card:not(.selected) img', color: textColor },
       { selector: 'label.card.selected img', color: onPrimaryColor },
       { selector: '.mark img', color: onPrimaryColor },
-      { selector: '.segment img', color: 'rgb(255, 255, 255)' },
+      { selector: '.segment img', color: theme === 'dark' ? 'rgb(26, 26, 26)' : 'rgb(255, 255, 255)' },
     ];
     for (const { selector, color } of expectations) {
       // A phone shows one view at a time: the deck on Vote, the people and results on Table.
