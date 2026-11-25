@@ -174,7 +174,7 @@
   margin-top: 0.5rem;
   border: 3px solid transparent;
   border-radius: 10px;
-  background: var(--primary-color);
+  background-color: var(--primary-color);
   color: var(--on-primary);
   font-size: calc(var(--card-w) * 0.29);
   font-weight: 700;
@@ -182,7 +182,7 @@
   // No vote yet: an empty dashed slot of the same size.
   &.none {
     border: 3px dashed var(--card-border);
-    background: transparent;
+    background-color: transparent;
   }
 
   img {
@@ -214,7 +214,7 @@
   // Revealed: a playing-card face on paper, with the value in two corners when it is text.
   &.flip {
     border-color: var(--card-border);
-    background: var(--card-bg);
+    background-color: var(--card-bg);
     color: var(--text-color);
     box-shadow: 0 3px 8px var(--shadow-color);
     animation: flip-in 0.35s ease-out;

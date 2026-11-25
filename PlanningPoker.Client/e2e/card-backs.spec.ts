@@ -30,7 +30,12 @@ async function join(page: Page, roomUrl: string, name: string): Promise<void> {
 }
 
 const mark = (page: Page, name: string) => page.locator('li.person').filter({ hasText: name }).locator('.mark');
-const backChoice = (page: Page, label: string) => page.getByRole('radiogroup', { name: 'Card back' }).getByRole('radio', { name: label });
+const backTrigger = (page: Page) => page.getByRole('combobox', { name: 'Card back' });
+/** Opens the card back dropdown and picks a design from it. */
+async function chooseBack(page: Page, label: string): Promise<void> {
+  await backTrigger(page).click();
+  await page.getByRole('listbox', { name: 'Card back' }).getByRole('option', { name: label }).click();
+}
 const pick = (page: Page, value: string) =>
   page.locator('label.card').filter({ hasText: new RegExp(`^\s*${value}\s*$`) }).click();
 
@@ -40,17 +45,21 @@ test('a face-down vote shows its voter\'s chosen card back to everyone, and the 
   const roomUrl = await createRoom(ann.page, 'Ann');
   await join(bob.page, roomUrl, 'Bob');
 
-  await expect(ann.page.getByRole('radiogroup', { name: 'Card back' }).getByRole('radio')).toHaveCount(6);
-  await backChoice(ann.page, 'Dots').click();
-  await expect(backChoice(ann.page, 'Dots')).toHaveAttribute('aria-checked', 'true');
+  await backTrigger(ann.page).click();
+  await expect(ann.page.getByRole('listbox', { name: 'Card back' }).getByRole('option')).toHaveCount(6);
+  await ann.page.getByRole('option', { name: 'Dots' }).click();
+  await expect(backTrigger(ann.page)).toHaveText(/Dots/);
 
   await pick(ann.page, '5');
   await expect(mark(bob.page, 'Ann')).toHaveAttribute('data-back', 'dots');
   await expect(mark(ann.page, 'Ann')).toHaveAttribute('data-back', 'dots');
 
   // Changing the choice while the vote is face down shows at once to the others.
-  await backChoice(ann.page, 'Stripes').click();
+  await chooseBack(ann.page, 'Stripes');
   await expect(mark(bob.page, 'Ann')).toHaveAttribute('data-back', 'stripes');
+
+  // The back is drawn, not a plain fill: the design's gradient reaches the face-down card.
+  await expect(mark(bob.page, 'Ann')).toHaveCSS('background-image', /gradient/);
 
   // Bob never picked one, so his back is the classic default.
   await pick(bob.page, '8');
@@ -58,7 +67,7 @@ test('a face-down vote shows its voter\'s chosen card back to everyone, and the 
 
   // The choice is kept for the browser: after a reload it is still checked, and the room shows it again.
   await ann.page.reload();
-  await expect(backChoice(ann.page, 'Stripes')).toHaveAttribute('aria-checked', 'true');
+  await expect(backTrigger(ann.page)).toHaveText(/Stripes/);
   await expect(mark(bob.page, 'Ann')).toHaveAttribute('data-back', 'stripes');
 
   await Promise.all([ann.context.close(), bob.context.close()]);
@@ -85,7 +94,7 @@ test('the card back picker fits a phone-width screen', async ({ browser }) => {
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
-  await expect(backChoice(page, 'Waves')).toBeVisible();
+  await expect(backTrigger(page)).toBeVisible();
 
   await context.close();
 });
