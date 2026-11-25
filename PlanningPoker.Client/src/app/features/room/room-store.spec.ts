@@ -33,6 +33,8 @@ import {
 } from './room-store';
 
 const CLEARED_AT = '2026-01-01T12:10:00+00:00';
+const ALARM_ENDS_AT = '2026-01-01T12:15:00+00:00';
+const IDLE_ALARM = { status: 'idle', endsAt: null } as const;
 
 /** Stand-ins for the services the store enters a room with; a spec sets what `me.get` and `rooms.exists` answer. */
 function enterServices() {
@@ -470,7 +472,7 @@ describe('RoomStore', () => {
     await store.enter('room-1');
 
     expect(store.people()).toEqual([ANN]);
-    expect(hub.on).toHaveBeenCalledTimes(28);
+    expect(hub.on).toHaveBeenCalledTimes(30);
   });
 
   /** Starts a join whose JoinRoom response is held until respond() is called. */
@@ -935,9 +937,9 @@ describe('RoomStore room management', () => {
 
   it('replaces configuration and cards when the configuration is updated', () => {
     const cards = [{ value: 'S', display: null }];
-    const configuration = { cardSet: 'tshirt', countdownSeconds: 9, showFireworks: false, maxParticipants: 4 };
+    const configuration = { cardSet: 'tshirt', countdownSeconds: 9, showFireworks: false, maxParticipants: 4, alarmEnabled: true, alarmMinutes: 5 };
 
-    hub.emit(HUB_EVENTS.RoomConfigurationUpdated, { configuration, cards, updatedBy: 'Ann', voteStatus: status({}) });
+    hub.emit(HUB_EVENTS.RoomConfigurationUpdated, { configuration, cards, updatedBy: 'Ann', voteStatus: status({}), alarm: IDLE_ALARM });
 
     expect(store.configuration()).toEqual(configuration);
     expect(store.cards()).toEqual(cards);
@@ -951,6 +953,7 @@ describe('RoomStore room management', () => {
       cards: [{ value: 'S', display: null }],
       updatedBy: 'Ann',
       voteStatus: status({}),
+      alarm: IDLE_ALARM,
     });
 
     expect(store.myMark()).toBeNull();
@@ -964,9 +967,119 @@ describe('RoomStore room management', () => {
       cards: JOIN_RESPONSE.cards,
       updatedBy: 'Ann',
       voteStatus: status({ [ANN.guid]: 'hide' }),
+      alarm: IDLE_ALARM,
     });
 
     expect(store.myMark()).toBe('5');
+  });
+
+  describe('the Alarm', () => {
+    it('starts idle', () => {
+      expect(store.alarm()).toEqual({ status: 'idle', endsAt: null });
+      expect(store.alarmElapsedCount()).toBe(0);
+    });
+
+    it('takes a running Alarm from the join snapshot, counting from the time left it reports', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.UTC(2030, 5, 1));
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, alarm: { status: 'running', endsAt: ALARM_ENDS_AT, remainingMilliseconds: 90_000 } });
+
+      await store.enter('room-1');
+
+      expect(store.alarm()).toEqual({ status: 'running', endsAt: Date.UTC(2030, 5, 1) + 90_000 });
+      vi.useRealTimers();
+    });
+
+    it('ignores the server clock: a skewed end time cannot make the count start a second high', () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.parse(ALARM_ENDS_AT) - 301_000);
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT, remainingMilliseconds: 300_000 });
+
+      expect(store.alarm().endsAt).toBe(Date.now() + 300_000);
+      vi.useRealTimers();
+    });
+
+    it('follows the room: running, then elapsed, then idle again', () => {
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT, remainingMilliseconds: 300_000 });
+      expect(store.alarm().status).toBe('running');
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ALARM_ENDS_AT });
+      expect(store.alarm()).toEqual({ status: 'elapsed', endsAt: Date.parse(ALARM_ENDS_AT) });
+
+      hub.emit(HUB_EVENTS.AlarmChanged, IDLE_ALARM);
+      expect(store.alarm()).toEqual({ status: 'idle', endsAt: null });
+    });
+
+    it('counts only an elapse it watched happen, never a snapshot of an elapsed Alarm', async () => {
+      hub.invoke.mockResolvedValue({ ...JOIN_RESPONSE, alarm: { status: 'elapsed', endsAt: ALARM_ENDS_AT } });
+      await store.enter('room-1');
+      expect(store.alarm().status).toBe('elapsed');
+      expect(store.alarmElapsedCount()).toBe(0);
+
+      hub.emit(HUB_EVENTS.AlarmChanged, IDLE_ALARM);
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT });
+      expect(store.alarmElapsedCount()).toBe(0);
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ALARM_ENDS_AT });
+      expect(store.alarmElapsedCount()).toBe(1);
+    });
+
+    it('does not count an elapse that arrived while the join was still in flight', async () => {
+      let respond!: () => void;
+      hub.invoke.mockImplementationOnce(() => new Promise((resolve) => (respond = () => resolve(JOIN_RESPONSE))));
+      const calls = hub.invoke.mock.calls.length;
+      const joining = store.enter('room-2');
+      await vi.waitFor(() => expect(hub.invoke).toHaveBeenCalledTimes(calls + 1));
+
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ALARM_ENDS_AT });
+      respond();
+      await joining;
+
+      expect(store.alarm().status).toBe('elapsed');
+      expect(store.alarmElapsedCount()).toBe(0);
+    });
+
+    it('applies the Alarm a settings save leaves behind, silently', () => {
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'running', endsAt: ALARM_ENDS_AT });
+
+      hub.emit(HUB_EVENTS.RoomConfigurationUpdated, {
+        configuration: { ...JOIN_RESPONSE.configuration, alarmEnabled: false },
+        cards: JOIN_RESPONSE.cards,
+        updatedBy: 'Ann',
+        voteStatus: status({}),
+        alarm: IDLE_ALARM,
+      });
+
+      expect(store.alarm().status).toBe('idle');
+      expect(store.alarmElapsedCount()).toBe(0);
+    });
+
+    it('sends start, cancel and reset to the hub', async () => {
+      expect(await store.startAlarm()).toBe(true);
+      expect(await store.cancelAlarm()).toBe(true);
+      expect(await store.resetAlarm()).toBe(true);
+
+      expect(hub.invoke).toHaveBeenCalledWith('StartAlarm');
+      expect(hub.invoke).toHaveBeenCalledWith('CancelAlarm');
+      expect(hub.invoke).toHaveBeenCalledWith('ResetAlarm');
+    });
+
+    it('flashes a refused Alarm command', async () => {
+      hub.invoke.mockRejectedValueOnce(new ApiRequestError(0, [{ code: 'alarm_not_idle', message: 'already running', metadata: {} }]));
+
+      expect(await store.startAlarm()).toBe(false);
+      expect(TestBed.inject(FlashMessageService).message()).toBe('already running');
+    });
+
+    it('forgets the Alarm when the room is left', async () => {
+      hub.emit(HUB_EVENTS.AlarmChanged, { status: 'elapsed', endsAt: ALARM_ENDS_AT });
+
+      await store.close();
+
+      expect(store.alarm()).toEqual({ status: 'idle', endsAt: null });
+      expect(store.alarmElapsedCount()).toBe(0);
+    });
   });
 
   it('sends the management commands to the hub', async () => {

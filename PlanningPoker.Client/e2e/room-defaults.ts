@@ -5,6 +5,8 @@ interface RoomDefaults {
   cardSet?: string;
   countdownSeconds?: number;
   showFireworks?: boolean;
+  alarmEnabled?: boolean;
+  alarmMinutes?: number;
 }
 
 /** Stores what new rooms are created with in the browser, as the app does after the owner saved settings. */
@@ -13,7 +15,7 @@ export async function seedRoomDefaults(page: Page, defaults: RoomDefaults): Prom
   const overrides = Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined));
   const stored = {
     useFunRoomName,
-    configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50, ...overrides },
+    configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50, alarmEnabled: true, alarmMinutes: 5, ...overrides },
   };
   await page.addInitScript((value) => {
     if (!localStorage.getItem('pp-room-defaults')) {

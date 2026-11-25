@@ -7,6 +7,7 @@ export const HUB_EVENTS = {
   OwnershipTransferred: 'OwnershipTransferred',
   PersonTypeChanged: 'PersonTypeChanged',
   RoomConfigurationUpdated: 'RoomConfigurationUpdated',
+  AlarmChanged: 'AlarmChanged',
   RoomDisposed: 'RoomDisposed',
   CountdownReset: 'CountdownReset',
   VoteCast: 'VoteCast',

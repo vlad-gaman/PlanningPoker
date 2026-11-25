@@ -36,6 +36,29 @@
       </div>
     </section>
     <section class="group">
+      <h3>Alarm</h3>
+      <div class="setting">
+        <div class="meta">
+          <label for="alarm-enabled">Alarm</label>
+          <small class="hint">A sound for everyone when the time is up</small>
+        </div>
+        <label class="switch">
+          <input id="alarm-enabled" type="checkbox" formControlName="alarmEnabled" />
+          <span class="track"></span>
+        </label>
+      </div>
+      <div class="setting">
+        <div class="meta">
+          <label for="alarm-minutes">Alarm length (minutes)</label>
+          <small class="hint">Anyone can start it; only you set the length</small>
+        </div>
+        <input id="alarm-minutes" class="form-control" type="number" formControlName="alarmMinutes" />
+        @if (form.controls.alarmMinutes.invalid) {
+          <div class="field-error" role="alert">Use {{ alarmRange.min }} to {{ alarmRange.max }} minutes.</div>
+        }
+      </div>
+    </section>
+    <section class="group">
       <h3>Room</h3>
       <div class="setting">
         <div class="meta"><label for="max-participants">Max participants</label><small class="hint">Who can join</small></div>

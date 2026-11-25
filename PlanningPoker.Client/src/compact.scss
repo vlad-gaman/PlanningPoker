@@ -372,7 +372,8 @@ $compact-max: 520px;
     }
 
     // The sticky bar already shows the time; drop the duplicate in the table view.
-    .head app-round-timer {
+    .head app-round-timer,
+    .head app-alarm-button {
       display: none;
     }
 

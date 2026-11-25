@@ -12,7 +12,9 @@ public class RoomConfigurationMapper : IRoomConfigurationMapper
             CardSet = entity.CardSet,
             CountdownSeconds = entity.CountdownSeconds,
             ShowFireworks = entity.ShowFireworks,
-            MaxParticipants = entity.MaxParticipants
+            MaxParticipants = entity.MaxParticipants,
+            AlarmEnabled = entity.AlarmEnabled,
+            AlarmMinutes = entity.AlarmMinutes
         };
     }
 }

@@ -34,6 +34,9 @@ public class RoomService(
     IPlanningPokerMetrics metrics,
     IRoomMembership membership,
     IRoomRound round,
+    IRoomAlarm alarm,
+    IAlarmStateMapper alarmStateMapper,
+    IAlarmChangeResultMapper alarmChangeResultMapper,
     TimeProvider time) : IRoomService
 {
     public ServiceResponse<Room> Create(Guid ownerGuid, RoomSettings settings)
@@ -371,8 +374,16 @@ public class RoomService(
             }
 
             // Shown votes are dropped (the old rule). So are votes cast for another card set: their marks are not cards of the new one.
-            var cleared = !room.VotingEnabled || room.Configuration.CardSet != configuration.CardSet;
+            var alarmOnly = room.Configuration.DiffersOnlyInAlarmFrom(configurationEntityMapper.Map(configuration));
+            var cleared = !alarmOnly && (!room.VotingEnabled || room.Configuration.CardSet != configuration.CardSet);
             room.Configuration = configurationEntityMapper.Map(configuration);
+            alarm.IdleWhenDisabled(room);
+            if (alarmOnly)
+            {
+                // The Alarm settings do not touch the round: shown votes stay and a running countdown keeps ticking.
+                return RoomUpdate.Changed((Response: ServiceResponse.Success(), Cleared: false, Decision: RoundDecision.None));
+            }
+
             if (cleared)
             {
                 round.Clear(room, restartTimer: false);
@@ -406,10 +417,61 @@ public class RoomService(
             Configuration = configurationMapper.Map(snapshot.Configuration),
             Cards = cards.Data!,
             UpdatedBy = person.Name,
+            Alarm = alarmStateMapper.Map(snapshot),
             VotesCleared = outcome.Cleared,
             VoteStatus = status,
             FollowUp = ToFollowUp(outcome.Decision, status)
         });
+    }
+
+    public ServiceResponse<AlarmChangeResult> StartAlarm(Guid personGuid, string connectionId)
+    {
+        return ChangeAlarm(personGuid, connectionId, alarm.Start);
+    }
+
+    public ServiceResponse<AlarmChangeResult> CancelAlarm(Guid personGuid, string connectionId)
+    {
+        return ChangeAlarm(personGuid, connectionId, alarm.Cancel);
+    }
+
+    public ServiceResponse<AlarmChangeResult> ResetAlarm(Guid personGuid, string connectionId)
+    {
+        return ChangeAlarm(personGuid, connectionId, alarm.Reset);
+    }
+
+    public ServiceResponse<AlarmChangeResult> ElapseAlarm(string roomId, DateTimeOffset endsAt)
+    {
+        return UpdateAlarm(roomId, room => alarm.Elapse(room, endsAt));
+    }
+
+    /// <summary>Runs an Alarm change in the connection's room under the room lock, for any member.</summary>
+    private ServiceResponse<AlarmChangeResult> ChangeAlarm(Guid personGuid, string connectionId, Func<RoomEntity, ServiceResponse<AlarmState>> change)
+    {
+        var located = Locate(personGuid, connectionId);
+        if (!located.IsSuccess)
+        {
+            return ServiceResponse<AlarmChangeResult>.Failure(located);
+        }
+
+        return UpdateAlarm(located.Data.RoomId, room => IsMember(room, personGuid, connectionId) ? change(room) : ServiceResponse<AlarmState>.Failure(ServiceError.NotInRoom()));
+    }
+
+    /// <summary>Runs an Alarm change under the room lock; only a change that succeeded counts as room activity.</summary>
+    private ServiceResponse<AlarmChangeResult> UpdateAlarm(string roomId, Func<RoomEntity, ServiceResponse<AlarmState>> change)
+    {
+        var found = roomUpdater.Update(roomId, room =>
+        {
+            var changed = change(room);
+            return RoomUpdate.Of(changed, changed.IsSuccess);
+        }, out var outcome);
+        if (!found || outcome is null)
+        {
+            return ServiceResponse<AlarmChangeResult>.Failure(ServiceError.RoomNotFound(roomId));
+        }
+
+        return outcome.IsSuccess
+            ? ServiceResponse<AlarmChangeResult>.Success(alarmChangeResultMapper.Map(roomId, outcome.Data!))
+            : ServiceResponse<AlarmChangeResult>.Failure(outcome);
     }
 
     public ServiceResponse<OwnershipTransferResult> TransferOwnership(Guid personGuid, string connectionId, Guid targetPersonGuid)

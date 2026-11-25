@@ -361,7 +361,7 @@ public class RoundResultMapperTests
             RoundHistory = [new RoundResultEntity { Round = 1, AverageMark = 2m }, new RoundResultEntity { Round = 2, AverageMark = 4m }]
         };
 
-        var room = new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper()).Map(entity);
+        var room = new RoomMapper(new RoomConfigurationMapper(), new RoundResultMapper(), new AlarmStateMapper()).Map(entity);
 
         Assert.Equal([2, 1], room.RoundHistory.Select(result => result.Round));
     }

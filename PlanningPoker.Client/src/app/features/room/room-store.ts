@@ -15,6 +15,8 @@ import { HUB_EVENTS } from '../../models/hub-events';
 import { Person, PersonType, UpdateMeRequest } from '../../models/person';
 import { orderPeople } from './order-people';
 import {
+  AlarmResponse,
+  AlarmState,
   CardOption,
   CountdownEvent,
   JoinRoomResponse,
@@ -59,6 +61,21 @@ export function isRoomGone(error: unknown): boolean {
   );
 }
 
+const IDLE_ALARM: AlarmState = { status: 'idle', endsAt: null };
+
+function toAlarmState(alarm: AlarmResponse | undefined): AlarmState {
+  if (!alarm) {
+    return IDLE_ALARM;
+  }
+  // A running Alarm counts from the time the server says is left, against this client's own clock; the server's end
+  // stamp is only a fallback, since the two clocks need not agree.
+  const endsAt =
+    alarm.status === 'running' && typeof alarm.remainingMilliseconds === 'number'
+      ? Date.now() + alarm.remainingMilliseconds
+      : parseStamp(alarm.endsAt ?? undefined);
+  return { status: alarm.status, endsAt };
+}
+
 /** Where entering a room has got to: checking it, asking for a name, or in. */
 export type RoomPhase = 'loading' | 'name' | 'joined';
 
@@ -91,6 +108,8 @@ export class RoomStore {
   private readonly revealCountState = signal(0);
   private readonly roundStartedAtState = signal<number | null>(null);
   private readonly roundHistoryState = signal<RoundResult[]>([]);
+  private readonly alarmState = signal<AlarmState>(IDLE_ALARM);
+  private readonly alarmElapsedCountState = signal(0);
   private readonly connectedState = signal(true);
   private readonly meState = signal<string | null>(null);
   private readonly phaseState = signal<RoomPhase>('loading');
@@ -108,6 +127,8 @@ export class RoomStore {
   private generation = 0;
   /** While a JoinRoom call is in flight, hub events are queued here and replayed after its snapshot is applied. */
   private buffered: (() => void)[] | null = null;
+  /** True while the events queued during a join are replayed: what they announce happened before this join finished. */
+  private replaying = false;
 
   /** False while the connection to the server is down (trying to get back) or closed. */
   readonly connected = this.connectedState.asReadonly();
@@ -145,6 +166,13 @@ export class RoomStore {
    * count, so the fireworks only follow a reveal the user watched happen.
    */
   readonly revealCount = this.revealCountState.asReadonly();
+  /** Where the room's Alarm is: from the join snapshot, then renewed by every change the room announces. */
+  readonly alarm = this.alarmState.asReadonly();
+  /**
+   * Counts the elapses that arrived as a live AlarmChanged event, so only someone in the room when it ran out hears the
+   * sound. A join snapshot of an already elapsed Alarm does not count.
+   */
+  readonly alarmElapsedCount = this.alarmElapsedCountState.asReadonly();
 
   private readonly myPerson = computed(() => this.peopleState().find((person) => person.guid === this.meState()));
   readonly isOwner = computed(() => this.meState() !== null && this.meState() === this.ownerState());
@@ -274,6 +302,21 @@ export class RoomStore {
     return this.send(this.generation, 'ChangePersonType', personType);
   }
 
+  /** Starts the room's Alarm; any member. */
+  async startAlarm(): Promise<boolean> {
+    return this.send(this.generation, 'StartAlarm');
+  }
+
+  /** Cancels the running Alarm without a sound; any member. */
+  async cancelAlarm(): Promise<boolean> {
+    return this.send(this.generation, 'CancelAlarm');
+  }
+
+  /** Returns an elapsed Alarm to idle without starting it again; any member. */
+  async resetAlarm(): Promise<boolean> {
+    return this.send(this.generation, 'ResetAlarm');
+  }
+
   /** Owner only: replaces the whole room configuration. Returns the server's error instead of flashing it. */
   async updateConfiguration(configuration: RoomConfiguration): Promise<void> {
     await this.hub.invoke('UpdateRoomConfiguration', configuration);
@@ -307,6 +350,8 @@ export class RoomStore {
     this.myMarkState.set(null);
     this.roundHistoryState.set([]);
     this.revealCountState.set(0);
+    this.alarmState.set(IDLE_ALARM);
+    this.alarmElapsedCountState.set(0);
     this.applyVoteStatus({
       votes: {},
       hasEveryoneVoted: false,
@@ -335,6 +380,7 @@ export class RoomStore {
     this.hub.on(HUB_EVENTS.RoomConfigurationUpdated, (event: RoomConfigurationUpdatedEvent) =>
       this.apply(() => this.configurationUpdated(event)),
     );
+    this.hub.on(HUB_EVENTS.AlarmChanged, (event: AlarmResponse) => this.apply(() => this.alarmChanged(event)));
     this.hub.on(HUB_EVENTS.RoomDisposed, (event: RoomDisposedEvent) => this.apply(() => void this.roomDisposed(event)));
     this.hub.on(HUB_EVENTS.VoteCast, (event: VoteCastEvent) => this.apply(() => this.voteCast(event)));
     this.hub.on(HUB_EVENTS.VoteStatusUpdate, (status: VoteStatus) => this.apply(() => this.applyVoteStatus(status)));
@@ -389,11 +435,17 @@ export class RoomStore {
     this.myMarkState.set(response.myMark ?? null);
     this.configurationState.set(response.configuration);
     this.roundHistoryState.set(response.roundHistory ?? []);
-    for (const change of queued) {
-      if (gen !== this.generation) {
-        return;
+    this.alarmState.set(toAlarmState(response.alarm));
+    this.replaying = true;
+    try {
+      for (const change of queued) {
+        if (gen !== this.generation) {
+          return;
+        }
+        change();
       }
-      change();
+    } finally {
+      this.replaying = false;
     }
   }
 
@@ -502,6 +554,13 @@ export class RoomStore {
     this.statisticsState.set(status.statistics);
   }
 
+  private alarmChanged(event: AlarmResponse): void {
+    this.alarmState.set(toAlarmState(event));
+    if (event.status === 'elapsed' && !this.replaying) {
+      this.alarmElapsedCountState.update((count) => count + 1);
+    }
+  }
+
   private votesShown(status: VoteStatus): void {
     this.applyVoteStatus(status);
     if (status.roundHistory) {
@@ -562,6 +621,7 @@ export class RoomStore {
       this.myMarkState.set(null);
     }
     this.applyVoteStatus(event.voteStatus);
+    this.alarmState.set(toAlarmState(event.alarm));
   }
 
   private personExited(event: PersonExitedEvent): void {

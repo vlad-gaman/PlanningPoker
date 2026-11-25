@@ -32,6 +32,7 @@ public class RoomManagementEventMappersTests
     {
         var result = new RoomConfigurationChangeResult
         {
+            Alarm = new AlarmState { Status = AlarmStatus.Idle },
             RoomId = "room",
             Configuration = new RoomConfiguration { CardSet = "t-shirt-sizes", CountdownSeconds = 8, ShowFireworks = true, MaxParticipants = 3 },
             Cards = [new CardOption { Value = "XS" }, new CardOption { Value = "coffee", Display = "coffee-display" }],
@@ -40,7 +41,7 @@ public class RoomManagementEventMappersTests
             VoteStatus = Status()
         };
 
-        var mapped = new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus()).Map(result);
+        var mapped = new RoomConfigurationUpdatedEventMapper(new RoomConfigurationResponseMapper(), new CardResponseMapper(), ResponseMappers.VoteStatus(), new AlarmResponseMapper()).Map(result);
 
         Assert.Equal(("t-shirt-sizes", 8, true, 3), (mapped.Configuration.CardSet, mapped.Configuration.CountdownSeconds, mapped.Configuration.ShowFireworks, mapped.Configuration.MaxParticipants));
         Assert.Equal(["XS", "coffee"], mapped.Cards.Select(card => card.Value));

@@ -6,7 +6,7 @@ import {
   RoomDefaultsService,
 } from './room-defaults.service';
 
-const CONFIGURATION: RoomConfiguration = { cardSet: 'linear', countdownSeconds: 7, showFireworks: false, maxParticipants: 9 };
+const CONFIGURATION: RoomConfiguration = { cardSet: 'linear', countdownSeconds: 7, showFireworks: false, maxParticipants: 9, alarmEnabled: false, alarmMinutes: 12 };
 
 describe('RoomDefaultsService', () => {
   beforeEach(() => localStorage.clear());
@@ -36,11 +36,24 @@ describe('RoomDefaultsService', () => {
     ['not json', '{'],
     ['wrong shape', '{"useFunRoomName":true}'],
     ['countdown out of range', JSON.stringify({ useFunRoomName: true, configuration: { ...CONFIGURATION, countdownSeconds: 99 } })],
+    ['an Alarm length out of range', JSON.stringify({ useFunRoomName: true, configuration: { ...CONFIGURATION, alarmMinutes: 61 } })],
     ['no participants allowed', JSON.stringify({ useFunRoomName: true, configuration: { ...CONFIGURATION, maxParticipants: 0 } })],
   ])('ignores a stored value that is %s', (_, stored) => {
     localStorage.setItem(ROOM_DEFAULTS_STORAGE_KEY, stored);
 
     expect(TestBed.inject(RoomDefaultsService).load()).toEqual(DEFAULT_CREATE_ROOM_REQUEST);
+  });
+
+  it('reads defaults saved before the Alarm existed as an Alarm that is on for the default length', () => {
+    const { alarmEnabled, alarmMinutes, ...before } = CONFIGURATION;
+    localStorage.setItem(ROOM_DEFAULTS_STORAGE_KEY, JSON.stringify({ useFunRoomName: false, configuration: before }));
+
+    expect(alarmEnabled).toBe(false);
+    expect(alarmMinutes).toBe(12);
+    expect(TestBed.inject(RoomDefaultsService).load()).toEqual({
+      useFunRoomName: false,
+      configuration: { ...before, alarmEnabled: true, alarmMinutes: 5 },
+    });
   });
 
   it('keeps working when storage is unavailable', () => {

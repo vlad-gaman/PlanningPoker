@@ -27,4 +27,8 @@ public static class ErrorCodes
     public const string ConnectionClosed = "connection_closed";
     public const string ObserverCannotVote = "observer_cannot_vote";
     public const string VotingClosed = "voting_closed";
+    public const string AlarmDisabled = "alarm_disabled";
+    public const string AlarmNotIdle = "alarm_not_idle";
+    public const string AlarmNotRunning = "alarm_not_running";
+    public const string AlarmNotElapsed = "alarm_not_elapsed";
 }

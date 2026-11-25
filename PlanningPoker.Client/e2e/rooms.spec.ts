@@ -177,7 +177,7 @@ async function createRoomWithoutOpeningIt(page: Page, name: string): Promise<str
   const created = await page.request.post('/api/rooms', {
     data: {
       useFunRoomName: false,
-      configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50 },
+      configuration: { cardSet: 'modified-fibonacci', countdownSeconds: 5, showFireworks: true, maxParticipants: 50, alarmEnabled: true, alarmMinutes: 5 },
     },
   });
   expect(created.status()).toBe(201);

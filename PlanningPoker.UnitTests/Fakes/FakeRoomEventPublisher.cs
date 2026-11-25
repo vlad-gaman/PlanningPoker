@@ -24,6 +24,8 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
 
     public List<OwnershipTransferResult> OwnershipTransfers { get; } = [];
 
+    public List<AlarmChangeResult> AlarmChanges { get; } = [];
+
     /// <summary>Every publish call in order, by name, so a test can check the order guarantees of the hub.</summary>
     public List<string> Order { get; } = [];
 
@@ -38,6 +40,13 @@ public sealed class FakeRoomEventPublisher : IRoomEventPublisher
     {
         ConfigurationUpdates.Add(result);
         Order.Add("RoomConfigurationUpdated");
+        return Task.CompletedTask;
+    }
+
+    public Task PublishAlarmChangedAsync(AlarmChangeResult result)
+    {
+        AlarmChanges.Add(result);
+        Order.Add("AlarmChanged");
         return Task.CompletedTask;
     }
 
