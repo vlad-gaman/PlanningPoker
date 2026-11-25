@@ -43,7 +43,7 @@
     @case ('name') {
       <form class="name-entry panel" [formGroup]="form" (ngSubmit)="submitName()">
         <h2>Join this room</h2>
-        <p class="hint">Enter your name to join this room.</p>
+        <p class="lead">Enter your name to join this room.</p>
         <app-person-fields [form]="form" />
         <div class="actions">
           <button class="primary-button" type="submit">Join room</button>
@@ -146,7 +146,7 @@
                   }
                 </span>
                 <span class="name">{{ person.name }}</span>
-                <span class="role-label">{{ roleLabel(person.personType) }}</span>
+                <span class="visually-hidden">{{ roleLabel(person.personType) }}</span>
                 @let mark = markOf(person);
                 <span class="mark" [class.none]="!mark.text && !mark.image" [class.back]="mark.hidden" [class.flip]="mark.revealed">
                   @if (mark.image; as src) {
