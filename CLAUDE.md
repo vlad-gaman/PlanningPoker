@@ -3,6 +3,8 @@
 
 # Decorations
     - Make sure to always update css when it comes to light vs dark mode
+    - Reuse the shared UI styles in `PlanningPoker.Client/src/styles.scss` instead of writing a new look for the same element: buttons are `primary-button`, `secondary-button` or `danger-button` (add `button-sm` for a dense row), text fields and selects are `input`. Never redefine those classes in a component stylesheet and never use `btn`, `plain-*` or `form-check`; `e2e/style-guard.spec.ts` fails if you do. If an element really needs a new variant, add it to `styles.scss` for everyone
+    - Text on a coloured fill uses a token (`--on-primary`, `--on-danger`), never a hard-coded `#fff`, so dark mode keeps its contrast
     - Attributations have their own separate page that can be accessed in the footer using a "Credits" link
 
 # Tests
