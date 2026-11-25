@@ -18,6 +18,11 @@ export type AlarmSoundId = (typeof ALARM_SOUNDS)[number]['id'];
 
 export const DEFAULT_ALARM_SOUND: AlarmSoundId = 'bell';
 
+/** Where a sound's audio file is served from, relative to the base href. */
+export function alarmSoundUrl(sound: Exclude<AlarmSoundId, 'silent'>): string {
+  return `sounds/alarm/${sound}.wav`;
+}
+
 export function isAlarmSoundId(value: unknown): value is AlarmSoundId {
   return ALARM_SOUNDS.some((sound) => sound.id === value);
 }

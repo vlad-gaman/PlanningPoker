@@ -1,5 +1,6 @@
 import { Browser, BrowserContext, Page, expect, test } from '@playwright/test';
 import { seedRoomDefaults } from './room-defaults';
+import { ALARM_SOUNDS, AlarmSoundId, alarmSoundUrl } from '../src/app/features/room/alarm/alarm-sounds';
 
 const GUID_ROOM_PATH = /\/room\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -131,4 +132,14 @@ test('a person picks their own sound in the header, kept for the next visit', as
   await page.reload();
 
   await expect(picker).toHaveValue('duck');
+});
+
+test('serves every Alarm sound as an audio file', async ({ request }) => {
+  for (const sound of ALARM_SOUNDS.filter((s) => s.id !== 'silent')) {
+    const response = await request.get(alarmSoundUrl(sound.id as Exclude<AlarmSoundId, 'silent'>));
+
+    expect(response.status(), sound.id).toBe(200);
+    // A missing file would fall back to index.html with a 200, so the type is what proves the file is there.
+    expect(response.headers()['content-type'], sound.id).toMatch(/^audio\//);
+  }
 });
