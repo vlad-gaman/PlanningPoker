@@ -70,27 +70,48 @@ test('templates do not use retired classes', () => {
   expect(offences).toEqual([]);
 });
 
-test('component styles do not redefine the shared classes', () => {
-  const offences: string[] = [];
+// The classes a stylesheet defines at its top level, outside any block: `.name {`, `.name,`, `.name:hover {` and so on.
+function topLevelClasses(text: string): Set<string> {
+  const names = new Set<string>();
+  let depth = 0;
+  for (const line of text.split(/\r?\n/)) {
+    const code = line.replace(/\/\/.*$/, '');
+    if (depth === 0) {
+      for (const [, name] of code.matchAll(/(?:^|,)\s*\.([\w-]+)(?=[\s{,:.[>+~]|$)/g)) {
+        names.add(name);
+      }
+    }
+    depth += (code.match(/{/g)?.length ?? 0) - (code.match(/}/g)?.length ?? 0);
+  }
+  return names;
+}
+
+// Component classes that share a name with a global one only to place it on that screen (spacing and alignment), not to restyle it.
+const placedSharedClasses: Record<string, string[]> = {
+  'features/admin/admin-sign-in.scss': ['actions', 'field', 'form-error'],
+  'features/credits/credits.scss': ['actions', 'panel'],
+  'features/home/home.scss': ['form-error'],
+  'features/shared/person-fields.scss': ['role-picker'],
+};
+
+test('component styles do not redefine a class from styles.scss', () => {
+  const shared = topLevelClasses(readFileSync(join(SRC, 'styles.scss'), 'utf8'));
+  const found: Record<string, string[]> = {};
   for (const path of files(join(SRC, 'app'), ['.scss'])) {
-    const text = readFileSync(path, 'utf8');
-    if (
-      /^\s*\.((primary|secondary|danger)-button|button-sm|icon-btn(-sm|-danger)?|link|input(-sm)?|switch(-field)?|field-label|hint|segmented(-icons)?|page(-wide)?|eyebrow|notice(-error)?|chip|list-row|dialog-(header|body|footer))\s*[{,:]/m.test(
-        text,
-      )
-    ) {
-      offences.push(path);
+    const duplicates = [...topLevelClasses(readFileSync(path, 'utf8'))].filter((name) => shared.has(name)).sort();
+    if (duplicates.length > 0) {
+      found[appPath(path)] = duplicates;
     }
   }
-  expect(offences).toEqual([]);
+  expect(found).toEqual(placedSharedClasses);
 });
 
 // A button that opens a list (role="combobox") looks like a field, so .input counts too.
 const sharedButtonClasses = ['primary-button', 'secondary-button', 'danger-button', 'icon-btn', 'link', 'input'];
 
-// Buttons that keep their own look until a later part of issue #181 moves them; shrink this as each part lands.
+// Buttons that keep a look of their own on purpose.
 const exemptButtons: Record<string, number> = {
-  'features/room/alarm/alarm-button.html': 1, // alarm pill
+  'features/room/alarm/alarm-button.html': 1, // the alarm is a live timer pill that fills in when time is up
 };
 
 // The options of a .segmented control take its look, so they need no class of their own.

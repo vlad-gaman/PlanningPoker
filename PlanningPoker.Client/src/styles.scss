@@ -2,6 +2,24 @@
 @use './compact';
 @use './accents';
 
+// Shared styles: every screen uses these instead of its own look-alike (see "Decorations" in CLAUDE.md;
+// e2e/style-guard.spec.ts fails when a component stylesheet redefines one of them).
+//
+// Tokens, each set in both theme blocks below:
+//   Surfaces and text   --bg-color, --text-color, --muted-color, --border-color, --panel-bg, --navbar-bg, --footer-bg
+//   Actions             --primary-color, --primary-hover, --primary-container, --danger, --success, --verdict-*
+//   Text on a fill      --on-primary, --on-primary-container, --on-danger, --on-role, --on-seg
+//   Fills               --role-*, --seg-1 to --seg-6, --switch-off, --switch-thumb, --avatar-from, --avatar-to
+//   Shape               --radius-panel, --radius-row, --card-w
+//
+// Components:
+//   Buttons             .primary-button, .secondary-button, .danger-button (+ .button-sm), .icon-btn, .link
+//   Fields              .field, .field-label, .input (+ .input-sm), .switch, .segmented, .hint, .field-error, .form-error
+//   Layout              .page (+ .page-wide), .panel, .actions, .list-row
+//   Text                h1, .eyebrow, .lead, .chip, .notice (+ .notice-error), .visually-hidden
+//   Dialogs             .dialog-header, .dialog-body, .dialog-footer
+//   Focus               one global :focus-visible ring; never add another
+
 // System font stack; no webfont, so Material controls and the page render the same face.
 $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
 
@@ -236,10 +254,6 @@ a {
     margin: 0 0 1rem;
     font-size: 1.15rem;
     font-weight: 700;
-  }
-
-  .hint {
-    margin: -0.5rem 0 1rem;
   }
 }
 
@@ -704,7 +718,7 @@ h1 {
   color: var(--danger);
 }
 
-// Plain (non-Material) form controls, coloured from the site variables.
+// Hidden on screen, still read by screen readers.
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -717,6 +731,13 @@ h1 {
   border: 0;
 }
 
+// The muted sentence under a page or panel heading.
+.lead {
+  margin: -0.5rem 0 1rem;
+  color: var(--muted-color);
+}
+
+// Small muted text beside a field or setting.
 .hint {
   color: var(--muted-color);
   font-size: 0.875rem;

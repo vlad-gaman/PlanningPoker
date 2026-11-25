@@ -156,15 +156,6 @@
   white-space: nowrap;
 }
 
-.role-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 // Someone who is offgrid looks switched off; their vote is still kept.
 .offgrid-person {
   opacity: 0.45;

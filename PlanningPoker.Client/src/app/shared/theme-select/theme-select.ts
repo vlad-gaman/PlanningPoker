@@ -5,7 +5,6 @@ import { ThemePreference, ThemeService } from '../../core/theme.service';
 @Component({
   selector: 'app-theme-select',
   templateUrl: './theme-select.html',
-  styleUrl: './theme-select.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThemeSelect {
