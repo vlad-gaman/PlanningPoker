@@ -262,13 +262,12 @@ $compact-max: 520px;
       flex-wrap: nowrap;
       margin: 0 0 0.5rem;
 
+      // A long room name wraps onto a second line rather than being cut off.
       h1 {
         flex: 1 1 0;
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
         word-break: normal;
+        overflow-wrap: anywhere;
       }
     }
 

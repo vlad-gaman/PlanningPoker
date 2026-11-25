@@ -588,10 +588,11 @@ select.input {
   max-width: 1140px;
 }
 
-// The page title. The home hero's title is the one bigger heading.
+// The page title: 1.8rem, scaling down on a phone so a long title such as a room name fits. The home hero's title is
+// the one bigger heading.
 h1 {
   margin: 0 0 1rem;
-  font-size: 1.8rem;
+  font-size: clamp(1.3rem, 1rem + 2vw, 1.8rem);
   font-weight: 700;
   line-height: 1.2;
 }
