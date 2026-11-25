@@ -27,12 +27,15 @@
 }
 
 .card-back[data-back='geometric'] {
+  // Concentric frames, alternating the card's fill with the darker shade.
   background-image:
-    conic-gradient(from 45deg at 50% 50%, var(--back-a) 0 25%, transparent 0 50%, var(--back-a) 0 75%, transparent 0),
-    linear-gradient(var(--back-b), var(--back-b));
-  background-size: 14px 14px, 100% 1px;
-  background-position: center, center;
-  background-repeat: repeat, no-repeat;
+    linear-gradient(var(--primary-color), var(--primary-color)),
+    linear-gradient(var(--back-a), var(--back-a)),
+    linear-gradient(var(--primary-color), var(--primary-color)),
+    linear-gradient(var(--back-a), var(--back-a));
+  background-size: 22% 22%, 44% 44%, 66% 66%, 88% 88%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .card-back[data-back='waves'] {
