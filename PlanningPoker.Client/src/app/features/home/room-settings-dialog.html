@@ -1,6 +1,6 @@
 <div class="settings-header">
   <h2 mat-dialog-title>Room Settings</h2>
-  <button type="button" class="btn btn-sm close" mat-dialog-close aria-label="Close">×</button>
+  <button type="button" class="secondary-button close" mat-dialog-close aria-label="Close">×</button>
 </div>
 <form [formGroup]="form" (ngSubmit)="submit()">
   <div class="settings-content">
@@ -88,7 +88,7 @@
                 <option [value]="person.guid">{{ person.name }}</option>
               }
             </select>
-            <button type="button" class="btn btn-sm" [disabled]="!transferTarget()" (click)="transferOwnership()">
+            <button type="button" class="secondary-button" [disabled]="!transferTarget()" (click)="transferOwnership()">
               Transfer
             </button>
           </div>
@@ -100,7 +100,7 @@
     }
   </div>
   <div class="settings-footer">
-    <button type="button" class="btn" mat-dialog-close>Cancel</button>
-    <button type="submit" class="btn">Save Settings</button>
+    <button type="button" class="secondary-button" mat-dialog-close>Cancel</button>
+    <button type="submit" class="primary-button">Save Settings</button>
   </div>
 </form>
