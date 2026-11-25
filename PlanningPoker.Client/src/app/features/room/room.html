@@ -59,7 +59,7 @@
           }
           <ng-container [ngTemplateOutlet]="alarmButton" />
         </p>
-        <div class="compact-tabs" role="group" aria-label="View">
+        <div class="segmented compact-tabs" role="group" aria-label="View">
           <button type="button" [attr.aria-pressed]="compactView() === 'vote'" (click)="compactView.set('vote')">Vote</button>
           <button type="button" [attr.aria-pressed]="compactView() === 'table'" (click)="compactView.set('table')">Table</button>
         </div>
@@ -67,7 +67,7 @@
       <div class="layout" [attr.data-view]="compactView()">
         <div class="main">
           <div class="head">
-            <div class="role-picker" role="radiogroup" aria-label="Your role">
+            <div class="segmented role-picker" role="radiogroup" aria-label="Your role">
               @for (option of personTypes; track option.value) {
                 <label [attr.data-role]="option.value">
                   <input

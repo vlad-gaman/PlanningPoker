@@ -13,10 +13,13 @@
     <form class="panel" (ngSubmit)="createRoom()" [formGroup]="form">
       <h2>Start a room</h2>
       <app-person-fields [form]="form" />
-      <div class="check">
-        <input id="use-fun-room-name" type="checkbox" [formControl]="useFunRoomName" />
-        <label for="use-fun-room-name">Use a fun name?</label>
-      </div>
+      <label class="switch-field fun-name">
+        <span class="switch">
+          <input id="use-fun-room-name" type="checkbox" role="switch" [formControl]="useFunRoomName" />
+          <span class="track"></span>
+        </span>
+        Use a fun name?
+      </label>
       <div class="actions">
         <button class="primary-button" type="submit">Create room</button>
         <button class="secondary-button" type="button" (click)="editSettings()">Room settings</button>
@@ -26,7 +29,7 @@
     <form class="panel" [formGroup]="joinForm" (ngSubmit)="joinRoom()">
       <h2>Join a room</h2>
       <div class="field">
-        <label for="room-name">Room Name:</label>
+        <label for="room-name">Room Name</label>
         <input class="input" id="room-name" formControlName="room" autocomplete="off" placeholder="A room name or link" />
       </div>
       @if (joinForm.controls.room.invalid && joinForm.controls.room.touched) {

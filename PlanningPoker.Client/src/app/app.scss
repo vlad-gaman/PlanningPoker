@@ -24,12 +24,14 @@ main {
   padding: 0 0.75rem;
 }
 
-// The accent and theme selectors, side by side.
+// The accent and theme selectors, side by side, at the right edge even when they wrap below the brand on a phone.
 .appearance {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
 .navbar {

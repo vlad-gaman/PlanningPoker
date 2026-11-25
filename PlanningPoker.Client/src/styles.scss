@@ -63,6 +63,11 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --verdict-mid: #b57e00;
   --verdict-bad: #d93025;
   --on-danger: #fff;
+  // Off track of a switch: at least 3:1 against the panel and card backgrounds it sits on.
+  --switch-off: #80878f;
+  --switch-thumb: #ffffff;
+  // Text on a role colour fill (the role picker, the corner tag).
+  --on-role: #ffffff;
   --avatar-from: #1b6ec2;
   --avatar-to: #7a4fd6;
   --seg-1: #1b6ec2;
@@ -128,6 +133,8 @@ $font-stack: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ari
   --verdict-mid: #ffd43b;
   --verdict-bad: #ff8787;
   --on-danger: #1a1a1a;
+  --switch-off: #7c838b;
+  --switch-thumb: #ffffff;
   --avatar-from: #4dabf7;
   --avatar-to: #9775fa;
   --seg-1: #4dabf7;
@@ -222,12 +229,14 @@ a {
   flex-direction: column;
   gap: 0.3rem;
   text-align: left;
+}
 
-  label {
-    color: var(--muted-color);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
+// The one label style for a field, a select, a switch or a group of options; no trailing colon.
+.field > label,
+.field-label {
+  color: var(--muted-color);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .input {
@@ -249,6 +258,80 @@ a {
     outline: 0;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
   }
+}
+
+select.input {
+  cursor: pointer;
+}
+
+// Compact size for a field in a dense row such as the navbar; it is as wide as its content.
+.input.input-sm {
+  width: auto;
+  height: 36px;
+  padding: 0 0.6rem;
+}
+
+// On/off switch: <span class="switch"><input type="checkbox" role="switch" /><span class="track"></span></span>.
+// The real checkbox covers the track, so it keeps its keyboard, form and screen-reader behaviour.
+.switch {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 42px;
+  height: 24px;
+
+  input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .track {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--switch-off);
+    transition: background-color 0.2s ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--switch-thumb);
+      transition: transform 0.2s ease;
+    }
+  }
+
+  input:checked + .track {
+    background: var(--primary-color);
+  }
+
+  input:checked + .track::after {
+    background: var(--on-primary);
+    transform: translateX(18px);
+  }
+
+  input:focus-visible + .track {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// A switch with its label text beside it, the whole row clickable.
+.switch-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
 
 .actions {
@@ -429,39 +512,60 @@ a {
   &[data-role='obs'] { --role: #7c7c8a; }
 }
 
-// Role picker: one segmented control, shared by the room and the name fields. The radios stay in the layout for keyboard use.
-.role-picker {
+// Segmented control: one row of options with the chosen one filled. The theme switch, the role picker and the compact
+// Vote/Table tabs share the look; each keeps its own semantics (radios, role="radio" buttons, or aria-pressed buttons).
+.segmented {
+  --segmented-on: var(--primary-color);
+  --on-segmented: var(--on-primary);
+
   display: inline-flex;
+  box-sizing: border-box;
   padding: 3px;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   background: var(--panel-bg);
-  border: 1px solid var(--border-color);
 
-  label {
+  > button,
+  > label {
     position: relative;
-    padding: 4px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    box-sizing: border-box;
+    min-height: 28px;
+    padding: 0 12px;
+    border: 0;
     border-radius: 8px;
+    background: transparent;
     color: var(--muted-color);
+    font: inherit;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
 
     &:hover {
       color: var(--text-color);
     }
-
-    &:has(input:checked) {
-      background: var(--role);
-      color: #fff;
-    }
-
-    &:has(input:focus-visible) {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 2px;
-    }
   }
 
-  // The invisible radio covers its whole label, so a click anywhere on the option lands on it, whatever pixel the layout puts it on.
-  input {
+  > [aria-checked='true'],
+  > [aria-pressed='true'],
+  > label:has(input:checked) {
+    background: var(--segmented-on);
+    color: var(--on-segmented);
+  }
+
+  > button:focus-visible,
+  > label:has(input:focus-visible) {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  // A radio option: the invisible radio covers its whole label, so a click anywhere on the option lands on it.
+  > label input {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -470,6 +574,18 @@ a {
     opacity: 0;
     cursor: pointer;
   }
+}
+
+// Icon-only options stay square.
+.segmented-icons > button {
+  width: 34px;
+  padding: 0;
+}
+
+// The role picker fills the chosen role with that role's colour.
+.role-picker > label {
+  --segmented-on: var(--role);
+  --on-segmented: var(--on-role);
 }
 
 // Shared page container; each page sets its own max-width.
@@ -493,25 +609,6 @@ a {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.form-control {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  height: 38px;
-  padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--card-bg);
-  color: var(--text-color);
-  font: inherit;
-  line-height: 1.5;
-
-  &:focus {
-    border-color: var(--primary-color);
-    outline: 0;
-  }
 }
 
 .hint {

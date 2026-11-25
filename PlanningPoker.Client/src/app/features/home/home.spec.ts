@@ -204,7 +204,7 @@ describe('Home', () => {
     const { fixture, element } = await render();
 
     type(element, 'Your name', 'Ann');
-    type(element, 'Room Name:', 'https://host/room/room-9');
+    type(element, 'Room Name', 'https://host/room/room-9');
     submit(element, 1);
     await fixture.whenStable();
 

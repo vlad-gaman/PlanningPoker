@@ -191,10 +191,10 @@ $compact-max: 520px;
       font-size: 1.15rem;
     }
 
-    // The theme switch: 40 x 36 per option (it was 34 x 28).
-    .seg button {
-      width: 40px;
-      height: 36px;
+    // The theme switch: 36 x 36 per option (34 x 28 on a wide screen), so the navbar controls still fit one row at 375px.
+    .segmented.segmented-icons > button {
+      width: 36px;
+      min-height: 36px;
     }
 
     .footer a:not(.buymeacoffee-link) {
@@ -242,16 +242,14 @@ $compact-max: 520px;
     }
 
     // The role picker (room and name fields) fills the width; each option is a full-size target.
-    .role-picker {
+    // Two classes, so these win over the shared .segmented rules that come later in styles.scss.
+    .segmented.role-picker {
       display: flex;
       width: 100%;
       box-sizing: border-box;
 
-      label {
-        display: flex;
+      > label {
         flex: 1 1 0;
-        align-items: center;
-        justify-content: center;
         min-height: calc(var(--tap) - 8px);
         padding: 0 2px;
         text-align: center;
@@ -368,30 +366,14 @@ $compact-max: 520px;
       display: none;
     }
 
-    .compact-tabs {
-      display: inline-flex;
+    // The Vote/Table tabs: the shared .segmented look, with full-size targets.
+    .segmented.compact-tabs {
       flex: none;
-      padding: 3px;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      background: var(--panel-bg);
 
-      button {
+      > button {
         min-width: 64px;
         min-height: calc(var(--tap) - 8px);
         padding: 0 0.9rem;
-        border: 0;
-        border-radius: 8px;
-        background: transparent;
-        color: var(--muted-color);
-        font: inherit;
-        font-weight: 600;
-        cursor: pointer;
-
-        &[aria-pressed='true'] {
-          background: var(--primary-color);
-          color: var(--on-primary);
-        }
       }
     }
 

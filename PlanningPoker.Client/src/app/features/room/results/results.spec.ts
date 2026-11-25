@@ -134,11 +134,13 @@ describe('Results', () => {
     expect(render(statistics, 1).element.querySelector('.groups')).toBeNull();
   });
 
+  const byRoleSwitch = (element: HTMLElement) => element.querySelector('.by-role input[role="switch"]') as HTMLInputElement;
+
   describe('by role', () => {
     it('is off by default, with the averages list and no role rows', () => {
       const { element } = render(STATISTICS, 2);
 
-      expect(element.querySelector('.role-toggle')?.getAttribute('aria-checked')).toBe('false');
+      expect(byRoleSwitch(element).checked).toBe(false);
       expect(element.querySelector('.roles')).toBeNull();
       expect(element.querySelector('.groups')).not.toBeNull();
     });
@@ -148,16 +150,16 @@ describe('Results', () => {
 
       const { element } = render(STATISTICS, 2);
 
-      expect(element.querySelector('.role-toggle')?.getAttribute('aria-checked')).toBe('true');
+      expect(byRoleSwitch(element).checked).toBe(true);
     });
 
     it('turns on when the toggle is clicked, and stores the choice', () => {
       const { fixture, element } = render(STATISTICS, 2);
 
-      (element.querySelector('.role-toggle') as HTMLButtonElement).click();
+      byRoleSwitch(element).click();
       fixture.detectChanges();
 
-      expect(element.querySelector('.role-toggle')?.getAttribute('aria-checked')).toBe('true');
+      expect(byRoleSwitch(element).checked).toBe(true);
       expect(element.querySelector('.roles')).not.toBeNull();
       expect(localStorage.getItem(RESULTS_BY_ROLE_STORAGE_KEY)).toBe('on');
     });
