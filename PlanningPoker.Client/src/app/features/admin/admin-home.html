@@ -57,7 +57,7 @@
                   @if (person.status === 'offgrid') {
                     <small class="seen">offgrid@if (person.lastSeenAt) { since {{ person.lastSeenAt | date: 'HH:mm' }}}</small>
                   }
-                  <button type="button" class="icon-btn" [attr.aria-label]="'Remove ' + person.name" (click)="removePerson(room, person)">
+                  <button type="button" class="icon-btn icon-btn-sm icon-btn-danger" [attr.aria-label]="'Remove ' + person.name" (click)="removePerson(room, person)">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
                   </button>
                 </li>

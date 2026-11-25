@@ -364,6 +364,23 @@ a {
   }
 }
 
+// Small borderless icon button that fits inside a line of text, such as a chip; add it to .icon-btn.
+.icon-btn.icon-btn-sm {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 0;
+  @include button-icon(0.7rem);
+
+  &:hover:not(:disabled) {
+    background: none;
+  }
+}
+
+// An icon button that removes or deletes something turns the danger colour on hover; add it to .icon-btn.
+.icon-btn.icon-btn-danger:hover:not(:disabled) {
+  color: var(--verdict-bad);
+}
+
 // A button that reads as a text link.
 .link {
   padding: 0;
