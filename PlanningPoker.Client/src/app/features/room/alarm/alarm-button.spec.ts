@@ -90,6 +90,18 @@ describe('AlarmButton', () => {
     expect(button()!.textContent).not.toContain('5:01');
   });
 
+  it('drops to the next second one second after it starts, however long ago the page loaded', () => {
+    const { fixture, host, button } = mount();
+    vi.advanceTimersByTime(100);
+
+    host.alarm.set({ status: 'running', endsAt: Date.now() + 300_000 });
+    fixture.detectChanges();
+    vi.advanceTimersByTime(1000);
+    fixture.detectChanges();
+
+    expect(button()!.textContent).toContain('4:59');
+  });
+
   it('never counts below zero while it waits for the room to say it elapsed', () => {
     const { fixture, host, button } = mount();
     host.alarm.set({ status: 'running', endsAt: NOW + 1000 });

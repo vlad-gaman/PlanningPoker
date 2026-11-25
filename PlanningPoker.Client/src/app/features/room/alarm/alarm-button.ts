@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal, untracked } from '@angular/core';
 import { formatRoundTime, spokenRoundTime } from '../round-timer/format-round-time';
 import { AlarmState } from '../../../models/room';
 
@@ -59,13 +59,22 @@ export class AlarmButton {
   protected readonly label = computed(() => this.view().label);
 
   constructor() {
-    // A new state is read against the clock as it is now: the ticker may last have run almost a second ago.
-    effect(() => {
-      this.alarm();
-      untracked(() => this.now.set(Date.now()));
+    // Each new state is read against the clock as it is now. While running, the next tick lands on the moment the
+    // count drops a second, so the first second lasts one second, however long ago the page loaded.
+    effect((onCleanup) => {
+      const { status, endsAt } = this.alarm();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const tick = () => {
+        const now = Date.now();
+        this.now.set(now);
+        const left = endsAt === null ? 0 : endsAt - now;
+        if (status === 'running' && left > 0) {
+          timer = setTimeout(tick, left % MILLISECONDS_PER_SECOND || MILLISECONDS_PER_SECOND);
+        }
+      };
+      untracked(tick);
+      onCleanup(() => clearTimeout(timer));
     });
-    const timer = setInterval(() => this.now.set(Date.now()), MILLISECONDS_PER_SECOND);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   protected press(): void {
