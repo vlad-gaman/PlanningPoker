@@ -6,9 +6,9 @@
 // card shows larger motifs instead of finer ones. A small preview sets its own --u.
 .card-back {
   --u: calc(var(--card-w, 72px) / 9);
-  --back-a: var(--primary-hover);
-  --back-b: color-mix(in srgb, var(--on-primary) 45%, transparent);
-  --ornament: color-mix(in srgb, var(--on-primary) 80%, transparent);
+  // The one secondary colour of every design: the text-on-fill colour mixed into the card's fill, opaque, so the
+  // designs read alike in light and dark mode.
+  --ink: color-mix(in srgb, var(--on-primary) 50%, var(--primary-color));
 
   position: relative;
   box-sizing: border-box;
@@ -20,16 +20,16 @@
 .card-back[data-back='classic'] {
   // A crosshatch; the line never gets thinner than a pixel, so a small preview stays regular.
   background-image:
-    repeating-linear-gradient(45deg, transparent 0 calc(var(--u) * 1.1), var(--back-b) calc(var(--u) * 1.1) calc(var(--u) * 1.1 + max(1px, var(--u) * 0.12))),
-    repeating-linear-gradient(-45deg, transparent 0 calc(var(--u) * 1.1), var(--back-b) calc(var(--u) * 1.1) calc(var(--u) * 1.1 + max(1px, var(--u) * 0.12)));
+    repeating-linear-gradient(45deg, transparent 0 calc(var(--u) * 1.1), var(--ink) calc(var(--u) * 1.1) calc(var(--u) * 1.1 + max(1px, var(--u) * 0.12))),
+    repeating-linear-gradient(-45deg, transparent 0 calc(var(--u) * 1.1), var(--ink) calc(var(--u) * 1.1) calc(var(--u) * 1.1 + max(1px, var(--u) * 0.12)));
 }
 
 .card-back[data-back='stripes'] {
-  background-image: repeating-linear-gradient(90deg, var(--back-a) 0 calc(var(--u) * 0.7), transparent calc(var(--u) * 0.7) calc(var(--u) * 1.4));
+  background-image: repeating-linear-gradient(90deg, var(--ink) 0 calc(var(--u) * 0.7), transparent calc(var(--u) * 0.7) calc(var(--u) * 1.4));
 }
 
 .card-back[data-back='dots'] {
-  background-image: radial-gradient(circle at center, var(--back-b) 0 calc(var(--u) * 0.24), transparent calc(var(--u) * 0.3));
+  background-image: radial-gradient(circle at center, var(--ink) 0 calc(var(--u) * 0.24), transparent calc(var(--u) * 0.3));
   background-size: calc(var(--u) * 1.2) calc(var(--u) * 1.2);
 }
 
@@ -37,13 +37,13 @@
   // Concentric frames: eight bands, alternating the card's fill with the darker shade.
   background-image:
     linear-gradient(var(--primary-color), var(--primary-color)),
-    linear-gradient(var(--back-a), var(--back-a)),
+    linear-gradient(var(--ink), var(--ink)),
     linear-gradient(var(--primary-color), var(--primary-color)),
-    linear-gradient(var(--back-a), var(--back-a)),
+    linear-gradient(var(--ink), var(--ink)),
     linear-gradient(var(--primary-color), var(--primary-color)),
-    linear-gradient(var(--back-a), var(--back-a)),
+    linear-gradient(var(--ink), var(--ink)),
     linear-gradient(var(--primary-color), var(--primary-color)),
-    linear-gradient(var(--back-a), var(--back-a));
+    linear-gradient(var(--ink), var(--ink));
   background-size: 12% 12%, 24% 24%, 36% 36%, 48% 48%, 60% 60%, 72% 72%, 84% 84%, 96% 96%;
   background-position: center;
   background-repeat: no-repeat;
@@ -51,25 +51,25 @@
 
 .card-back[data-back='waves'] {
   // Wide bands rising from below the card, alternating the darker shade with the card's fill.
-  background-image: repeating-radial-gradient(circle at 50% 120%, var(--back-a) 0 calc(var(--u) * 0.9), transparent calc(var(--u) * 0.9) calc(var(--u) * 1.8));
+  background-image: repeating-radial-gradient(circle at 50% 120%, var(--ink) 0 calc(var(--u) * 0.9), transparent calc(var(--u) * 0.9) calc(var(--u) * 1.8));
 }
 
 .card-back[data-back='diamonds'] {
   background-image:
-    linear-gradient(45deg, var(--back-a) 25%, transparent 25% 75%, var(--back-a) 75%),
-    linear-gradient(-45deg, var(--back-a) 25%, transparent 25% 75%, var(--back-a) 75%);
+    linear-gradient(45deg, var(--ink) 25%, transparent 25% 75%, var(--ink) 75%),
+    linear-gradient(-45deg, var(--ink) 25%, transparent 25% 75%, var(--ink) 75%);
   background-size: calc(var(--u) * 1.8) calc(var(--u) * 1.8);
 }
 
 .card-back[data-back='rings'] {
   // Five rings across and seven down, whatever the card's size: the tile is 20% of the width, and 20% of the width
   // is 14.2857% of the height on a 5:7 card. The ring is a share of its own tile, so it always fits.
-  background-image: radial-gradient(circle closest-side at center, transparent 46%, var(--back-b) 50% 77%, transparent 81%);
+  background-image: radial-gradient(circle closest-side at center, transparent 46%, var(--ink) 50% 77%, transparent 81%);
   background-size: 20% 14.2857%;
 }
 
 .card-back[data-back='sunburst'] {
-  background-image: repeating-conic-gradient(from 0deg at 50% 50%, var(--back-a) 0 10deg, transparent 10deg 20deg);
+  background-image: repeating-conic-gradient(from 0deg at 50% 50%, var(--ink) 0 10deg, transparent 10deg 20deg);
 }
 
 // The ornamental backs: one symmetrical drawing over the whole card, cut out of a flat fill so it takes the theme colour.
@@ -86,7 +86,7 @@ $ornaments: (
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--ornament);
+    background: var(--ink);
     -webkit-mask: url('data:image/svg+xml,#{$drawing}') center / 100% 100% no-repeat;
     mask: url('data:image/svg+xml,#{$drawing}') center / 100% 100% no-repeat;
   }
