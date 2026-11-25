@@ -1,13 +1,11 @@
-// The accent dropdown: a native select, so the keyboard works without extra code. Colours come from the site
-// variables, so it reads in light and dark. The closed select shows the picked accent in its own colour.
+// The accent dropdown: a custom select-only combobox (see accent-select.ts). Colours come from the site variables, so
+// it reads in light and dark. Only the dot takes the preset's colour; the label keeps the text colour.
 .accent {
+  position: relative;
   display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
 }
 
-// Each option starts with a dot in its preset's colour (light values; the dark block follows the dark theme). Keep these
-// in step with src/accents.scss. Options cannot hold a swatch element, so the dot is a character coloured here.
+// Dot colours per preset (light, dark). Keep these in step with src/accents.scss.
 $accent-dots: (
   'blue': (#1b6ec2, #4dabf7),
   'indigo': (#4263eb, #748ffc),
@@ -30,27 +28,75 @@ $accent-dots: (
 );
 
 @each $id, $dots in $accent-dots {
-  option[data-accent='#{$id}'] {
-    color: nth($dots, 1);
+  .dot[data-accent='#{$id}'] {
+    background: nth($dots, 1);
   }
 
-  :host-context(:root[data-theme='dark']) option[data-accent='#{$id}'] {
-    color: nth($dots, 2);
+  :host-context(:root[data-theme='dark']) .dot[data-accent='#{$id}'] {
+    background: nth($dots, 2);
   }
 }
 
-select {
+.dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   height: 34px;
   padding: 0 0.6rem;
   border: 1px solid var(--border-color);
   border-radius: 999px;
   background: var(--panel-bg);
-  color: var(--primary-color);
+  color: var(--text-color);
   font: inherit;
   cursor: pointer;
 
   &:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
+  }
+}
+
+.list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 100%;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    color: var(--text-color);
+    cursor: pointer;
+    white-space: nowrap;
+
+    &.active {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+    }
+
+    &[aria-selected='true'] {
+      font-weight: 600;
+    }
   }
 }

@@ -30,7 +30,7 @@ describe('App', () => {
     expect(brand.textContent).toContain('Planning Poker');
     expect(brand.querySelector('img')?.getAttribute('alt')).toBe('Planning Poker logo');
     expect(root.querySelector('header app-theme-select [role="radiogroup"]')).not.toBeNull();
-    expect(root.querySelector('header button:not([role="radio"])')).toBeNull();
+    expect(root.querySelector('header button:not([role="radio"]):not([role="combobox"])')).toBeNull();
   });
 
   it('has the copyright with the current year and a Credits link in the footer', () => {
