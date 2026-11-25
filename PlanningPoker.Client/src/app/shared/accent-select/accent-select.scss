@@ -45,23 +45,12 @@ $accent-dots: (
   box-shadow: inset 0 0 0 1px var(--border-color);
 }
 
+// The look comes from the shared .input.input-sm; this only lays out the dot, the name and the chevron.
 .trigger {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  height: 34px;
-  padding: 0 0.6rem;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--text-color);
-  font: inherit;
   cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
 }
 
 .list {

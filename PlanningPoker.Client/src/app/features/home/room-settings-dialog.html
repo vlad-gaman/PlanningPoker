@@ -10,7 +10,7 @@
       <h3>Voting</h3>
       <div class="setting">
         <div class="meta"><label for="card-set">Card Set</label><small class="hint">Values on the cards</small></div>
-        <select id="card-set" class="form-control" formControlName="cardSet">
+        <select id="card-set" class="input" formControlName="cardSet">
           @for (cardSet of cardSets(); track cardSet.value) {
             <option [value]="cardSet.value">{{ cardSet.display }}</option>
           }
@@ -21,7 +21,7 @@
           <label for="countdown-seconds">Countdown (seconds)</label>
           <small class="hint">0 reveals instantly when everyone votes</small>
         </div>
-        <input id="countdown-seconds" class="form-control" type="number" formControlName="countdownSeconds" />
+        <input id="countdown-seconds" class="input" type="number" formControlName="countdownSeconds" />
         @if (form.controls.countdownSeconds.invalid) {
           <div class="field-error" role="alert">Use {{ countdownRange.min }} to {{ countdownRange.max }} seconds.</div>
         }
@@ -54,7 +54,7 @@
           <label for="alarm-minutes">Alarm length (minutes)</label>
           <small class="hint">Anyone can start it; only you set the length</small>
         </div>
-        <input id="alarm-minutes" class="form-control" type="number" formControlName="alarmMinutes" />
+        <input id="alarm-minutes" class="input" type="number" formControlName="alarmMinutes" />
         @if (form.controls.alarmMinutes.invalid) {
           <div class="field-error" role="alert">Use {{ alarmRange.min }} to {{ alarmRange.max }} minutes.</div>
         }
@@ -64,7 +64,7 @@
       <h3>Room</h3>
       <div class="setting">
         <div class="meta"><label for="max-participants">Max participants</label><small class="hint">Who can join</small></div>
-        <input id="max-participants" class="form-control" type="number" formControlName="maxParticipants" />
+        <input id="max-participants" class="input" type="number" formControlName="maxParticipants" />
         @if (form.controls.maxParticipants.invalid) {
           <div class="field-error" role="alert">At least 1 participant.</div>
         }
@@ -81,7 +81,7 @@
           <div class="transfer-row">
             <select
               id="transfer-ownership"
-              class="form-control"
+              class="input"
               [value]="transferTarget() ?? ''"
               (change)="transferTarget.set($any($event.target).value || null)"
             >

@@ -1,5 +1,5 @@
 <div class="alarm-sound">
-  <select aria-label="Alarm sound" #select (change)="pick(select.value)">
+  <select class="input input-sm" aria-label="Alarm sound" #select (change)="pick(select.value)">
     @for (sound of sounds; track sound.id) {
       <option [value]="sound.id" [selected]="sound.id === alarmSound.sound()">{{ sound.icon }} {{ sound.label }}</option>
     }
