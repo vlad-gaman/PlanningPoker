@@ -210,19 +210,3 @@
     border-left-color: var(--verdict-mid);
   }
 }
-
-.danger-button {
-  height: 34px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--verdict-bad);
-  border-radius: 10px;
-  background: var(--verdict-bad);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover {
-    filter: brightness(0.92);
-  }
-}
