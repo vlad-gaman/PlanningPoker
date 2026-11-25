@@ -29,17 +29,17 @@ $compact-max: 520px;
     margin-bottom: 0.75rem;
   }
 
-  .act {
+  .acts > button {
     position: relative;
     flex: 0 0 var(--tap);
     padding: 0;
 
-    &.primary {
+    &.primary-button {
       flex: 1 1 auto;
       padding: 0 0.75rem;
     }
 
-    &:not(.primary) span {
+    &:not(.primary-button) span {
       @include sr-only;
     }
 
@@ -231,12 +231,7 @@ $compact-max: 520px;
       min-height: var(--tap);
     }
 
-    .act {
-      min-height: var(--tap);
-      height: auto;
-    }
-
-    .copy.icon {
+    .icon-btn {
       width: var(--tap);
       height: var(--tap);
     }

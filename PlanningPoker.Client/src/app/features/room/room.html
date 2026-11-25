@@ -19,14 +19,14 @@
         Room {{ id() }}
       }
     </h1>
-    <button type="button" class="copy icon" title="Copy room name" aria-label="Copy room name" (click)="copy('name')">
+    <button type="button" class="icon-btn" title="Copy room name" aria-label="Copy room name" (click)="copy('name')">
       @if (copied() === 'name') {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
       } @else {
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
       }
     </button>
-    <button type="button" class="copy icon" title="Copy room link" aria-label="Copy room link" (click)="copy('link')">
+    <button type="button" class="icon-btn" title="Copy room link" aria-label="Copy room link" (click)="copy('link')">
       @if (copied() === 'link') {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
       } @else {
@@ -89,21 +89,21 @@
             </div>
           </div>
           <div class="acts">
-            <button type="button" class="act primary" [disabled]="store.votingFinished()" (click)="showVotes()">
+            <button type="button" class="primary-button button-sm" [disabled]="store.votingFinished()" (click)="showVotes()">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
               <span>Show votes</span>
             </button>
-            <button type="button" class="act" (click)="clearVotes()">
+            <button type="button" class="secondary-button button-sm" (click)="clearVotes()">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
               <span>Clear votes</span>
             </button>
             @if (store.isOwner()) {
-              <button type="button" class="act" (click)="openSettings()">
+              <button type="button" class="secondary-button button-sm" (click)="openSettings()">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
                 <span>Settings</span>
               </button>
             }
-            <button type="button" class="act leave" (click)="leave()">
+            <button type="button" class="secondary-button button-sm leave" (click)="leave()">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></svg>
               <span>Leave room</span>
             </button>

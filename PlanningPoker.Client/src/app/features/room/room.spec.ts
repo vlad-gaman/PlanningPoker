@@ -220,7 +220,7 @@ describe('Room', () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
       vi.stubGlobal('navigator', { clipboard: { writeText } });
       const { fixture, element } = await render();
-      const [name, link] = Array.from(element.querySelectorAll<HTMLButtonElement>('.copy'));
+      const [name, link] = Array.from(element.querySelectorAll<HTMLButtonElement>('button[aria-label^="Copy room"]'));
 
       name.click();
       link.click();
@@ -238,7 +238,7 @@ describe('Room', () => {
       document.execCommand = exec;
       const { fixture, element } = await render();
 
-      element.querySelector<HTMLButtonElement>('.copy')?.click();
+      element.querySelector<HTMLButtonElement>('button[aria-label^="Copy room"]')?.click();
       await settle(fixture);
 
       expect(exec).toHaveBeenCalledWith('copy');

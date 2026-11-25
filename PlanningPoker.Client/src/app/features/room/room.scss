@@ -28,25 +28,6 @@
   }
 }
 
-.copy {
-  padding: 0.1rem 0.6rem;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--muted-color);
-  font-size: 0.75rem;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text-color);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
-}
-
 .name-entry {
   max-width: 30rem;
   margin: 2rem auto;
@@ -369,63 +350,6 @@
   }
 }
 
-// The action buttons: one toolbar row under the role picker; Leave sits at the far right.
-.act {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  height: 38px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--card-bg);
-  color: var(--text-color);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    opacity 0.2s ease;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    flex: none;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  &:hover:not(:disabled) {
-    border-color: var(--primary-color);
-    background: var(--card-hover-bg);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  &.primary {
-    border-color: var(--primary-hover);
-    background: var(--primary-color);
-    color: var(--on-primary);
-
-    &:hover:not(:disabled) {
-      background: var(--primary-hover);
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
-}
-
 .acts {
   display: flex;
   flex-wrap: wrap;
@@ -434,24 +358,6 @@
 
   .leave {
     margin-left: auto;
-  }
-}
-
-.copy.icon {
-  display: grid;
-  place-items: center;
-  width: 1.7rem;
-  height: 1.7rem;
-  padding: 0;
-
-  svg {
-    width: 0.95rem;
-    height: 0.95rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
   }
 }
 
