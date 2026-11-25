@@ -33,16 +33,3 @@ h1 {
   align-items: center;
   gap: 1rem;
 }
-
-.link-button {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--primary-color);
-  font: inherit;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}

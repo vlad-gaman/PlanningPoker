@@ -154,27 +154,6 @@ html {
     )
   );
 
-  // Buttons look like the old Bootstrap ones: 16px/400 text, 4px radius, 1px border, white (dark #2d2d2d) fill.
-  @include mat.button-overrides(
-    (
-      filled-container-shape: 4px,
-      filled-container-height: 38px,
-      filled-horizontal-padding: 12px,
-      filled-container-color: var(--card-bg),
-      filled-label-text-color: var(--text-color),
-      filled-hover-state-layer-opacity: 0.075,
-      outlined-container-shape: 4px,
-      outlined-container-height: 38px,
-      outlined-horizontal-padding: 12px,
-      outlined-label-text-color: var(--text-color),
-      outlined-outline-color: var(--border-color),
-      text-container-shape: 4px,
-      text-container-height: 38px,
-      text-horizontal-padding: 12px,
-      text-label-text-color: var(--text-color),
-    )
-  );
-
   @include mat.dialog-overrides((container-color: var(--card-bg), container-shape: 8px));
 
   // Text is 16px like the old page (Material defaults to 14px for labels and table cells).
@@ -279,9 +258,13 @@ a {
   margin-top: 1.25rem;
 }
 
-.primary-button,
-.secondary-button,
-.danger-button {
+// Shape of the shared buttons; the error popup's Dismiss (Material renders it, so it cannot take a class) reuses it.
+@mixin button-shape {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  box-sizing: border-box;
   height: 42px;
   padding: 0 1.25rem;
   border-radius: 10px;
@@ -291,6 +274,32 @@ a {
   transition:
     background-color 0.2s ease,
     transform 0.2s ease;
+}
+
+@mixin button-sm-shape {
+  height: 36px;
+  padding: 0 0.9rem;
+}
+
+// Line icon inside a button, drawn in the button's text colour.
+@mixin button-icon($size) {
+  svg {
+    width: $size;
+    height: $size;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  @include button-shape;
+  @include button-icon(18px);
 }
 
 .primary-button {
@@ -321,24 +330,59 @@ a {
 
 // Compact size for a button sitting in a dense row or beside a field; add it to a button above.
 .button-sm {
-  height: 36px;
-  padding: 0 0.9rem;
+  @include button-sm-shape;
 }
 
-.button-sm.icon-only {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+// Round icon-only button: dialog close, copy, remove. Give it an aria-label.
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
   width: 36px;
+  height: 36px;
   padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-color);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+  @include button-icon(16px);
 
-  svg {
-    width: 16px;
-    height: 16px;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    fill: none;
+  &:hover:not(:disabled) {
+    background: var(--card-hover-bg);
+    color: var(--text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// A button that reads as a text link.
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary-color);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
   }
 }
 
@@ -423,12 +467,6 @@ a {
   color: var(--mat-sys-error);
 }
 
-// The old footer text and link are muted grey in both themes; `.mat-mdc-unelevated-button` and the text button carry the old 1px border.
-.mat-mdc-unelevated-button:not(:disabled),
-.mat-mdc-button:not(:disabled) {
-  border: 1px solid var(--border-color);
-}
-
 // Plain (non-Material) form controls, coloured from the site variables.
 .visually-hidden {
   position: absolute;
@@ -481,4 +519,12 @@ a {
   --mat-snack-bar-container-color: #b3261e;
   --mat-snack-bar-supporting-text-color: #fff;
   --mat-snack-bar-button-color: #fff;
+
+  // Dismiss is a small shared button outlined in the popup's text colour, so it reads on the red in both themes.
+  .mat-mdc-snack-bar-action.mdc-button {
+    @include button-shape;
+    @include button-sm-shape;
+    border: 1px solid currentColor;
+    letter-spacing: normal;
+  }
 }

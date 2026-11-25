@@ -46,7 +46,7 @@
             <div class="head">
               <h2>{{ room.id }}</h2>
               <span class="state {{ room.state }}">{{ room.state }}</span>
-              <button class="danger-button button-sm" type="button" (click)="closeRoom(room)">Close room</button>
+              <button class="danger-button" type="button" (click)="closeRoom(room)">Close room</button>
             </div>
             <p class="meta">Created {{ room.createdAt | date: 'd MMM HH:mm' }} &middot; active {{ room.lastActivityAt | date: 'd MMM HH:mm' }}</p>
             <ul class="chips">
@@ -57,7 +57,7 @@
                   @if (person.status === 'offgrid') {
                     <small class="seen">offgrid@if (person.lastSeenAt) { since {{ person.lastSeenAt | date: 'HH:mm' }}}</small>
                   }
-                  <button type="button" [attr.aria-label]="'Remove ' + person.name" (click)="removePerson(room, person)">&times;</button>
+                  <button type="button" class="icon-btn" [attr.aria-label]="'Remove ' + person.name" (click)="removePerson(room, person)">&times;</button>
                 </li>
               }
             </ul>

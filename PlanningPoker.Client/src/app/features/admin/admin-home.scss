@@ -161,19 +161,6 @@
     color: var(--muted-color);
   }
 
-  button {
-    padding: 0 0.4rem;
-    border: 0;
-    background: none;
-    color: var(--muted-color);
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-
-    &:hover {
-      color: var(--verdict-bad);
-    }
-  }
 }
 
 .feed {

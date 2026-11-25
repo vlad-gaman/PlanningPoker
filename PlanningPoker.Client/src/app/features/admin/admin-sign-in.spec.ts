@@ -198,7 +198,7 @@ describe('AdminSignIn', () => {
   it('goes back to the password step from the Back link', async () => {
     const { fixture, element } = await onCodeStep();
 
-    element.querySelector<HTMLButtonElement>('.link-button')!.click();
+    element.querySelector<HTMLButtonElement>('.link')!.click();
     await settle(fixture);
 
     expect(text(element)).toContain('Operator sign-in');
@@ -208,7 +208,7 @@ describe('AdminSignIn', () => {
 
   it('empties the password once the step is done', async () => {
     const { fixture, element } = await onCodeStep();
-    element.querySelector<HTMLButtonElement>('.link-button')!.click();
+    element.querySelector<HTMLButtonElement>('.link')!.click();
     await settle(fixture);
 
     expect(element.querySelector<HTMLInputElement>('#operator-password')?.value).toBe('');
