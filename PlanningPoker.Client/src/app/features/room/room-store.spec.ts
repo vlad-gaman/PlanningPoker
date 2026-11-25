@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
+import { CARD_BACK_STORAGE_KEY, CardBackService } from '../../core/card-back.service';
 import { ClosingBeacon } from '../../core/closing-beacon';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
@@ -472,7 +473,7 @@ describe('RoomStore', () => {
     await store.enter('room-1');
 
     expect(store.people()).toEqual([ANN]);
-    expect(hub.on).toHaveBeenCalledTimes(30);
+    expect(hub.on).toHaveBeenCalledTimes(32);
   });
 
   /** Starts a join whose JoinRoom response is held until respond() is called. */
@@ -1221,7 +1222,7 @@ describe('RoomStore entering a room', () => {
 
       await store.submitName({ name: 'Ann', personType: 'dev' });
 
-      expect(services.me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+      expect(services.me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev', cardBack: 'classic' });
       expect(services.personDefaults.save).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
       expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
       expect(store.me()).toBe(ANN.guid);
@@ -1510,5 +1511,65 @@ describe('RoomStore entering a room', () => {
 
       expect(store.voterCount()).toBe(0);
     });
+  });
+});
+
+describe('RoomStore card back', () => {
+  const services = enterServices();
+  let hub: ReturnType<typeof fakeHub>;
+  let store: RoomStore;
+
+  async function enter(stored: string | null, person: { guid: string; name: string; personType: 'dev'; cardBack?: string } = ANN) {
+    localStorage.clear();
+    if (stored) {
+      localStorage.setItem(CARD_BACK_STORAGE_KEY, stored);
+    }
+    hub = fakeHub({ ...JOIN_RESPONSE, people: [person] });
+    services.me.get.mockReset().mockReturnValue(of(person));
+    services.rooms.exists.mockReset().mockReturnValue(of({ id: 'room-1', exists: true }));
+    TestBed.configureTestingModule({
+      providers: [RoomStore, provideRouter([]), ...services.providers, { provide: RoomHubClient, useValue: hub }],
+    });
+    store = TestBed.inject(RoomStore);
+    await store.enter('room-1');
+    TestBed.tick();
+  }
+
+  afterEach(() => localStorage.clear());
+
+  it('sends the browser choice after joining when the server holds another one', async () => {
+    await enter('dots');
+
+    expect(hub.invoke).toHaveBeenCalledWith('ChangeCardBack', 'dots');
+  });
+
+  it('sends nothing when the server already holds the browser choice', async () => {
+    await enter('dots', { ...ANN, cardBack: 'dots' });
+
+    expect(hub.invoke).not.toHaveBeenCalledWith('ChangeCardBack', expect.anything());
+  });
+
+  it('sends nothing for the default design the server also treats as the default', async () => {
+    await enter(null);
+
+    expect(hub.invoke).not.toHaveBeenCalledWith('ChangeCardBack', expect.anything());
+  });
+
+  it('sends a pick made in the room once', async () => {
+    await enter(null);
+
+    TestBed.inject(CardBackService).set('waves');
+    TestBed.tick();
+    TestBed.tick();
+
+    expect(hub.invoke.mock.calls.filter(([method]) => method === 'ChangeCardBack')).toEqual([['ChangeCardBack', 'waves']]);
+  });
+
+  it('shows a card back another person picked', async () => {
+    await enter(null);
+
+    hub.emit(HUB_EVENTS.CardBackChanged, { personGuid: ANN.guid, cardBack: 'checker' });
+
+    expect(store.people()[0].cardBack).toBe('checker');
   });
 });

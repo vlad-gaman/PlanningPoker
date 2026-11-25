@@ -1,0 +1,45 @@
+// The face-down side of a card: one design per card back id (see core/card-back.service.ts). Every colour comes from the
+// theme tokens, so each design reads in light and dark mode. The element sets its own size and radius; a design only
+// paints the surface. The paper-coloured frame is the card's edge, like a printed back.
+.card-back {
+  --back-a: var(--primary-hover);
+  --back-b: color-mix(in srgb, var(--on-primary) 38%, transparent);
+
+  box-sizing: border-box;
+  border: 2px solid var(--card-bg);
+  background-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--card-border, var(--border-color));
+}
+
+.card-back[data-back='classic'] {
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 5px, var(--back-b) 5px 6px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, var(--back-b) 5px 6px);
+}
+
+.card-back[data-back='stripes'] {
+  background-image: repeating-linear-gradient(90deg, var(--back-a) 0 6px, transparent 6px 12px);
+}
+
+.card-back[data-back='dots'] {
+  background-image: radial-gradient(circle at center, var(--back-b) 0 2px, transparent 2.5px);
+  background-size: 10px 10px;
+}
+
+.card-back[data-back='geometric'] {
+  background-image:
+    conic-gradient(from 45deg at 50% 50%, var(--back-a) 0 25%, transparent 0 50%, var(--back-a) 0 75%, transparent 0),
+    linear-gradient(var(--back-b), var(--back-b));
+  background-size: 14px 14px, 100% 1px;
+  background-position: center, center;
+  background-repeat: repeat, no-repeat;
+}
+
+.card-back[data-back='waves'] {
+  background-image: repeating-radial-gradient(circle at 50% 120%, transparent 0 6px, var(--back-b) 6px 7px);
+}
+
+.card-back[data-back='checker'] {
+  background-image: conic-gradient(var(--back-a) 0 25%, transparent 0 50%, var(--back-a) 0 75%, transparent 0);
+  background-size: 14px 14px;
+}

@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../core/api-request-error';
+import { CardBackService } from '../../core/card-back.service';
 import { ErrorPopupService } from '../../core/error-popup.service';
 import { FlashMessageService } from '../../core/flash-message.service';
 import { MeService } from '../../core/me.service';
@@ -32,6 +33,7 @@ export class Home implements OnInit, OnDestroy {
   private readonly roomsService = inject(RoomsService);
   private readonly roomDefaults = inject(RoomDefaultsService);
   private readonly personDefaults = inject(PersonDefaultsService);
+  private readonly cardBacks = inject(CardBackService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly builder = inject(FormBuilder);
@@ -111,7 +113,7 @@ export class Home implements OnInit, OnDestroy {
 
   private async saveMe(): Promise<void> {
     const request = this.form.getRawValue();
-    await firstValueFrom(this.meService.update(request));
+    await firstValueFrom(this.meService.update({ ...request, cardBack: this.cardBacks.cardBack() }));
     this.personDefaults.save(request);
   }
 

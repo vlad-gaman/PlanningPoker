@@ -16,6 +16,7 @@ import {
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { AlarmSoundService } from '../../core/alarm-sound.service';
+import { CardBackId, resolveCardBack } from '../../core/card-back.service';
 import { ErrorPopupService } from '../../core/error-popup.service';
 import { PersonDefaultsService } from '../../core/person-defaults.service';
 import { RoomDefaultsService } from '../../core/room-defaults.service';
@@ -251,14 +252,15 @@ export class Room implements OnInit, OnChanges, OnDestroy {
     art: string | null;
     alt: string;
     hidden: boolean;
+    back: CardBackId | null;
     revealed: boolean;
   } {
     const mark = this.store.votes()[person.guid];
     if (mark === undefined || person.personType === 'obs') {
-      return { text: '', image: null, art: null, alt: '', hidden: false, revealed: false };
+      return { text: '', image: null, art: null, alt: '', hidden: false, back: null, revealed: false };
     }
     if (mark === HIDDEN_MARK && !this.store.votingFinished()) {
-      return { text: '▮', image: null, art: null, alt: '', hidden: true, revealed: false };
+      return { text: '▮', image: null, art: null, alt: '', hidden: true, back: resolveCardBack(person.cardBack), revealed: false };
     }
     const card = this.store.cards().find((option) => option.value === mark);
     return {
@@ -267,6 +269,7 @@ export class Room implements OnInit, OnChanges, OnDestroy {
       art: card ? cardArt(card) : null,
       alt: mark,
       hidden: false,
+      back: null,
       revealed: true,
     };
   }

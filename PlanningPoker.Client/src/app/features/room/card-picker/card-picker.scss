@@ -14,7 +14,7 @@
   justify-content: center;
   box-sizing: border-box;
   width: var(--card-w);
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 5 / 7;
   border: 3px solid var(--border-color);
   border-radius: 10px;
   background: var(--card-bg);
@@ -63,6 +63,27 @@
     &.selected {
       opacity: 1;
     }
+  }
+
+  // A text card shows its value in two corners, like a playing card; the centre value stays the large one.
+  // Generated content, so the card's text stays the one value. The span is not positioned: the corners sit on the card.
+  span[data-value]::before,
+  span[data-value]::after {
+    content: attr(data-value) / '';
+    position: absolute;
+    font-size: calc(var(--card-w) * 0.14);
+    line-height: 1;
+  }
+
+  span[data-value]::before {
+    top: 4px;
+    left: 5px;
+  }
+
+  span[data-value]::after {
+    right: 5px;
+    bottom: 4px;
+    transform: rotate(180deg);
   }
 
   // An illustrated card is a physical card: 5:7, its paper colour, no border. Its art fills the face.

@@ -6,6 +6,7 @@ export const HUB_EVENTS = {
   PersonBack: 'PersonBack',
   OwnershipTransferred: 'OwnershipTransferred',
   PersonTypeChanged: 'PersonTypeChanged',
+  CardBackChanged: 'CardBackChanged',
   RoomConfigurationUpdated: 'RoomConfigurationUpdated',
   AlarmChanged: 'AlarmChanged',
   RoomDisposed: 'RoomDisposed',

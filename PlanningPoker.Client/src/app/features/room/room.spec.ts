@@ -114,7 +114,7 @@ describe('Room', () => {
       (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
       await settle(fixture);
 
-      expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev' });
+      expect(me.update).toHaveBeenCalledWith({ name: 'Ann', personType: 'dev', cardBack: 'classic' });
       expect(hub.invoke).toHaveBeenCalledWith('JoinRoom', 'room-1');
       expect(element.querySelector('.people')).not.toBeNull();
     });

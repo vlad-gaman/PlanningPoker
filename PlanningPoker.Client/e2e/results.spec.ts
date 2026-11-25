@@ -248,8 +248,8 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
     await bob.page.getByRole('radio', { name: '4', exact: true }).check({ force: true });
     await expect(results(page)).toHaveCount(1);
 
-    // Cards on the page surface follow the theme text colour; the selected card and the vote card sit on the accent
-    // fill and follow the theme's on-primary colour (white in light, near-black in dark). The split bar segments keep
+    // Cards on the page surface follow the theme text colour; the selected card sits on the accent
+    // fill and follows the theme's on-primary colour (white in light, near-black in dark); a revealed vote is a paper face and follows the text colour. The split bar segments keep
     // their own fixed colours, so their card stays white like the segment text. Every one is a mask with no backing tile.
     const textColor = await page.evaluate(() => getComputedStyle(document.body).color);
     const onPrimaryColor = await page.evaluate(() => {
@@ -263,7 +263,7 @@ for (const { name, stored, scheme, theme } of FIST_THEMES) {
     const expectations = [
       { selector: 'label.card:not(.selected) img', color: textColor },
       { selector: 'label.card.selected img', color: onPrimaryColor },
-      { selector: '.mark img', color: onPrimaryColor },
+      { selector: '.mark img', color: textColor },
       { selector: '.segment img', color: 'rgb(255, 255, 255)' },
     ];
     for (const { selector, color } of expectations) {

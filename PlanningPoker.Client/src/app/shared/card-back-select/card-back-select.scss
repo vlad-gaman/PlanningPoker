@@ -1,0 +1,26 @@
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+// Six swatches must fit the navbar on a phone: tighter than the icon buttons of the theme switch.
+.card-back-select > button {
+  width: 26px;
+}
+
+// A small card back; the design itself is the shared .card-back (src/styles.scss).
+.swatch {
+  display: block;
+  width: 14px;
+  aspect-ratio: 5 / 7;
+  border-radius: 3px;
+}
+
+// The chosen swatch gets a ring in the on-fill colour, so it reads on the accent fill in both themes.
+[aria-checked='true'] .swatch {
+  outline: 2px solid var(--on-segmented);
+  outline-offset: 1px;
+}
