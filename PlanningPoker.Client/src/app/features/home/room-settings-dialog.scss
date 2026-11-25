@@ -14,36 +14,6 @@ form {
   min-height: 0;
 }
 
-.settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-  border-bottom: 1px solid var(--border-color);
-
-  h2 {
-    margin: 0;
-    padding: 0;
-    font-size: 1.5rem;
-    font-weight: 500;
-    line-height: 1.2;
-    color: var(--text-color);
-
-    &::before {
-      display: none;
-    }
-  }
-}
-
-.group h3 {
-  margin: 0 0 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-color);
-}
-
 .setting {
   margin-bottom: 14px;
 
@@ -62,27 +32,17 @@ form {
   align-items: center;
 }
 
-.settings-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 15px;
-  border-top: 1px solid var(--border-color);
-}
-
-// Grouped cards
-
+// The settings sit in grouped cards.
 .settings-content {
-  padding: 15px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+
 .group {
   padding: 14px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-row);
   background: var(--panel-bg);
 }
 .setting:last-child {

@@ -1,13 +1,13 @@
-<div class="settings-header">
+<div class="dialog-header">
   <h2 mat-dialog-title>Room Settings</h2>
   <button type="button" class="icon-btn" mat-dialog-close aria-label="Close">
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
   </button>
 </div>
 <form [formGroup]="form" (ngSubmit)="submit()">
-  <div class="settings-content">
+  <div class="dialog-body settings-content">
     <section class="group">
-      <h3>Voting</h3>
+      <h3 class="eyebrow">Voting</h3>
       <div class="setting">
         <div class="meta"><label class="field-label" for="card-set">Card Set</label><small class="hint">Values on the cards</small></div>
         <select id="card-set" class="input" formControlName="cardSet">
@@ -38,7 +38,7 @@
       </div>
     </section>
     <section class="group">
-      <h3>Alarm</h3>
+      <h3 class="eyebrow">Alarm</h3>
       <div class="setting">
         <div class="meta">
           <label class="field-label" for="alarm-enabled">Alarm</label>
@@ -61,7 +61,7 @@
       </div>
     </section>
     <section class="group">
-      <h3>Room</h3>
+      <h3 class="eyebrow">Room</h3>
       <div class="setting">
         <div class="meta"><label class="field-label" for="max-participants">Max participants</label><small class="hint">Who can join</small></div>
         <input id="max-participants" class="input" type="number" formControlName="maxParticipants" />
@@ -72,7 +72,7 @@
     </section>
     @if (data.candidates.length) {
       <section class="group">
-        <h3>Ownership</h3>
+        <h3 class="eyebrow">Ownership</h3>
         <div class="setting">
           <div class="meta">
             <label class="field-label" for="transfer-ownership">Transfer ownership</label>
@@ -101,7 +101,7 @@
       <p class="form-error" role="alert">{{ message }}</p>
     }
   </div>
-  <div class="settings-footer">
+  <div class="dialog-footer">
     <button type="button" class="secondary-button" mat-dialog-close>Cancel</button>
     <button type="submit" class="primary-button">Save Settings</button>
   </div>

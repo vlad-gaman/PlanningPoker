@@ -1,16 +1,4 @@
-.content {
-  padding: 0 24px;
-
-  p {
-    margin: 0;
-    max-width: 24rem;
-    color: var(--text-color);
-  }
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 1.25rem 24px 1rem;
+p {
+  max-width: 24rem;
+  margin: 0;
 }

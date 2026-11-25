@@ -25,14 +25,15 @@ describe('AdminConfirmDialog', () => {
     expect(element.querySelector('.danger-button')?.textContent).toContain('Close room');
   });
 
-  it('answers false from Cancel and true from the confirm button', () => {
+  it('answers false from Close and Cancel and true from the confirm button', () => {
     const fixture = TestBed.createComponent(AdminConfirmDialog);
     fixture.detectChanges();
-    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button');
+    const element = fixture.nativeElement as HTMLElement;
 
-    buttons[0].click();
-    buttons[1].click();
+    element.querySelector<HTMLButtonElement>('button[aria-label="Close"]')!.click();
+    element.querySelector<HTMLButtonElement>('.secondary-button')!.click();
+    element.querySelector<HTMLButtonElement>('.danger-button')!.click();
 
-    expect(ref.close.mock.calls.map((call) => call[0])).toEqual([false, true]);
+    expect(ref.close.mock.calls.map((call) => call[0])).toEqual([false, false, true]);
   });
 });

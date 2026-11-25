@@ -1,9 +1,9 @@
 <section class="history" aria-label="Round history">
-  <h2>Round history</h2>
+  <h2 class="eyebrow">Round history</h2>
   @if (rounds().length > 0) {
     <ol>
       @for (result of rounds(); track result.round) {
-        <li>
+        <li class="list-row">
           <span class="round">Round {{ result.round }}</span>
           <time class="when" [attr.datetime]="result.revealedAt">{{ result.revealedAt | date: 'HH:mm' }}</time>
           @if (result.averageMark !== null) {
