@@ -8,7 +8,7 @@
 // A small card back; the design itself is the shared .card-back (src/card-backs.scss).
 // It sets its own --u, so the pattern is scaled to the preview and not to the room's cards.
 .swatch {
-  --u: 2px;
+  --u: 3px;
 
   flex: none;
   display: block;
