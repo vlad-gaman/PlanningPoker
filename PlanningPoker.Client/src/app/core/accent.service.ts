@@ -3,24 +3,24 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 
 /** The accent presets. The colour values live in `src/accents.scss`, keyed by the same ids. */
 export const ACCENT_PRESETS = [
+  { id: 'red', label: 'Red' },
+  { id: 'orange', label: 'Orange' },
+  { id: 'brown', label: 'Brown' },
+  { id: 'amber', label: 'Amber' },
+  { id: 'gold', label: 'Gold' },
+  { id: 'lime', label: 'Lime' },
+  { id: 'green', label: 'Green' },
+  { id: 'teal', label: 'Teal' },
+  { id: 'cyan', label: 'Cyan' },
+  { id: 'sky', label: 'Sky' },
   { id: 'blue', label: 'Blue' },
   { id: 'indigo', label: 'Indigo' },
   { id: 'violet', label: 'Violet' },
-  { id: 'magenta', label: 'Magenta' },
-  { id: 'cyan', label: 'Cyan' },
-  { id: 'graphite', label: 'Graphite' },
-  { id: 'red', label: 'Red' },
-  { id: 'orange', label: 'Orange' },
-  { id: 'amber', label: 'Amber' },
-  { id: 'green', label: 'Green' },
-  { id: 'teal', label: 'Teal' },
-  { id: 'brown', label: 'Brown' },
-  { id: 'lime', label: 'Lime' },
-  { id: 'sky', label: 'Sky' },
-  { id: 'rose', label: 'Rose' },
   { id: 'plum', label: 'Plum' },
+  { id: 'magenta', label: 'Magenta' },
+  { id: 'rose', label: 'Rose' },
   { id: 'slate', label: 'Slate' },
-  { id: 'gold', label: 'Gold' },
+  { id: 'graphite', label: 'Graphite' },
 ] as const;
 
 export type AccentId = (typeof ACCENT_PRESETS)[number]['id'];

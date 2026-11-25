@@ -41,7 +41,7 @@ describe('AccentSelect', () => {
     expect(options().map((option) => option.querySelector('.dot')?.getAttribute('data-accent'))).toEqual(
       ACCENT_PRESETS.map((preset) => preset.id),
     );
-    expect(options()[0].getAttribute('aria-selected')).toBe('true');
+    expect(options()[10].getAttribute('aria-selected')).toBe('true');
   });
 
   it('applies and persists a clicked preset, then closes', () => {
@@ -50,7 +50,7 @@ describe('AccentSelect', () => {
 
     trigger.click();
     fixture.detectChanges();
-    options()[5].click();
+    options()[17].click();
     fixture.detectChanges();
 
     expect(set).toHaveBeenCalledWith('graphite');
